@@ -3,12 +3,8 @@
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{DA1CBCC2-757D-46D0-8A84-0AD4E133C637}|Infrastructure\\Infrastructure.csproj|e:\\project\\repo\\tableordering\\infrastructure\\persistence\\configurations\\orderconfiguration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{DA1CBCC2-757D-46D0-8A84-0AD4E133C637}|Infrastructure\\Infrastructure.csproj|solutionrelative:infrastructure\\persistence\\configurations\\orderconfiguration.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{952F2670-CC6E-41D1-80F4-E8267B497D5B}|Domain\\Domain.csproj|e:\\project\\repo\\tableordering\\domain\\entities\\order.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{952F2670-CC6E-41D1-80F4-E8267B497D5B}|Domain\\Domain.csproj|solutionrelative:domain\\entities\\order.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{4F1B0285-D96E-47BB-9E85-68B47BDB22BD}|Api\\Api.csproj|e:\\project\\repo\\tableordering\\api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{4F1B0285-D96E-47BB-9E85-68B47BDB22BD}|Api\\Api.csproj|solutionrelative:api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,32 +14,19 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Order.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\Domain\\Entities\\Order.cs",
-              "RelativeDocumentMoniker": "Domain\\Entities\\Order.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\Domain\\Entities\\Order.cs",
-              "RelativeToolTip": "Domain\\Entities\\Order.cs",
-              "ViewState": "AgIAAA8AAAAAAAAAAAA1wBUAAAAXAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-12T03:28:23.159Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "OrderConfiguration.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\Infrastructure\\Persistence\\Configurations\\OrderConfiguration.cs",
-              "RelativeDocumentMoniker": "Infrastructure\\Persistence\\Configurations\\OrderConfiguration.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\Infrastructure\\Persistence\\Configurations\\OrderConfiguration.cs",
-              "RelativeToolTip": "Infrastructure\\Persistence\\Configurations\\OrderConfiguration.cs",
-              "ViewState": "AgIAAAQAAAAAAAAAAAAYwBIAAAAhAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-12T03:05:44.773Z",
+              "Title": "appsettings.json",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\Api\\appsettings.json",
+              "RelativeDocumentMoniker": "Api\\appsettings.json",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\Api\\appsettings.json",
+              "RelativeToolTip": "Api\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-10-13T15:30:36.503Z",
               "EditorCaption": ""
             }
           ]

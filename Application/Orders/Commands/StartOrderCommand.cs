@@ -1,6 +1,4 @@
-using System.Threading;
-using System.Threading.Tasks;
-using Application.Abstractions;
+﻿using Application.Abstractions;
 using Application.Dtos;
 using Application.Mappings;
 using Domain.Entities;
@@ -26,7 +24,7 @@ public class StartOrderHandler : ICommandHandler<StartOrderCommand, OrderDto>
     public async Task<OrderDto> Handle(StartOrderCommand command, CancellationToken ct)
     {
         var table = await _tables.GetByIdAsync(command.TableId);
-        if (table is null) throw new InvalidOperationException("Table not found.");
+        if (table is null) throw new InvalidOperationException("Không tìm thấy bàn.");
         var order = Order.Start(command.OrderId, command.TableId);
         await _orders.AddAsync(order);
         await _uow.SaveChangesAsync(ct);

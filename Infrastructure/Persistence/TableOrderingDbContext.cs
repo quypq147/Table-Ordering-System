@@ -1,63 +1,31 @@
-﻿using Domain.Entities;
-using Domain.ValueObjects;
+﻿using Application.Abstractions;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace Infrastructure.Persistence;
 
-public sealed class TableOrderingDbContext : DbContext
+public sealed class TableOrderingDbContext : DbContext, IApplicationDbContext
 {
-    public TableOrderingDbContext(DbContextOptions<TableOrderingDbContext> options) : base(options) { }
+    public TableOrderingDbContext(DbContextOptions<TableOrderingDbContext> options)
+        : base(options) { }
 
     public DbSet<Order> Orders => Set<Order>();
-    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<RestaurantTable> Tables => Set<RestaurantTable>();
     public DbSet<Voucher> Vouchers => Set<Voucher>();
+    // Lưu ý: KHÔNG có DbSet<OrderItem> khi dùng OwnedCollection (OwnsMany)
+
+    // Explicit interface implementation for IApplicationDbContext
+    DbSet<RestaurantTable> IApplicationDbContext.RestaurantTables => Tables;
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
-        // Order
-        mb.Entity<Order>(e =>
-        {
-            e.HasKey(x => x.Id);
-            e.HasMany(x => x.Items)
-             .WithOne()
-             .HasForeignKey("OrderId")
-             .OnDelete(DeleteBehavior.Cascade);
-
-            // nếu Order có thuộc tính Status (enum) → lưu int
-            // e.Property(x => x.Status).HasConversion<int>();
-        });
-
-        // OrderItem (Money, Quantity là owned types)
-        mb.Entity<OrderItem>(e =>
-        {
-            e.HasKey(x => x.Id);
-
-            e.OwnsOne(x => x.UnitPrice, b =>
-            {
-                b.Property(p => p.Amount).HasColumnType("decimal(18,2)");
-                b.Property(p => p.Currency).HasMaxLength(10);
-            });
-
-            e.OwnsOne(x => x.Quantity, b =>
-            {
-                b.Property(q => q.Value).HasColumnName("Quantity");
-            });
-        });
-
-        // MenuItem.Price (owned)
-        mb.Entity<MenuItem>(e =>
-        {
-            e.HasKey(x => x.Id);
-            e.OwnsOne(x => x.Price, b =>
-            {
-                b.Property(p => p.Amount).HasColumnType("decimal(18,2)");
-                b.Property(p => p.Currency).HasMaxLength(10);
-            });
-        });
-
-        // RestaurantTable, Voucher: thêm HasKey/Owned nếu cần
+        // Áp toàn bộ cấu hình từ các class *Configuration trong assembly này
+        mb.ApplyConfigurationsFromAssembly(typeof(TableOrderingDbContext).Assembly);
     }
+
+    Task<int> IApplicationDbContext.SaveChangesAsync(CancellationToken ct) => base.SaveChangesAsync(ct);
 }
+
 

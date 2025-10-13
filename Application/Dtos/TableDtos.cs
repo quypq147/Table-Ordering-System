@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Application.Dtos
 {
-    public record TableDto(int Id, string Code, int Capacity, TableStatus Status);
+    public record TableDto(string Id, string Code, int Capacity, TableStatus Status);
 }

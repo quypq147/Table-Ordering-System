@@ -1,29 +1,35 @@
 ﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Domain.ValueObjects;
 
-namespace Infrastructure.Persistence.Configurations;
-
-public class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
+public sealed class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
 {
     public void Configure(EntityTypeBuilder<MenuItem> b)
     {
         b.ToTable("MenuItems");
         b.HasKey(x => x.Id);
-        b.Property(x => x.Id).HasMaxLength(64);
 
-        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Name).IsRequired().HasMaxLength(200);
         b.Property(x => x.IsActive).HasDefaultValue(true);
 
-        // Value Object: Money Price => Owned
-        b.OwnsOne(x => x.Price, money =>
-        {
-            money.Property(p => p.Amount).HasColumnType("decimal(18,2)").IsRequired();
-            money.Property(p => p.Currency).HasMaxLength(10).IsRequired(); // "VND", "USD", ...
-            money.WithOwner();
-        });
+        // Money -> decimal, luôn đọc/ghi với currency "VND"
+        var moneyToDecimal = new ValueConverter<Money, decimal>(
+            v => v.Amount,
+            v => new Money(v, "VND")
+        );
 
-        b.HasIndex(x => x.Name);
+        b.Property(x => x.Price)
+         .HasConversion(moneyToDecimal)
+         .HasColumnName("Price")
+         .HasPrecision(18, 2)
+         .IsRequired();
+
+        // (tùy chọn) concurrency
+        b.Property<byte[]>("RowVersion").IsRowVersion();
     }
 }
+
+
 

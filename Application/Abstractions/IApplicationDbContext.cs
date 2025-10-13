@@ -2,13 +2,13 @@
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore; // Pragmatic: chấp nhận DbSet trong Application
 
-namespace Application.Common.Interfaces;
+namespace Application.Abstractions;
 
 public interface IApplicationDbContext
 {
     DbSet<MenuItem> MenuItems { get; }
     DbSet<Order> Orders { get; }
-    DbSet<RestaurantTable> Tables { get; }
+    DbSet<RestaurantTable> RestaurantTables { get; }
     DbSet<Voucher> Vouchers { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

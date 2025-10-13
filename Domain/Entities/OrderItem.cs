@@ -1,16 +1,19 @@
-using Domain.ValueObjects;
+﻿using Domain.ValueObjects;
 
 namespace Domain.Entities;
 
+/// <summary>
+/// Dòng hàng của Order. Có Id (int) để EF map gọn (OwnsMany).
+/// </summary>
 public class OrderItem
 {
+    public int Id { get; private set; }              // EF key
     public string MenuItemId { get; private set; } = default!;
     public string NameSnapshot { get; private set; } = default!;
     public Money UnitPrice { get; private set; }
     public Quantity Quantity { get; private set; }
 
-    // EF-friendly
-    private OrderItem() { }
+    private OrderItem() { } // EF
 
     public OrderItem(string menuItemId, string nameSnapshot, Money unitPrice, Quantity quantity)
     {
@@ -22,8 +25,12 @@ public class OrderItem
         Quantity = quantity;
     }
 
-    public Money LineTotal => UnitPrice * (int)Quantity;
+    public Money LineTotal => new Money(UnitPrice.Amount * Quantity.Value, UnitPrice.Currency);
 
-    public void Increase(Quantity q) => Quantity = new Quantity(Quantity.Value + q.Value);
-    public void ChangeQuantity(Quantity q) => Quantity = q;
+    public void ChangeQuantity(Quantity q)
+    {
+        if (q.Value <= 0) throw new ArgumentOutOfRangeException(nameof(q.Value));
+        Quantity = q;
+    }
 }
+

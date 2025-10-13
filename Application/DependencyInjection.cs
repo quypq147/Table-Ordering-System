@@ -1,14 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using TableOrdering.Application.Orders;
+﻿using Application.Common.CQRS;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace TableOrdering.Application;
+namespace Application;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Đăng ký các UseCase, validator, mediator... ở đây
-        services.AddScoped<OrderUseCases>();
+        services.AddScoped<ISender, Sender>();     // Mediator “nhẹ”
+        services.AddCqrsHandlers();                // Quét & đăng ký toàn bộ Handler
         return services;
     }
 }

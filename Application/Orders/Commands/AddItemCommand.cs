@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Dtos;
@@ -23,7 +23,7 @@ public class AddItemHandler : ICommandHandler<AddItemCommand, OrderDto>
 
     public async Task<OrderDto> Handle(AddItemCommand command, CancellationToken ct)
     {
-        var order = await _orders.GetByIdAsync(command.OrderId) ?? throw new InvalidOperationException("Order not found.");
+        var order = await _orders.GetByIdAsync(command.OrderId) ?? throw new InvalidOperationException("Không tìm thấy đơn.");
         order.AddItem(command.MenuItemId, command.Name, new Money(command.Price, command.Currency), new Quantity(command.Quantity));
         _orders.Update(order);
         await _uow.SaveChangesAsync(ct);

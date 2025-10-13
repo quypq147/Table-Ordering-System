@@ -1,63 +1,68 @@
 ﻿using Domain.Entities;
-using Domain.Enums;
-using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Domain.ValueObjects;
 
-namespace Infrastructure.Persistence.Configurations;
-
-public class OrderConfiguration : IEntityTypeConfiguration<Order>
+public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
     public void Configure(EntityTypeBuilder<Order> b)
     {
         b.ToTable("Orders");
         b.HasKey(x => x.Id);
-        b.Property(x => x.Id).HasMaxLength(64);
 
-        b.Property(x => x.TableId).HasMaxLength(64).IsRequired();
-
-        b.Property(x => x.Status)
-         .HasConversion<string>()
-         .HasMaxLength(32)
-         .HasDefaultValue(OrderStatus.Draft);
-
+        b.Property(x => x.TableId).IsRequired().HasMaxLength(64);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
         b.Property(x => x.CreatedAtUtc).IsRequired();
-        b.Property(x => x.SubmittedAtUtc);
-        b.Property(x => x.PaidAtUtc);
 
-        // Owned collection: Items (OrderItem không có Id riêng => EF tạo key shadow)
-        b.OwnsMany(x => x.Items, oi =>
+        b.HasIndex(x => new { x.TableId, x.Status });
+        b.HasIndex(x => x.CreatedAtUtc);
+
+        b.Property<byte[]>("RowVersion").IsRowVersion();
+
+        // Converters
+        var moneyToDecimal = new ValueConverter<Money, decimal>(
+            v => v.Amount,
+            v => new Money(v, "VND")
+        );
+        var quantityToInt = new ValueConverter<Quantity, int>(
+            v => v.Value,
+            v => new Quantity(v)
+        );
+
+        // 1 Order - nhiều OrderItem (owned)
+        b.OwnsMany(x => x.Items, nb =>
         {
-            oi.ToTable("OrderItems");
-            oi.WithOwner().HasForeignKey("OrderId");
+            nb.ToTable("OrderItems");
+            nb.WithOwner().HasForeignKey("OrderId");
 
-            oi.Property<int>("Id"); // key shadow
-            oi.HasKey("Id");
+            nb.HasKey(i => i.Id);                         // dùng Id int có sẵn trong OrderItem
+            nb.Property(i => i.Id).ValueGeneratedOnAdd(); // identity
 
-            oi.Property(p => p.MenuItemId).HasMaxLength(64).IsRequired();
-            oi.Property(p => p.NameSnapshot).HasMaxLength(200).IsRequired();
+            nb.Property(i => i.MenuItemId).IsRequired().HasMaxLength(64);
+            nb.Property(i => i.NameSnapshot).IsRequired().HasMaxLength(200);
 
-            // Money UnitPrice: owned
-            oi.OwnsOne(p => p.UnitPrice, money =>
-            {
-                money.Property(m => m.Amount).HasColumnType("decimal(18,2)").IsRequired();
-                money.Property(m => m.Currency).HasMaxLength(10).IsRequired();
-                money.WithOwner();
-            });
-
-            // Quantity: value converter (Quantity <-> int)
-            oi.Property(p => p.Quantity)
-              .HasConversion(
-                  q => q.Value,
-                  v => new Quantity(v))
+            nb.Property(i => i.UnitPrice)
+              .HasConversion(moneyToDecimal)    
+              .HasColumnName("UnitPrice")
+              .HasPrecision(18, 2)
               .IsRequired();
 
-            oi.Property<string>("OrderId").HasMaxLength(64);
-            oi.HasIndex(p => p.MenuItemId);
-        });
+            nb.Property(i => i.Quantity)
+              .HasConversion(quantityToInt)
+              .HasColumnName("Quantity")
+              .IsRequired();
 
-        // Cho phép EF truy cập backing-field của Items
-        b.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+            // Không lưu LineTotal (computed), bỏ qua nếu có property get-only
+            // nb.Ignore(i => i.LineTotal);
+
+            nb.HasIndex(i => i.MenuItemId);
+        });
     }
 }
+
+
+
+
+
 

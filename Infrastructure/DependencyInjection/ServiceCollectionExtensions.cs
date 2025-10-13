@@ -1,5 +1,6 @@
-﻿using Domain.Repositories;
-using Infrastructure.Persistence;           // TableOrderingDbContext
+﻿using Application.Abstractions;
+using Domain.Repositories;
+using Infrastructure.Persistence;
 using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -11,17 +12,24 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        // Đăng ký DbContext (SQL Server). Có thể đổi sang Npgsql nếu dùng Postgres.
+        // DbContext
         services.AddDbContext<TableOrderingDbContext>(opt =>
-            opt.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+        {
+            var cs = config.GetConnectionString("DefaultConnection"); // dùng 'config'
+            opt.UseSqlServer(cs); // hoặc UseNpgsql/UseSqlite tuỳ DB
+        });
 
-        // Repository/UoW phải là Scoped để dùng chung scope với DbContext mỗi request
+        // Repositories + UoW
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<ITableRepository, TableRepository>();
         services.AddScoped<IMenuItemRepository, MenuItemRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        // Map IApplicationDbContext -> TableOrderingDbContext
+        services.AddScoped<IApplicationDbContext, TableOrderingDbContext>();
+
         return services;
     }
 }
+
 

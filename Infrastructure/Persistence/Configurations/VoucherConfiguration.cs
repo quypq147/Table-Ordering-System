@@ -1,5 +1,5 @@
 ﻿using Domain.Entities;
-using Domain.Enums; // <— SỬA nếu file hiện đang là Domain.Enum
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,9 +22,6 @@ public class VoucherConfiguration : IEntityTypeConfiguration<Voucher>
          .HasMaxLength(32)
          .IsRequired();
 
-        // DateOnly: 
-        // - PostgreSQL (Npgsql) hỗ trợ native.
-        // - SQL Server: dùng converter DateOnly <-> DateTime (Date).
         b.Property(x => x.CreatedAt)
          .HasConversion(
              v => v.ToDateTime(TimeOnly.MinValue),

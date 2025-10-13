@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Dtos;
@@ -21,7 +21,7 @@ public class SubmitOrderHandler : ICommandHandler<SubmitOrderCommand, OrderDto>
 
     public async Task<OrderDto> Handle(SubmitOrderCommand command, CancellationToken ct)
     {
-        var order = await _orders.GetByIdAsync(command.OrderId) ?? throw new InvalidOperationException("Order not found.");
+        var order = await _orders.GetByIdAsync(command.OrderId) ?? throw new InvalidOperationException("Không tìm thấy đơn.");
         order.Submit();
         _orders.Update(order);
         await _uow.SaveChangesAsync(ct);
