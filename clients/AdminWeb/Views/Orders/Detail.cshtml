@@ -1,0 +1,44 @@
+﻿@using AdminWeb.Dtos
+@model OrderDetailDto
+@{
+    ViewData["Title"] = $"Order {Model.Code}";
+}
+<h1>Order @Model.Code</h1>
+
+<div class="order-head">
+    <div><b>Trạng thái:</b> @Model.Status</div>
+    <div><b>Tổng:</b> @Model.Total.ToString("N0")</div>
+    <div><b>Tạo lúc:</b> @Model.CreatedAt.ToLocalTime()</div>
+</div>
+
+<h3>Items</h3>
+<table class="table">
+    <thead><tr><th>Tên</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+        @foreach (var i in Model.Items)
+        {
+            <tr>
+                <td>@i.Name</td>
+                <td>@i.Qty</td>
+                <td>@i.UnitPrice.ToString("N0")</td>
+                <td>@i.LineTotal.ToString("N0")</td>
+                <td>@i.Note</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<form asp-action="UpdateStatus" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+    <select name="status">
+        <option>Placed</option>
+        <option>InKitchen</option>
+        <option>Ready</option>
+        <option>Served</option>
+        <option>Cancelled</option>
+        <option>Paid</option>
+    </select>
+    <button type="submit" class="btn">Cập nhật</button>
+</form>
+
