@@ -1,0 +1,22 @@
+﻿@using AdminWeb.Dtos
+@model List<MenuItemDto>
+@{
+    ViewData["Title"] = "Menu";
+}
+<h1>Menu</h1>
+<p><a asp-action="Create" class="btn">+ Thêm món</a></p>
+<table class="table">
+    <thead><tr><th>Tên</th><th>SKU</th><th>Giá</th><th>Trạng thái</th></tr></thead>
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.Name</td>
+                <td>@m.Sku</td>
+                <td>@m.Price.ToString("N0")</td>
+                <td>@(m.IsActive ? "Active" : "Inactive")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+

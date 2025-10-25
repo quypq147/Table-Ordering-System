@@ -1,0 +1,24 @@
+﻿@using AdminWeb.Dtos
+@model List<KitchenTicketDto>
+@{
+    ViewData["Title"] = "KDS Board";
+    Layout = "_Layout";
+}
+<h1>KDS Station</h1>
+
+<div id="tickets" class="board">
+    @foreach (var t in Model)
+    {
+        <div class="ticket" data-id="@t.Id">
+            <div class="code"><b>@t.ItemName</b> x @t.Qty</div>
+            <div class="meta">Status: @t.Status</div>
+            <div class="meta">@t.CreatedAt.ToLocalTime()</div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/js/kds.js"></script>
+}
+

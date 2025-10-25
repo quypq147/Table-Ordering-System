@@ -1,138 +1,87 @@
 # TableOrdering
 
-Hệ thống quản lý gọi món theo kiến trúc phân tầng: Domain, Application (CQRS), Infrastructure (EF Core), Api (ASP.NET Core).
+Monorepo quản lý gọi món gồm Backend (.NET) và Clients (web). Kiến trúc phân tầng: Domain, Application (CQRS), Infrastructure (EF Core), Api (ASP.NET Core).
 
 - Runtime: .NET 9
-- ORM: EF Core (SQL Server)
+- ORM: EF Core
 - API: ASP.NET Core + Swagger
-- Kiến trúc: CQRS nhẹ với Sender/Handlers
+- CI: GitHub Actions
 
-## Cấu trúc solution
+## Cấu trúc
 
-- [TableOrdering.sln](TableOrdering.sln)
-- API: [Api](Api)
-  - Startup: [Api/Program.cs](Api/Program.cs)
-  - Cấu hình: [Api/appsettings.json](Api/appsettings.json)
-  - Swagger/OpenAPI (tự bật ở Development)
-  - Health check DB: GET /health/db
-- Application (CQRS, DTO, Mappings):
-  - Abstractions: [`Application.Abstractions.ICommand`](Application/Abstractions/ICommand.cs), [`Application.Abstractions.IQuery`](Application/Abstractions/IQuery.cs), [`Application.Abstractions.ICommandHandler`](Application/Abstractions/ICommandHandler.cs), [`Application.Abstractions.IQueryHandler`](Application/Abstractions/IQueryHandler.cs), [`Application.Abstractions.IApplicationDbContext`](Application/Abstractions/IApplicationDbContext.cs)
-  - Dtos: [Application/Dtos](Application/Dtos), ví dụ [`Application.Dtos.OrderDto`](Application/Dtos/OrderDto.cs)
-  - Mappings: [`Application.Mappings.OrderMapper`](Application/Mappings/OrderMapper.cs)
-  - Orders use-cases:
-    - Start: [`Application.Orders.Commands.StartOrderCommand`](Application/Orders/Commands/StartOrderCommand.cs)
-    - Add item: [`Application.Orders.Commands.AddItemCommand`](Application/Orders/Commands/AddItemCommand.cs)
-    - Submit: [`Application.Orders.Commands.SubmitOrderCommand`](Application/Orders/Commands/SubmitOrderCommand.cs)
-    - Pay: [`Application.Orders.Commands.PayOrderCommand`](Application/Orders/Commands/PayOrderCommand.cs)
-  - DI: [Application/DependencyInjection.cs](Application/DependencyInjection.cs)
-- Domain (Entities, ValueObjects, Events, Enums):
-  - Entities:
-    - [`Domain.Entities.Order`](Domain/Entities/Order.cs) + [`Domain.Entities.OrderItem`](Domain/Entities/OrderItem.cs)
-    - [`Domain.Entities.MenuItem`](Domain/Entities/MenuItem.cs)
-    - [`Domain.Entities.RestaurantTable`](Domain/Entities/RestaurantTable.cs)
-    - [`Domain.Entities.Voucher`](Domain/Entities/Voucher.cs)
-  - Value objects:
-    - [`Domain.ValueObjects.Money`](Domain/ValueObjects/Money.cs)
-    - [`Domain.ValueObjects.Quantity`](Domain/ValueObjects/Quantity.cs)
-  - Enums:
-    - [`Domain.Enums.OrderStatus`](Domain/Enums/OrderStatus.cs), [`Domain.Enums.TableStatus`](Domain/Enums/TableStatus.cs), [`Domain.Enums.PaymentMethod`](Domain/Enums/PaymentMethod.cs), [`Domain.Enums.DiscountType`](Domain/Enums/DiscountType.cs)
-  - Events:
-    - [`Domain.Events.OrderPlaced`](Domain/Events/OrderPlaced.cs), [`Domain.Events.OrderSubmitted`](Domain/Events/OrderSubmitted.cs), [`Domain.Events.OrderPaid`](Domain/Events/OrderPaid.cs)
-  - Abstractions:
-    - [`Domain.Abstractions.AggregateRoot<TId>`](Domain/Abstractions/AggregateRoot.cs), [`Domain.Abstractions.Entity<TId>`](Domain/Abstractions/Entity.cs), [`Domain.Abstractions.IDomainEvent`](Domain/Abstractions/IDomainEvent.cs)
-  - Repositories contracts:
-    - [`Domain.Repositories.IOrderRepository`](Domain/Repositories/IOrderRepository.cs), [`Domain.Repositories.IMenuItemRepository`](Domain/Repositories/IMenuItemRepository.cs), [`Domain.Repositories.ITableRepository`](Domain/Repositories/ITableRepository.cs), [`Domain.Repositories.IUnitOfWork`](Domain/Repositories/IUnitOfWork.cs)
-- Infrastructure (EF Core, Repositories, DbContext):
-  - DbContext: [`Infrastructure.Persistence.TableOrderingDbContext`](Infrastructure/Persistence/TableOrderingDbContext.cs)
-  - Configurations: 
-    - [`OrderConfiguration`](Infrastructure/Persistence/Configurations/OrderConfiguration.cs), [`MenuItemConfiguration`](Infrastructure/Persistence/Configurations/MenuItemConfiguration.cs), [`RestaurantTableConfiguration`](Infrastructure/Persistence/Configurations/RestaurantTableConfiguration.cs), [`VoucherConfiguration`](Infrastructure/Persistence/Configurations/VoucherConfiguration.cs)
-  - Repositories:
-    - [`Infrastructure.Repositories.OrderRepository`](Infrastructure/Repositories/OrderRepository.cs), [`Infrastructure.Repositories.MenuItemRepository`](Infrastructure/Repositories/MenuItemRepository.cs), [`Infrastructure.Repositories.TableRepository`](Infrastructure/Repositories/TableRepository.cs), [`Infrastructure.Repositories.UnitOfWork`](Infrastructure/Repositories/UnitOfWork.cs)
-  - DI:
-    - Được API dùng: [`Infrastructure.DependencyInjection.ServiceCollectionExtensions.AddInfrastructure`](Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs)
-    - Tùy chọn (có Seeder hosted service): [`Infrastructure.DependencyInjection`](Infrastructure/DependencyInjection.cs)
-  - Seeder: [`Infrastructure.Persistence.DbSeeder`](Infrastructure/Persistence/DbSeeder.cs)
-- UnitTests: [UnitTests](UnitTests) (khởi tạo, chưa có test)
+- Solution chính: [TableOrdering.sln](TableOrdering.sln)
+- Backend: [backend/src](backend/src)
+  - API: [backend/src/Api](backend/src/Api)
+  - Application: [backend/src/Application](backend/src/Application)
+  - Domain: [backend/src/Domain](backend/src/Domain)
+  - Infrastructure: [backend/src/Infrastructure](backend/src/Infrastructure)
+  - Unit tests: [backend/UnitTests](backend/UnitTests), csproj: [backend/UnitTests/UnitTests.csproj](backend/UnitTests/UnitTests.csproj)
+- Clients: [clients](clients)
+  - Solution: [clients/TableOrdering.Clients.sln](clients/TableOrdering.Clients.sln)
+  - AdminWeb: [clients/AdminWeb](clients/AdminWeb)
+  - KdsWeb: [clients/KdsWeb](clients/KdsWeb)
+- CI/CD: [./github/workflows](.github/workflows)
 - Git ignore: [.gitignore](.gitignore)
 
-## Domain chính
-
-- Order lifecycle: Draft → Submitted → InProgress → Ready → Served → Paid → Cancelled
-  - Submit: [`Domain.Entities.Order.Submit`](Domain/Entities/Order.cs)
-  - Tiến trình: [`Order.MarkInProgress`](Domain/Entities/Order.cs), [`Order.MarkReady`](Domain/Entities/Order.cs), [`Order.MarkServed`](Domain/Entities/Order.cs)
-  - Thanh toán: [`Order.Pay(Money amount, string method)`](Domain/Entities/Order.cs) kiểm tra trạng thái (Submitted/Ready/Served), kiểm tra tiền tệ và số tiền phải đúng bằng Total, raise [`Domain.Events.OrderPaid`](Domain/Events/OrderPaid.cs)
-  - Hủy: [`Order.Cancel`](Domain/Entities/Order.cs) cấm khi đã Paid
-- Tính tổng: [`Order.Total`](Domain/Entities/Order.cs) cộng LineTotal của Items theo currency đồng nhất
-- Dòng món: [`Domain.Entities.OrderItem`](Domain/Entities/OrderItem.cs) có Id (int) để EF OwnsMany, `LineTotal = UnitPrice * Quantity`, đổi số lượng qua `ChangeQuantity`
-- Value objects:
-  - [`Money`](Domain/ValueObjects/Money.cs): đảm bảo currency thống nhất khi so sánh/cộng trừ, làm tròn 2 chữ số
-  - [`Quantity`](Domain/ValueObjects/Quantity.cs): số lượng > 0
-
-## Application (CQRS)
-
-Các use-case được triển khai qua Command + Handler:
-- Bắt đầu đơn: [`Application.Orders.Commands.StartOrderCommand`](Application/Orders/Commands/StartOrderCommand.cs)
-- Thêm món: [`Application.Orders.Commands.AddItemCommand`](Application/Orders/Commands/AddItemCommand.cs)
-- Xác nhận đơn: [`Application.Orders.Commands.SubmitOrderCommand`](Application/Orders/Commands/SubmitOrderCommand.cs)
-- Thanh toán: [`Application.Orders.Commands.PayOrderCommand`](Application/Orders/Commands/PayOrderCommand.cs) truyền đủ `Amount/Currency/Method` vào domain `Order.Pay`
-
-Mapping sang DTO: [`Application.Mappings.OrderMapper`](Application/Mappings/OrderMapper.cs)
-
-Đăng ký CQRS/Sender: [Application/DependencyInjection.cs](Application/DependencyInjection.cs)
-
-## Persistence
-
-- DbContext: [`TableOrderingDbContext`](Infrastructure/Persistence/TableOrderingDbContext.cs) chứa DbSet cho Orders/MenuItems/Tables/Vouchers
-- Mappings/Conversion:
-  - OwnsMany OrderItems trong [`OrderConfiguration`](Infrastructure/Persistence/Configurations/OrderConfiguration.cs)
-  - `Money` → decimal(18,2) và `Quantity` → int
-- Repositories + UoW: xem [`Infrastructure.Repositories`](Infrastructure/Repositories)
-
-Seeder mẫu: [`DbSeeder`](Infrastructure/Persistence/DbSeeder.cs) thêm MenuItems/Tables. Lưu ý:
-- Nhánh DI mà API đang dùng ([`Infrastructure.DependencyInjection.ServiceCollectionExtensions`](Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs)) chưa tự chạy seeding.
-- Có biến thể DI khác có HostedService seeding trong [`Infrastructure/DependencyInjection.cs`](Infrastructure/DependencyInjection.cs). Muốn bật seeding tự động, có thể:
-  - Chuyển using trong API sang `using Infrastructure;` và gọi `AddInfrastructure(builder.Configuration);` (biến thể này đăng ký `SeedHostedService`)
-  - Hoặc tự gọi `DbSeeder.SeedAsync` sau khi migrate.
-
-API hiện chạy migrate startup tại [Api/Program.cs](Api/Program.cs).
-
-## Thiết lập & chạy
+## Bắt đầu
 
 Yêu cầu:
-- .NET SDK 9
-- SQL Server chạy local (hoặc chỉnh lại connection string)
+- .NET SDK 9.x
+- SQL Server (hoặc DB provider khác tùy cấu hình)
 
-1) Cấu hình DB
-- Mở [Api/appsettings.json](Api/appsettings.json) và chỉnh "ConnectionStrings:DefaultConnection" cho phù hợp.
+Cấu hình:
+- Sửa connection string trong appsettings của API tại [backend/src/Api](backend/src/Api) (file appsettings.json trong thư mục này).
 
-2) Tạo migration và cập nhật DB
-- Nếu chưa có migration, tạo và apply (đặt migration ở Infrastructure):
-```sh
-dotnet ef migrations add InitialCreate -s Api/Api.csproj -p Infrastructure/Infrastructure.csproj -o Persistence/Migrations
-dotnet ef database update -s Api/Api.csproj -p Infrastructure/Infrastructure.csproj
-```
-
-3) Build & run
+Build & chạy API:
 ```sh
 dotnet restore
-dotnet build
-dotnet run --project Api/Api.csproj
+dotnet build TableOrdering.sln
+dotnet run --project backend/src/Api
 ```
 
-4) Truy cập
-- Swagger: https://localhost:5001/swagger (port thực tế theo output)
-- Health DB: GET /health/db
+Truy cập:
+- Swagger: theo URL/port hiển thị trong Output (ví dụ https://localhost:5001/swagger)
 
-## API Controllers
+Chạy test:
+```sh
+dotnet test backend/UnitTests/UnitTests.csproj
+```
 
-Hiện các controller mẫu trong [Api/Controller](Api/Controller) là stub (trả về View). Bạn có thể triển khai Web API endpoints gọi CQRS `ISender` để dùng các use-case trong Application.
+## Cơ sở dữ liệu (EF Core)
+
+Tạo migration và cập nhật DB (đường dẫn dùng thư mục dự án):
+```sh
+dotnet ef migrations add InitialCreate -s backend/src/Api -p backend/src/Infrastructure -o Persistence/Migrations
+dotnet ef database update -s backend/src/Api -p backend/src/Infrastructure
+```
+
+Gợi ý:
+- Nếu có Seeder/HostedService, bật trong API sau khi migrate.
+- Biến môi trường/secret: dùng appsettings.json và biến môi trường; các biến thể dev/local đã được ignore trong [.gitignore](.gitignore).
+
+## Phát triển
+
+- Mô hình phân tầng:
+  - Domain: entities, value objects, rules.
+  - Application: CQRS (commands/queries, handlers, DTO/mapping).
+  - Infrastructure: EF Core DbContext, configurations, repositories.
+  - Api: composition root, DI, endpoints, Swagger.
+- Mỗi dự án có thể có file .csproj tương ứng trong thư mục của nó; dùng đường dẫn thư mục với dotnet CLI để tránh phụ thuộc tên file.
+
+## Clients
+
+- Mở [clients/TableOrdering.Clients.sln](clients/TableOrdering.Clients.sln) trong Visual Studio.
+- Build và chạy từng dự án (AdminWeb, KdsWeb) theo hướng dẫn riêng của mỗi project.
+
+## CI/CD
+
+- Workflow được định nghĩa tại [.github/workflows](.github/workflows) (build/test trên pull request và main).
 
 ## Ghi chú
 
-- Phân hệ MenuItem/Table đã có Repository và EF config; thêm endpoints theo nhu cầu
-- UnitTests project đã có sẵn, cần bổ sung test cho Domain/Application
-- `.gitignore` đã cấu hình cho .NET/VS/EF: xem [.gitignore](.gitignore)
+- Kiểm tra các file cấu hình thực tế trong [backend/src/Api](backend/src/Api), [backend/src/Infrastructure](backend/src/Infrastructure) để điều chỉnh tên migration/thư mục nếu cần.
+- Đã cấu hình ignore chuẩn cho .NET/VS/EF trong [.gitignore](.gitignore).
 
 ## License
 
-MIT (tùy chỉnh theo nhu cầu dự án)
+Chưa thiết lập. Thêm LICENSE theo nhu cầu dự án.

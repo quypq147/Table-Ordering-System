@@ -1,0 +1,22 @@
+﻿@using AdminWeb.Dtos
+@model Paginated<OrderSummaryDto>
+@{
+    ViewData["Title"] = "Orders";
+}
+<h1>Orders</h1>
+<table class="table">
+    <thead><tr><th>Mã</th><th>Trạng thái</th><th>Tổng</th><th>Thời gian</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var o in Model.Items)
+        {
+            <tr>
+                <td>@o.Code</td>
+                <td>@o.Status</td>
+                <td>@o.Total.ToString("N0")</td>
+                <td>@o.CreatedAt.ToLocalTime()</td>
+                <td><a asp-action="Detail" asp-route-id="@o.Id">Chi tiết</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
