@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AdminWeb.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AdminWeb.Controllers
 {
-    public class OrdersController(BackendApiClient api) : Controller
+    public class OrdersController(IBackendApiClient api) : Controller
     {
         public async Task<IActionResult> Index(int page = 1)
         {

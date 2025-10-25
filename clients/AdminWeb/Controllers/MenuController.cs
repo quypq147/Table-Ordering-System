@@ -1,18 +1,19 @@
 ﻿using AdminWeb.Dtos;
+using AdminWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 
-public class MenuController(BackendApiClient api, IConfiguration cfg) : Controller
+public class MenuController(IBackendApiClient api) : Controller
 {
-    // Hardcode restaurant id DEMO (lấy từ claims hoặc config)
-    private Guid RestaurantId => Guid.Parse(cfg["Demo:RestaurantId"] ?? "00000000-0000-0000-0000-000000000001");
+    
+    
 
     public async Task<IActionResult> Index()
     {
-        var items = await api.GetMenuAsync(RestaurantId);
+        var items = await api.GetMenuAsync();
         return View(items);
     }
 
-    public IActionResult Create() => View(new CreateMenuItemRequest(RestaurantId, Guid.Empty, "", "", 0));
+    public IActionResult Create() => View(new CreateMenuItemRequest( Guid.Empty, "", "", 0));
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateMenuItemRequest req)

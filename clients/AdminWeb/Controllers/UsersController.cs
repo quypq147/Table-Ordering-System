@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AdminWeb.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AdminWeb.Controllers
 {
-    public class UsersController : Controller
+    public class UsersController(IBackendApiClient api) : Controller
     {
         public IActionResult Index()
         {

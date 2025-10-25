@@ -11,35 +11,35 @@
     <div class="stats">
         <div class="stat kpi">
             <div class="stat-head">
-                <span class="label">Total Tables</span>
+                <span class="label">Tổng số bàn</span>
                 <span class="stat-icon">🪑</span>
             </div>
             <div class="stat-value" data-metric="totalTables">0</div>
-            <div class="muted">Active: <b data-metric="activeTables">0</b></div>
+            <div class="muted">Đang hoạt động: <b data-metric="activeTables">0</b></div>
         </div>
         <div class="stat kpi">
             <div class="stat-head">
-                <span class="label">Open Sessions</span>
+                <span class="label">Đang mở phiên</span>
                 <span class="stat-icon">🔓</span>
             </div>
             <div class="stat-value" data-metric="openSessions">0</div>
-            <div class="muted">Avg guests: <b data-metric="avgGuests">0</b></div>
+            <div class="muted">Khách trung bình: <b data-metric="avgGuests">0</b></div>
         </div>
         <div class="stat kpi">
             <div class="stat-head">
-                <span class="label">Orders Today</span>
+                <span class="label">Tổng đơn hôm nay</span>
                 <span class="stat-icon">🧾</span>
             </div>
             <div class="stat-value" data-metric="ordersToday">0</div>
-            <div class="muted">Ready: <b data-metric="ordersReady">0</b></div>
+            <div class="muted">Đơn có thể nhận: <b data-metric="ordersReady">0</b></div>
         </div>
         <div class="stat kpi">
             <div class="stat-head">
-                <span class="label">Revenue Today</span>
+                <span class="label">Doanh thu hôm nay</span>
                 <span class="stat-icon">₫</span>
             </div>
             <div class="stat-value" data-metric="revenueToday">0</div>
-            <div class="muted">Avg ticket: <b data-metric="avgTicket">0</b></div>
+            <div class="muted">Trung bình mỗi vé: <b data-metric="avgTicket">0</b></div>
         </div>
         <div class="stat kpi">
             <div class="stat-head">
@@ -51,7 +51,7 @@
         </div>
         <div class="stat kpi">
             <div class="stat-head">
-                <span class="label">Avg Prep Time</span>
+                <span class="label">Trung bình thời gian chuẩn bị</span>
                 <span class="stat-icon">⏱️</span>
             </div>
             <div class="stat-value" data-metric="avgPrepMin">0m</div>
@@ -82,7 +82,7 @@
 
     <div class="card">
         <div class="card-head between">
-            <h3>Recent Orders</h3>
+            <h3>Đơn gần đây</h3>
             <a class="ghost" asp-controller="Orders" asp-action="Index">View all</a>
         </div>
         <div class="table-wrap">
@@ -90,9 +90,9 @@
                 <thead>
                     <tr>
                         <th>Code</th>
-                        <th>Status</th>
-                        <th>Total</th>
-                        <th>Created</th>
+                        <th>Tình trạng</th>
+                        <th>Tổng tiền</th>
+                        <th>Tạo vào</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -105,12 +105,12 @@
 
     <div class="card">
         <div class="card-head between">
-            <h3>Quick Actions</h3>
+            <h3>Các chức năng </h3>
         </div>
         <div class="quick">
-            <a class="ghost" asp-controller="Tables" asp-action="Index">Open / Merge / Move Table</a>
-            <a class="ghost" asp-controller="Menu" asp-action="Create">Create Menu Item</a>
-            <a class="ghost" asp-controller="Orders" asp-action="Index">Review Orders</a>
+            <a class="ghost" asp-controller="Tables" asp-action="Index">Mở / Ghép / Chuyển Bàn</a>
+            <a class="ghost" asp-controller="Menu" asp-action="Create">Tạo menu các món</a>
+            <a class="ghost" asp-controller="Orders" asp-action="Index">Xem các đơn</a>
         </div>
     </div>
 </section>

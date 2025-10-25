@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using AdminWeb.Models;
+using AdminWeb.Services;
 
 namespace AdminWeb.Controllers;
 
-public class HomeController(BackendApiClient api) : Controller
+public class HomeController(IBackendApiClient api) : Controller
 {
     public async Task<IActionResult> Index()
     {

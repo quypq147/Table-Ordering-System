@@ -6,7 +6,6 @@
 <h1>Thêm món</h1>
 <form method="post">
     @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="RestaurantId" />
     <div>
         <label>Tên</label>
         <input asp-for="Name" />
