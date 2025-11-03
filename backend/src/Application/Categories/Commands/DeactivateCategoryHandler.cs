@@ -19,7 +19,7 @@ public sealed class DeactivateCategoryHandler
     public async Task<CategoryDto> Handle(DeactivateCategoryCommand c, CancellationToken ct)
     {
         var cat = await _db.Categories.FirstOrDefaultAsync(x => x.Id == c.Id, ct)
-                  ?? throw new KeyNotFoundException("Category not found");
+                  ?? throw new KeyNotFoundException("Khong tim thay danh muc");
         cat.Deactivate();
         await _db.SaveChangesAsync(ct);
         return CategoryMapper.ToDto(cat);

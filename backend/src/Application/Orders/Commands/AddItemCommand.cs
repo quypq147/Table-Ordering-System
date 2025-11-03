@@ -8,7 +8,7 @@ using Domain.ValueObjects;
 
 namespace Application.Orders.Commands;
 
-public record AddItemCommand(string OrderId, string MenuItemId, string Name, decimal Price, string Currency, int Quantity) : ICommand<OrderDto>;
+public record AddItemCommand(Guid OrderId, Guid MenuItemId, string Name, decimal Price, string Currency, int Quantity) : ICommand<OrderDto>;
 
 public class AddItemHandler : ICommandHandler<AddItemCommand, OrderDto>
 {

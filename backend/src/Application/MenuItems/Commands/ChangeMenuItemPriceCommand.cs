@@ -8,6 +8,6 @@ using System.Threading.Tasks;
 
 namespace Application.MenuItems.Commands
 {
-    public sealed record ChangeMenuItemPriceCommand(string Id, decimal Price, string Currency) : ICommand<MenuItemDto>;
+    public sealed record ChangeMenuItemPriceCommand(Guid Id, decimal Price, string Currency) : ICommand<MenuItemDto>;
 }
 

@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Application.Orders.Commands
 {
-    public sealed record CancelOrderCommand(string OrderId) : ICommand<OrderDto>;
+    public sealed record CancelOrderCommand(Guid OrderId) : ICommand<OrderDto>;
 }

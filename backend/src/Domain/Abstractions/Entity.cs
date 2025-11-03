@@ -5,8 +5,12 @@ namespace Domain.Abstractions;
 public abstract class Entity<TId>
 {
     public TId Id { get; protected set; }
+    public Guid Id1 { get; }
 
-    protected Entity() { }
+    protected Entity(Guid id)
+    {
+        Id1 = id;
+    }
 
     protected Entity(TId id) => Id = id;
 

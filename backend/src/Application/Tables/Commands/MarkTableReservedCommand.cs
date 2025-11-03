@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Application.Tables.Commands
 {
-    public sealed record MarkTableReservedCommand(string Id) : ICommand<TableDto>;
+    public sealed record MarkTableReservedCommand(Guid Id) : ICommand<TableDto>;
 }

@@ -1,11 +1,7 @@
-﻿using Domain.Enums;
+﻿// Application/Dtos/TableDto.cs
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Domain.Enums;
 
-namespace Application.Dtos
-{
-    public record TableDto(string Id, string Code, int Capacity, TableStatus Status);
-}
+namespace Application.Dtos;
+public sealed record TableDto(Guid Id, string Code, int Seats, TableStatus Status);
+

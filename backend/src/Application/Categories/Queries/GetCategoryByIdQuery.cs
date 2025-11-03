@@ -4,5 +4,5 @@ using Application.Dtos;
 
 namespace Application.Categories.Queries;
 
-public sealed record GetCategoryByIdQuery(string Id) : IQuery<CategoryDto?>;
+public sealed record GetCategoryByIdQuery(Guid Id) : IQuery<CategoryDto?>;
 

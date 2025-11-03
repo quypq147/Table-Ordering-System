@@ -6,4 +6,4 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Categories.Commands;
 
-public sealed record RenameCategoryCommand(string Id, string NewName) : ICommand<CategoryDto>;
+public sealed record RenameCategoryCommand(Guid Id, string NewName) : ICommand<CategoryDto>;

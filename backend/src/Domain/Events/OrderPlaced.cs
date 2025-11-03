@@ -2,4 +2,4 @@ using Domain.Abstractions;
 
 namespace Domain.Events;
 
-public record OrderPlaced(string OrderId) : IDomainEvent;
+public record OrderPlaced(Guid OrderId) : IDomainEvent;

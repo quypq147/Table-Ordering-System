@@ -1,9 +1,13 @@
+// Application/Dtos/OrderDtos.cs
+using System;
 using System.Collections.Generic;
+using Domain.Enums;
 
 namespace Application.Dtos;
 
-public record OrderItemDto(
-    string MenuItemId,
+public sealed record OrderItemDto(
+    int OrderItemId,
+    Guid MenuItemId,
     string Name,
     decimal UnitPrice,
     string Currency,
@@ -11,11 +15,12 @@ public record OrderItemDto(
     decimal LineTotal
 );
 
-public record OrderDto(
-    string Id,
-    string TableId,
-    string Status,
+public sealed record OrderDto(
+    Guid Id,
+    Guid TableId,
+    OrderStatus Status,
     IReadOnlyList<OrderItemDto> Items,
     decimal Total,
     string Currency
 );
+

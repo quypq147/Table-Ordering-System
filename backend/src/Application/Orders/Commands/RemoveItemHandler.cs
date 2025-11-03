@@ -19,7 +19,7 @@ public sealed class RemoveItemHandler : ICommandHandler<RemoveItemCommand, Order
     public async Task<OrderDto> Handle(RemoveItemCommand cmd, CancellationToken ct)
     {
         var order = await _orders.GetByIdAsync(cmd.OrderId)
-                    ?? throw new KeyNotFoundException("Order not found");
+                    ?? throw new KeyNotFoundException("Don khong tim thay");
 
         // TODO: Domain nên có phương thức rõ ràng, ví dụ:
         // order.RemoveItemByMenuItemId(cmd.MenuItemId);

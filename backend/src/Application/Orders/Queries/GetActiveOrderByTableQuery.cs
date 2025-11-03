@@ -1,3 +1,3 @@
 ﻿using Application.Abstractions;
 using Application.Dtos;
-public sealed record GetActiveOrderByTableQuery(string TableId) : IQuery<OrderDto?>;
+public sealed record GetActiveOrderByTableQuery(Guid TableId) : IQuery<OrderDto?>;

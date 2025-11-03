@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Application.MenuItems.Commands
 {
-    public sealed record DeactivateMenuItemCommand(string Id) : ICommand<MenuItemDto>;
+    public sealed record DeactivateMenuItemCommand(Guid Id) : ICommand<MenuItemDto>;
 }

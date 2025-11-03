@@ -1,28 +1,59 @@
-﻿@using AdminWeb.Dtos
-@model CreateMenuItemRequest
+﻿@model AdminWeb.Dtos.CreateMenuItemRequest
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using AdminWeb.Dtos
 @{
     ViewData["Title"] = "Thêm món";
+    var categories = (SelectList)ViewBag.Categories;
+    var currencies = (SelectList)ViewBag.Currencies;
 }
-<h1>Thêm món</h1>
+
+<h2>Thêm món</h2>
+
 <form method="post">
     @Html.AntiForgeryToken()
-    <div>
-        <label>Tên</label>
-        <input asp-for="Name" />
-        <span asp-validation-for="Name"></span>
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label class="form-label">Danh mục</label>
+        <select asp-for="CategoryId" class="form-select" asp-items="categories">
+            <option value="">-- Chọn danh mục --</option>
+        </select>
+        <span asp-validation-for="CategoryId" class="text-danger"></span>
     </div>
-    <div>
-        <label>SKU</label>
-        <input asp-for="Sku" />
+
+    <div class="mb-3">
+        <label class="form-label">Tên món</label>
+        <input asp-for="Name" class="form-control" placeholder="Ví dụ: Phở bò đặc biệt" />
+        <span asp-validation-for="Name" class="text-danger"></span>
     </div>
-    <div>
-        <label>CategoryId</label>
-        <input asp-for="CategoryId" />
+
+    <div class="mb-3">
+        <label class="form-label">SKU</label>
+        <input asp-for="Sku" class="form-control" placeholder="Ví dụ: PHO-BO-DB" />
+        <span asp-validation-for="Sku" class="text-danger"></span>
     </div>
-    <div>
-        <label>Giá</label>
-        <input asp-for="Price" type="number" step="0.01" />
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Giá</label>
+            <input asp-for="Price" class="form-control" type="number" step="0.01" min="0.01" placeholder="Ví dụ: 45000" />
+            <span asp-validation-for="Price" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Tiền tệ</label>
+            <select asp-for="Currency" class="form-select" asp-items="currencies"></select>
+            <span asp-validation-for="Currency" class="text-danger"></span>
+        </div>
     </div>
-    <button type="submit">Lưu</button>
+
+    <div class="mt-3">
+        <button class="btn btn-primary" type="submit">Lưu</button>
+        <a class="btn btn-secondary" asp-action="Index">Huỷ</a>
+    </div>
 </form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
 

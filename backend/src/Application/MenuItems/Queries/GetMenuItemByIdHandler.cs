@@ -29,8 +29,10 @@ public sealed class GetMenuItemByIdHandler
         // Fallback map thẳng (điều chỉnh fields theo MenuItemDto của bạn):
         return new MenuItemDto(
             Id: m.Id,
+            CategoryId: m.CategoryId,         // Added missing argument for CategoryId
+            Sku: m.Sku,
             Name: m.Name,
-            Price: m.Price.Amount,     // giả sử Price là ValueObject Money(Amount, Currency)
+            Price: m.Price.Amount,
             Currency: m.Price.Currency,
             IsActive: m.IsActive
         );

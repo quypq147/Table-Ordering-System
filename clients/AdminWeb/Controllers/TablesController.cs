@@ -1,40 +1,40 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using AdminWeb.Dtos;
+﻿using AdminWeb.Dtos;
 using AdminWeb.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AdminWeb.Controllers
 {
-    public class TablesController(IBackendApiClient api) : Controller
+    public class TablesController : Controller
     {
-        private readonly IBackendApiClient _api = api;
+        private readonly IBackendApiClient _api;
+        public TablesController(IBackendApiClient api) => _api = api;
 
         // LIST
         public async Task<IActionResult> Index()
-        {
-            var tables = await _api.GetTablesAsync();
-            return View(tables);
-        }
+            => View(await _api.GetTablesAsync());
 
         // CREATE (GET)
         public IActionResult Create()
-        {
-            return View(new CreateTableRequest("", "", 4, true));
-        }
+            => View(new CreateTableRequest("", 4, 1)); // mặc định capacity=4, status=1 (Active)
 
         // CREATE (POST)
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateTableRequest req)
         {
+            if (!ModelState.IsValid) return View(req);
+
             var res = await _api.CreateTableAsync(req);
             if (!res.IsSuccessStatusCode)
             {
-                TempData["Error"] = "Co loi khi tao ban";
+                TempData["Error"] = $"Create failed: {(int)res.StatusCode}";
                 return View(req);
             }
+
             TempData["Success"] = "Created";
             return RedirectToAction(nameof(Index));
         }
     }
 }
+
 
 

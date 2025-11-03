@@ -3,4 +3,4 @@ using Application.Dtos;
 
 namespace Application.Categories.Commands;
 
-public sealed record ChangeCategoryDescriptionCommand(string Id, string? Description) : ICommand<CategoryDto>;
+public sealed record ChangeCategoryDescriptionCommand(Guid Id, string? Description) : ICommand<CategoryDto>;

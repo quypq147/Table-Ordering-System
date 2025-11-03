@@ -6,4 +6,4 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Categories.Commands;
 
-public sealed record ChangeCategorySortOrderCommand(string Id, int SortOrder) : ICommand<CategoryDto>;
+public sealed record ChangeCategorySortOrderCommand(Guid Id, int SortOrder) : ICommand<CategoryDto>;

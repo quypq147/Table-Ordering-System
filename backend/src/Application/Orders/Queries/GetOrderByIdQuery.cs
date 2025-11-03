@@ -2,4 +2,4 @@
 using Application.Dtos;
 
 namespace Application.Orders.Queries;
-public sealed record GetOrderByIdQuery(string OrderId) : IQuery<OrderDto?>;
+public sealed record GetOrderByIdQuery(Guid OrderId) : IQuery<OrderDto?>;

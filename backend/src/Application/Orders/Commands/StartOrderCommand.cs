@@ -6,7 +6,7 @@ using Domain.Repositories;
 
 namespace Application.Orders.Commands;
 
-public record StartOrderCommand(string OrderId, string TableId) : ICommand<OrderDto>;
+public record StartOrderCommand(Guid OrderId, Guid TableId) : ICommand<OrderDto>;
 
 public class StartOrderHandler : ICommandHandler<StartOrderCommand, OrderDto>
 {

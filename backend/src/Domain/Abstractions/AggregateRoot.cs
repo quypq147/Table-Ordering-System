@@ -3,14 +3,10 @@ using System.Collections.Generic;
 
 namespace Domain.Abstractions;
 
-public abstract class AggregateRoot<TId> : Entity<TId>
+public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id)
 {
-    private readonly List<IDomainEvent> _domainEvents = new();
-
-    protected AggregateRoot() { }
-
-    protected AggregateRoot(TId id) : base(id) { }
-
+    private readonly List<IDomainEvent> _domainEvents = [];
+    
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     protected void Raise(IDomainEvent @event) => _domainEvents.Add(@event);

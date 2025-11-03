@@ -1,26 +1,38 @@
-@model AdminWeb.Dtos.CreateTableRequest
+﻿@model AdminWeb.Dtos.CreateTableRequest
 @{
-    ViewData["Title"] = "Create Table";
+    ViewData["Title"] = "Tạo bàn";
 }
+
 <section class="card">
-    <div class="card-head"><h3>New Table</h3></div>
+    <div class="card-head"><h3>Bàn mới</h3></div>
     <form method="post" class="form">
         @Html.AntiForgeryToken()
         <div class="grid" style="grid-template-columns:repeat(2,1fr);gap:12px">
-            <div><label>Code</label><input class="input" asp-for="Code" /></div>
-            <div><label>Name</label><input class="input" asp-for="Name" /></div>
-            <div><label>Seats</label><input class="input" asp-for="SeatCount" type="number" min="1" /></div>
             <div>
-                <label>Status</label>
-                <select class="input" asp-for="IsActive">
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
+                <label>Mã bàn</label>
+                <input class="input" asp-for="Code" />
+                <span asp-validation-for="Code" class="text-danger"></span>
+            </div>
+            <div>
+                <label>Số ghế</label>
+                <!-- >>> đổi Capacity -> Seats <<< -->
+                <input class="input" asp-for="Seats" type="number" min="1" />
+                <span asp-validation-for="Seats" class="text-danger"></span>
+            </div>
+            <div>
+                <label>Trạng thái</label>
+                <select class="input" asp-for="Status">
+                    <option value="1">Đang hoạt động</option>
+                    <option value="0">Không hoạt động</option>
                 </select>
             </div>
         </div>
         <div style="margin-top:14px">
-            <button class="ghost" type="submit">Save</button>
-            <a class="ghost" asp-action="Index">Cancel</a>
+            <button class="ghost" type="submit">Lưu</button>
+            <a class="ghost" asp-action="Index">Hủy tạo bàn</a>
         </div>
     </form>
 </section>
+
+
+

@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Application.MenuItems.Commands
 {
-    public sealed record ActivateMenuItemCommand(string Id) : ICommand<MenuItemDto>;
+    public sealed record ActivateMenuItemCommand(Guid Id) : ICommand<MenuItemDto>;
 }

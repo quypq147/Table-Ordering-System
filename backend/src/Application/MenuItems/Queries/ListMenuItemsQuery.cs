@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 
 namespace Application.MenuItems.Queries
 {
-    public sealed record ListMenuItemsQuery(string? Search = null, bool OnlyActive = true, int Page = 1, int PageSize = 20)
-    : IQuery<IReadOnlyList<MenuItemDto>>;
+    public sealed record ListMenuItemsQuery : IQuery<IReadOnlyList<MenuItemDto>>
+    {
+        public string? Search { get; init; }
+        public Guid? CategoryId { get; init; }
+        public bool OnlyActive { get; init; } = true;
+        public int Page { get; init; } = 1;
+        public int PageSize { get; init; } = 20;
+    }
 }

@@ -1,32 +1,57 @@
+﻿using System;
 using Domain.Abstractions;
 using Domain.ValueObjects;
 
 namespace Domain.Entities;
 
-public class MenuItem : Entity<string>
+public class MenuItem : Entity<Guid>
 {
-    public string Name { get; private set; } = default!;
-    public Money Price { get; private set; }
-    public bool IsActive { get; private set; } = true;
+    public int Number { get; private set; }
 
-    public string CategoryId { get; private set; } = default!;
+    public string Sku { get; private set; } = null!;
+    public string Name { get; private set; } = null!;
+
+    public Money Price { get; private set; }
+
+    public bool IsActive { get; private set; }
+
+    private string? Description { get; set; }
+    private string? ImageUrl { get; set; }
+    private string? Images { get; set; }
+
+    public Guid CategoryId { get; private set; }
     public Category? Category { get; private set; }
 
-    private MenuItem() { }
+    // For EF Core materialization
+    private MenuItem() : base(default!) { }
 
-    public MenuItem(string id, string name, Money price) : base(id)
+    public MenuItem(Guid id, Guid categoryId, string name, string sku, Money price) : base(id)
     {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(sku)) throw new ArgumentNullException(nameof(sku));
+
+        CategoryId = categoryId;
         Rename(name);
+        SetSku(sku);
         ChangePrice(price);
+        IsActive = true;
     }
 
     public void Deactivate() => IsActive = false;
     public void Activate() => IsActive = true;
 
     public void Rename(string name)
-    {
-        Name = string.IsNullOrWhiteSpace(name) ? throw new ArgumentNullException(nameof(name)) : name.Trim();
-    }
+        => Name = string.IsNullOrWhiteSpace(name)
+            ? throw new ArgumentNullException(nameof(name))
+            : name.Trim();
 
     public void ChangePrice(Money price) => Price = price;
+
+    // SKU is required for creation and immutable afterwards.
+    private void SetSku(string sku)
+    {
+        Sku = string.IsNullOrWhiteSpace(sku)
+            ? throw new ArgumentNullException(nameof(sku))
+            : sku.Trim().ToUpperInvariant();
+    }
 }

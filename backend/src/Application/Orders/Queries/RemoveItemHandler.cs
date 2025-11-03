@@ -18,7 +18,11 @@ public sealed class RemoveItemHandler : ICommandHandler<RemoveItemCommand, Order
                                     .FirstOrDefaultAsync(o => o.Id == cmd.OrderId, ct)
                     ?? throw new KeyNotFoundException("Không tìm thấy đơn");
 
-        order.RemoveItem(cmd.MenuItemId); // chỉ hợp lệ khi Draft :contentReference[oaicite:4]{index=4}
+        // Find the OrderItem's int Id by MenuItemId
+        var orderItem = order.Items.FirstOrDefault(i => i.MenuItemId == cmd.MenuItemId)
+            ?? throw new KeyNotFoundException("Không tìm thấy món trong đơn");
+
+        order.RemoveItem(orderItem.Id); // Pass int OrderItem.Id instead of Guid MenuItemId
         await _db.SaveChangesAsync(ct);
         return OrderMapper.ToDto(order);
     }
