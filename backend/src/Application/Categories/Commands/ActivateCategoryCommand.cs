@@ -3,4 +3,4 @@ using Application.Dtos;
 
 namespace Application.Categories.Commands;
 
-public sealed record ActivateCategoryCommand(string Id) : ICommand<CategoryDto>;
+public sealed record ActivateCategoryCommand(Guid Id) : ICommand<CategoryDto>;

@@ -6,7 +6,10 @@ namespace AdminWeb.Services
     {
         // MENU
         Task<List<MenuItemDto>> GetMenuAsync(CancellationToken ct = default);
+        Task<List<MenuItemDto>> GetMenuAsync(string? search, Guid? categoryId, bool? onlyActive, CancellationToken ct = default);
         Task<HttpResponseMessage> CreateMenuItemAsync(CreateMenuItemRequest req, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> ActivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> DeactivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
 
         // ORDERS
         Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
@@ -15,10 +18,18 @@ namespace AdminWeb.Services
 
         // KDS
         Task<List<KitchenTicketDto>> GetTicketsAsync(Guid stationId, CancellationToken cancellationToken = default);
+
         // TABLES
         Task<List<DiningTableDto>> GetTablesAsync(CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> CreateTableAsync(CreateTableRequest req, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> UpdateTableAsync(Guid id, UpdateTableRequest req, CancellationToken cancellationToken = default);
 
+        // ===== Categories =====
+        Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+        Task<CategoryDto?> GetCategoryAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

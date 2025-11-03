@@ -17,7 +17,7 @@ public sealed class ChangeItemQuantityHandler
     public async Task<OrderDto> Handle(ChangeItemQuantityCommand cmd, CancellationToken ct)
     {
         var order = await _orders.GetByIdAsync(cmd.OrderId)
-                    ?? throw new KeyNotFoundException("Order not found");
+                    ?? throw new KeyNotFoundException("Khong tim thay don");
         order.ChangeItemQuantity(cmd.OrderItemId, cmd.NewQuantity); // domain method
         _orders.Update(order);
         await _uow.SaveChangesAsync(ct);

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Application.Dtos;
 
 public sealed record CategoryDto(
-    string Id,
+    Guid Id,
     string Name,
     string? Description,
     bool IsActive,

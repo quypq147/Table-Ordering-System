@@ -4,6 +4,6 @@ using Application.Dtos;
 
 namespace Application.Orders.Commands;
 
-public sealed record ChangeItemQuantityCommand(string OrderId, int OrderItemId, int NewQuantity)
+public sealed record ChangeItemQuantityCommand(Guid OrderId, int OrderItemId, int NewQuantity)
     : ICommand<OrderDto>;
 

@@ -8,7 +8,7 @@ using Domain.ValueObjects;
 namespace Application.Orders.Commands;
 
 public sealed record PayOrderCommand(
-    string OrderId,
+    Guid OrderId,
     decimal Amount,
     string Currency,
     string Method = "CASH" // <— thêm method, có default

@@ -7,7 +7,7 @@ using Domain.Repositories;
 
 namespace Application.Orders.Commands;
 
-public record SubmitOrderCommand(string OrderId) : ICommand<OrderDto>;
+public record SubmitOrderCommand(Guid OrderId) : ICommand<OrderDto>;
 
 public class SubmitOrderHandler : ICommandHandler<SubmitOrderCommand, OrderDto>
 {

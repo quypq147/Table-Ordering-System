@@ -2,20 +2,25 @@
 
 namespace Domain.Entities;
 
-public class Category : Entity<string>
+public class Category : Entity<Guid>
 {
+    public int Number { get; private set; }                // auto-increment (DB sequence)
+    public string Code { get; private set; } = default!;
     public string Name { get; private set; } = default!;
     public string? Description { get; private set; }
     public bool IsActive { get; private set; } = true;
     public int SortOrder { get; private set; } = 0;
+    private string? IconUrl { get; set; } = default!;
 
-    private Category() { } // EF
+    // EF
 
-    public Category(string id, string name, string? description = null, int sortOrder = 0) : base(id)
+    public Category(Guid id, string code, string name, string? description, int sortOrder = 0) : base(id)
     {
+        Code = string.IsNullOrWhiteSpace(code) ? throw new ArgumentNullException(nameof(code)) : code.Trim();
         Rename(name);
         ChangeDescription(description);
         ChangeSortOrder(sortOrder);
+        IsActive = true;
     }
 
     public void Rename(string name)

@@ -16,8 +16,26 @@ namespace AdminWeb.Services
         public async Task<List<MenuItemDto>> GetMenuAsync(CancellationToken cancellationToken = default)
             => await GetOrDefaultAsync<List<MenuItemDto>>($"/api/menuitems", cancellationToken).ConfigureAwait(false) ?? [];
 
+        // New: Get menu with filter
+        public async Task<List<MenuItemDto>> GetMenuAsync(string? search, Guid? categoryId, bool? onlyActive, CancellationToken cancellationToken = default)
+        {
+            var q = new List<string>();
+            if (!string.IsNullOrWhiteSpace(search)) q.Add($"search={Uri.EscapeDataString(search)}");
+            if (categoryId is Guid c && c != Guid.Empty) q.Add($"categoryId={c}");
+            if (onlyActive is bool oa) q.Add($"onlyActive={(oa ? "true" : "false")}");
+            var url = "/api/menuitems" + (q.Count > 0 ? "?" + string.Join("&", q) : "");
+            return await GetOrDefaultAsync<List<MenuItemDto>>(url, cancellationToken).ConfigureAwait(false) ?? [];
+        }
+
         public Task<HttpResponseMessage> CreateMenuItemAsync(CreateMenuItemRequest req, CancellationToken cancellationToken = default)
             => _http.PostAsJsonAsync("/api/menuitems", req, JsonOptions, cancellationToken);
+
+        // New: Activate/Deactivate
+        public Task<HttpResponseMessage> ActivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.PostAsync($"/api/menuitems/{id}/activate", content: null, cancellationToken);
+
+        public Task<HttpResponseMessage> DeactivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.PostAsync($"/api/menuitems/{id}/deactivate", content: null, cancellationToken);
 
         // ORDERS
         public async Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
@@ -115,6 +133,47 @@ namespace AdminWeb.Services
 
         public Task<HttpResponseMessage> UpdateTableAsync(Guid id, UpdateTableRequest req, CancellationToken cancellationToken = default)
             => _http.PutAsJsonAsync($"/api/tables/{id}", req, JsonOptions, cancellationToken);
+
+        // ===== CATEGORIES =====
+        public async Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/categories?search={Uri.EscapeDataString(search ?? string.Empty)}&page={page}&pageSize={pageSize}";
+            if (onlyActive is not null) url += $"&onlyActive={(onlyActive.Value ? "true" : "false")}";
+
+
+            using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
+
+            var list = JsonSerializer.Deserialize<List<CategoryDto>>(text, JsonOptions) ?? [];
+            return list;
+        }
+
+        public async Task<CategoryDto?> GetCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/categories/{id}";
+            using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            if (resp.StatusCode == HttpStatusCode.NotFound) return null;
+
+            var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
+
+            return JsonSerializer.Deserialize<CategoryDto>(text, JsonOptions);
+        }
+
+        public Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default)
+            => _http.PostAsJsonAsync("/api/categories", req, JsonOptions, cancellationToken);
+
+        public Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default)
+            => _http.PostAsJsonAsync($"/api/categories/{id}/rename", req, JsonOptions, cancellationToken);
+
+        public Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.PostAsync($"/api/categories/{id}/activate", content: null, cancellationToken);
+
+        public Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.PostAsync($"/api/categories/{id}/deactivate", content: null, cancellationToken);
 
 
 

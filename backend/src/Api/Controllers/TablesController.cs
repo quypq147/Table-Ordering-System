@@ -27,7 +27,7 @@ public class TablesController : ControllerBase
         return Ok(result);
     }
     [HttpGet("{id}")]
-    public Task<TableDto?> GetById(string id, CancellationToken ct)
+    public Task<TableDto?> GetById(Guid id, CancellationToken ct)
     => _sender.Send(new GetTableByIdQuery(id), ct);
 
     [HttpGet("by-status/{status}")]
@@ -39,15 +39,15 @@ public class TablesController : ControllerBase
         => _sender.Send(cmd, ct);
 
     [HttpPost("{id}/reserve")]
-    public Task<TableDto> Reserve(string id, CancellationToken ct)
+    public Task<TableDto> Reserve(Guid id, CancellationToken ct)
         => _sender.Send(new MarkTableReservedCommand(id), ct);
 
     [HttpPost("{id}/occupy")]
-    public Task<TableDto> Occupy(string id, CancellationToken ct)
+    public Task<TableDto> Occupy(Guid id, CancellationToken ct)
         => _sender.Send(new MarkTableOccupiedCommand(id), ct);
 
     [HttpPost("{id}/available")]
-    public Task<TableDto> Available(string id, CancellationToken ct)
+    public Task<TableDto> Available(Guid id, CancellationToken ct)
         => _sender.Send(new MarkTableAvailableCommand(id), ct);
 
 }

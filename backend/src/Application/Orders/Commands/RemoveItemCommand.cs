@@ -4,5 +4,5 @@ using Application.Dtos;
 
 namespace Application.Orders.Commands;
 
-public sealed record RemoveItemCommand(string OrderId, string MenuItemId) : ICommand<OrderDto>;
+public sealed record RemoveItemCommand(Guid OrderId, Guid MenuItemId) : ICommand<OrderDto>;
 

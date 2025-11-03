@@ -1,0 +1,65 @@
+﻿@model List<AdminWeb.Dtos.CategoryDto>
+@{
+    ViewData["Title"] = "Danh mục";
+    var search = (string?)ViewBag.Search ?? "";
+    bool? onlyActive = (bool?)ViewBag.OnlyActive;
+}
+
+<h2>Danh mục</h2>
+
+<form method="get" class="mb-3" style="display:flex;gap:8px;align-items:center">
+    <input type="text" name="search" value="@search" placeholder="Tìm theo tên..." class="form-control" style="max-width:260px" />
+    <label style="display:flex;align-items:center;gap:6px">
+        <input type="checkbox" name="onlyActive" value="true" @(onlyActive == true ? "checked" : "") />
+        Chỉ hiển thị đang hoạt động
+    </label>
+    <button class="btn btn-primary" type="submit">Lọc</button>
+    <a class="btn btn-secondary" asp-action="Index">Bỏ lọc</a>
+    <a class="btn btn-success" asp-action="Create">+ Thêm danh mục</a>
+</form>
+
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger">@err</div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Tên</th>
+            <th>Thứ tự</th>
+            <th>Trạng thái</th>
+            <th style="width:260px"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Name</td>
+                <td>@c.DisplayOrder</td>
+                <td>
+                    @if (c.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </td>
+                <td>
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@c.Id">Sửa</a>
+
+                    <form method="post" asp-action="@(c.IsActive ? "Deactivate" : "Activate")" asp-route-id="@c.Id" style="display:inline">
+                        @Html.AntiForgeryToken()
+                        <button class="btn btn-sm @(c.IsActive ? "btn-outline-warning" : "btn-outline-success")" type="submit">
+                            @(c.IsActive ? "Vô hiệu hoá" : "Kích hoạt")
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+

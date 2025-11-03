@@ -5,5 +5,5 @@ namespace Domain.Repositories;
 
 public interface IMenuItemRepository
 {
-    Task<MenuItem?> GetByIdAsync(string id);
+    Task<MenuItem?> GetByIdAsync(Guid id);
 }

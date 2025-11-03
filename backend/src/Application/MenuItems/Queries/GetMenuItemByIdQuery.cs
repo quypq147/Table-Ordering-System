@@ -3,4 +3,4 @@ using Application.Dtos;          // MenuItemDto
 
 namespace Application.MenuItems.Queries;
 
-public sealed record GetMenuItemByIdQuery(string Id) : IQuery<MenuItemDto?>;
+public sealed record GetMenuItemByIdQuery(Guid Id) : IQuery<MenuItemDto?>;

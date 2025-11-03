@@ -5,6 +5,7 @@ using Application.Dtos;                        // MenuItemDto
 using Application.MenuItems.Commands;          // CreateMenuItemCommand, ChangeMenuItemPriceCommand, DeactivateMenuItemCommand
 using Application.MenuItems.Queries;           // ListMenuItemsQuery
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace Api.Controllers;
 
@@ -15,49 +16,57 @@ public class MenuItemsController : ControllerBase
     private readonly ISender _sender;
     public MenuItemsController(ISender sender) => _sender = sender;
 
-    // GET /api/menuitems?search=tra&page=1&pageSize=20&onlyActive=true
-    [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<MenuItemDto>>> List(
-        [FromQuery] string? search,
-        [FromQuery] bool onlyActive = true,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
-    {
-        var result = await _sender.Send(new ListMenuItemsQuery(search, onlyActive, page, pageSize));
-        return Ok(result);
-    }
-
-    public sealed record CreateDto(string Id, string Name, decimal Price, string Currency);
+    public sealed record CreateDto(
+        [Required] Guid CategoryId,
+        [Required, StringLength(200, MinimumLength = 1)] string Name,
+        [Required, StringLength(64, MinimumLength = 1)] string Sku, // NEW
+        [Range(0.01, 1_000_000)] decimal Price,
+        [Required, StringLength(3, MinimumLength = 3)] string Currency
+    );
 
     // POST /api/menuitems
     [HttpPost]
-    public async Task<ActionResult<MenuItemDto>> Create([FromBody] CreateDto body)
+    public async Task<ActionResult<MenuItemDto>> Create([FromBody] CreateDto body, CancellationToken ct)
     {
-        var dto = await _sender.Send(new CreateMenuItemCommand(body.Id, body.Name, body.Price, body.Currency));
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+        var cmd = new CreateMenuItemCommand(
+            body.CategoryId,
+            body.Name.Trim(),
+            body.Sku.Trim(),
+            body.Price,
+            body.Currency.Trim().ToUpperInvariant()
+        );
+
+        var dto = await _sender.Send(cmd, ct);
         return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
     }
 
     // GET /api/menuitems/{id}
-    [HttpGet("{id}")]
-    public async Task<ActionResult<MenuItemDto>> GetById(string id)
+    [HttpGet("{id:guid}")]
+    public Task<MenuItemDto?> GetById(Guid id, CancellationToken ct)
+        => _sender.Send(new GetMenuItemByIdQuery(id), ct);
+
+    // GET /api/menuitems?search=tra&page=1&pageSize=20&onlyActive=true
+    [HttpGet]
+    public async Task<List<MenuItemDto>> List(
+        [FromQuery] string? search,
+        [FromQuery] Guid? categoryId,
+        CancellationToken ct,
+        [FromQuery] bool onlyActive = true,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var dto = await _sender.Send(new GetMenuItemByIdQuery(id));
-        return dto is null ? NotFound() : Ok(dto);
+        var result = await _sender.Send(new ListMenuItemsQuery
+        {
+            Search = search,
+            CategoryId = categoryId,
+            OnlyActive = onlyActive,
+            Page = page,
+            PageSize = pageSize
+        }, ct);
+
+        return result.ToList();
     }
-
-    public sealed record ChangePriceDto(decimal Price, string Currency);
-
-    // PATCH /api/menuitems/{id}/price
-    [HttpPatch("{id}/price")]
-    public async Task<ActionResult<MenuItemDto>> ChangePrice(string id, [FromBody] ChangePriceDto body)
-    {
-        var dto = await _sender.Send(new ChangeMenuItemPriceCommand(id, body.Price, body.Currency));
-        return Ok(dto);
-    }
-
-    // POST /api/menuitems/{id}/deactivate
-    [HttpPost("{id}/deactivate")]
-    public async Task<ActionResult<MenuItemDto>> Deactivate(string id)
-        => Ok(await _sender.Send(new DeactivateMenuItemCommand(id)));
 }
 

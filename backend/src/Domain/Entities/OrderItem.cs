@@ -7,22 +7,24 @@ namespace Domain.Entities;
 /// </summary>
 public class OrderItem
 {
-    public int Id { get; private set; }              // EF key
-    public string MenuItemId { get; private set; } = default!;
+    public int Id { get; private set; }                      // EF key (int)
+    public Guid MenuItemId { get; private set; }
     public string NameSnapshot { get; private set; } = default!;
     public Money UnitPrice { get; private set; }
     public Quantity Quantity { get; private set; }
+    public string? Note { get; private set; }
 
     private OrderItem() { } // EF
 
-    public OrderItem(string menuItemId, string nameSnapshot, Money unitPrice, Quantity quantity)
+    public OrderItem(Guid menuItemId, string nameSnapshot, Money unitPrice, Quantity quantity)
     {
-        if (string.IsNullOrWhiteSpace(menuItemId)) throw new ArgumentNullException(nameof(menuItemId));
+        if (menuItemId == Guid.Empty) throw new ArgumentNullException(nameof(menuItemId));
         if (string.IsNullOrWhiteSpace(nameSnapshot)) throw new ArgumentNullException(nameof(nameSnapshot));
-        MenuItemId = menuItemId.Trim();
+        MenuItemId = menuItemId;
         NameSnapshot = nameSnapshot.Trim();
         UnitPrice = unitPrice;
         Quantity = quantity;
+        Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
     }
 
     public Money LineTotal => new Money(UnitPrice.Amount * Quantity.Value, UnitPrice.Currency);
@@ -31,6 +33,10 @@ public class OrderItem
     {
         if (q.Value <= 0) throw new ArgumentOutOfRangeException(nameof(q.Value));
         Quantity = q;
+    }
+    public void ChangeNote(string? note)
+    {
+        Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
     }
 }
 

@@ -12,14 +12,17 @@ namespace Domain.Entities;
 /// Aggregate Root: Order
 /// EF-friendly: backing field cho Items, ctor không tham số, setter private.
 /// </summary>
-public class Order : AggregateRoot<string>
+public class Order : AggregateRoot<Guid>
 {
     // Backing field cho EF
     private readonly List<OrderItem> _items = new();
+    public int Number { get; private set; }               
+    public string Code { get; private set; } = default!;
 
     // Scalar
-    public string TableId { get; private set; } = default!;
-    public OrderStatus Status { get; private set; } = OrderStatus.Draft;
+    public Guid TableId { get; private set; } = default!;
+    public TableStatus Status { get; private set; } = TableStatus.Available;
+    public OrderStatus OrderStatus { get; private set; } = OrderStatus.Draft;
 
     // Timeline (UTC)
     public DateTime CreatedAtUtc { get; private set; } = DateTime.UtcNow;
@@ -33,25 +36,24 @@ public class Order : AggregateRoot<string>
     // Navigation (EF sẽ dùng backing field)
     public IReadOnlyCollection<OrderItem> Items => _items;
 
-    private Order() { } // EF
 
-    private Order(string id, string tableId) : base(id)
+    private Order(Guid id, Guid tableId) : base(id)
     {
-        if (string.IsNullOrWhiteSpace(tableId)) throw new ArgumentNullException(nameof(tableId));
-        TableId = tableId.Trim();
+        if (tableId == Guid.Empty) throw new ArgumentNullException(nameof(tableId));
+        TableId = tableId;
     }
 
-    public static Order Start(string id, string tableId)
+    public static Order Start(Guid id, Guid tableId)
     {
         var order = new Order(id, tableId);
-        order.Raise(new OrderPlaced(id));
+        order.Raise(new OrderPlaced(id)); // nếu event đang nhận string, tạm ToString(); tốt hơn là đổi event sang Guid
         return order;
     }
 
-    public void AddItem(string menuItemId, string menuItemName, Money unitPrice, Quantity quantity)
+    public void AddItem(Guid menuItemId, string menuItemName, Money unitPrice, Quantity quantity)
     {
         EnsureDraft();
-        if (string.IsNullOrWhiteSpace(menuItemId)) throw new ArgumentNullException(nameof(menuItemId));
+        if (menuItemId == Guid.Empty) throw new ArgumentNullException(nameof(menuItemId));
         if (string.IsNullOrWhiteSpace(menuItemName)) throw new ArgumentNullException(nameof(menuItemName));
 
         var existing = _items.FirstOrDefault(i => i.MenuItemId == menuItemId &&
@@ -59,7 +61,7 @@ public class Order : AggregateRoot<string>
 
         if (existing is null)
         {
-            _items.Add(new OrderItem(menuItemId.Trim(), menuItemName.Trim(), unitPrice, quantity));
+            _items.Add(new OrderItem(menuItemId, menuItemName.Trim(), unitPrice, quantity));
         }
         else
         {
@@ -67,17 +69,17 @@ public class Order : AggregateRoot<string>
         }
     }
 
-    public void RemoveItem(string menuItemId)
+    public void RemoveItem(int orderItemId)
     {
         EnsureDraft();
-        _items.RemoveAll(i => i.MenuItemId == menuItemId);
+        _items.RemoveAll(i => i.Id == orderItemId);
     }
 
     public void Submit()
     {
         EnsureDraft();
-        if (_items.Count == 0) throw new InvalidOperationException("Không thể xác nhận đơn nếu đơn không có món.");
-        Status = OrderStatus.Submitted;
+        if (_items.Count == 0) throw new InvalidOperationException("Không thể xác nhận đơn trống.");
+        OrderStatus = OrderStatus.Submitted;
         SubmittedAtUtc = DateTime.UtcNow;
         Raise(new OrderSubmitted(Id));
     }
@@ -85,37 +87,37 @@ public class Order : AggregateRoot<string>
     public void MarkInProgress()
     {
         EnsureState(OrderStatus.Submitted);
-        Status = OrderStatus.InProgress;
+        OrderStatus = OrderStatus.InProgress;
         InProgressAtUtc = DateTime.UtcNow;
     }
 
     public void MarkReady()
     {
         EnsureState(OrderStatus.InProgress);
-        Status = OrderStatus.Ready;
+        OrderStatus = OrderStatus.Ready;
         ReadyAtUtc = DateTime.UtcNow;
     }
 
     public void MarkServed()
     {
         EnsureState(OrderStatus.Ready);
-        Status = OrderStatus.Served;
+        OrderStatus = OrderStatus.Served;
         ServedAtUtc = DateTime.UtcNow;
     }
 
     public void Cancel()
     {
-        if (Status == OrderStatus.Paid)
-            throw new InvalidOperationException("Không thể cancel đơn .");
-        if (Status == OrderStatus.Cancelled) return;
+        if (OrderStatus == OrderStatus.Paid)
+            throw new InvalidOperationException("Không thể hủy đơn đã thanh toán.");
+        if (OrderStatus == OrderStatus.Cancelled) return;
 
-        Status = OrderStatus.Cancelled;
+        OrderStatus = OrderStatus.Cancelled;
         CancelledAtUtc = DateTime.UtcNow;
     }
 
     public void Pay(Money amount, string method)
     {
-        if (Status != OrderStatus.Submitted && Status != OrderStatus.Ready && Status != OrderStatus.Served)
+        if (OrderStatus != OrderStatus.Submitted && OrderStatus != OrderStatus.Ready && OrderStatus != OrderStatus.Served)
             throw new InvalidOperationException("Đơn này chưa thể thanh toán.");
 
         var due = Total();
@@ -124,7 +126,7 @@ public class Order : AggregateRoot<string>
         if (amount.Amount != due.Amount)
             throw new InvalidOperationException($"Số tiền phải bằng số: {due.Amount}");
 
-        Status = OrderStatus.Paid;
+        OrderStatus = OrderStatus.Paid;
         PaidAtUtc = DateTime.UtcNow;
         Raise(new OrderPaid(Id, amount.Amount, amount.Currency, method));
     }
@@ -138,21 +140,21 @@ public class Order : AggregateRoot<string>
 
     private void EnsureDraft()
     {
-        if (Status != OrderStatus.Draft)
-            throw new InvalidOperationException("Only draft orders can be modified.");
+        if (OrderStatus != OrderStatus.Draft)
+            throw new InvalidOperationException("Chỉ đơn ở trạng thái Nháp mới được phép chỉnh sửa.");
     }
 
     private void EnsureState(OrderStatus expected)
     {
-        if (Status != expected) throw new InvalidOperationException($"Order must be {expected}.");
+        if (OrderStatus != expected) throw new InvalidOperationException($"Đơn hàng phải ở trạng thái {expected}.");
     }
     public void ChangeItemQuantity(int orderItemId, int newQuantity)
     {
         if (newQuantity < 0)
-            throw new ArgumentOutOfRangeException(nameof(newQuantity), "Quantity must be >= 0");
+            throw new ArgumentOutOfRangeException(nameof(newQuantity), "Số lượng phải lớn hơn hoặc bằng 0");
 
         var line = _items.FirstOrDefault(i => i.Id == orderItemId)
-            ?? throw new KeyNotFoundException($"OrderItem {orderItemId} not found");
+            ?? throw new KeyNotFoundException($"Không tìm thấy OrderItem {orderItemId}");
 
         if (newQuantity == 0)
         {

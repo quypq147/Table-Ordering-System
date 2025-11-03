@@ -8,5 +8,5 @@ using System.Threading.Tasks;
 
 namespace Application.Orders.Commands
 {
-    public sealed record MarkServedCommand(string OrderId) : ICommand<OrderDto>;
+    public sealed record MarkServedCommand(Guid OrderId) : ICommand<OrderDto>;
 }

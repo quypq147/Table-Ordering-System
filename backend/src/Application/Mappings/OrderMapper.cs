@@ -1,3 +1,4 @@
+// Application/Mappings/OrderMapper.cs
 using System.Linq;
 using Application.Dtos;
 using Domain.Entities;
@@ -9,6 +10,7 @@ public static class OrderMapper
     public static OrderDto ToDto(Order o)
     {
         var items = o.Items.Select(i => new OrderItemDto(
+            i.Id,
             i.MenuItemId,
             i.NameSnapshot,
             i.UnitPrice.Amount,
@@ -16,7 +18,15 @@ public static class OrderMapper
             i.Quantity.Value,
             i.LineTotal.Amount
         )).ToList();
-        var currency = o.Items.FirstOrDefault()?.UnitPrice.Currency ?? "VND";
-        return new OrderDto(o.Id, o.TableId, o.Status.ToString(), items, o.Total().Amount, currency);
+
+        var total = o.Total();
+        return new OrderDto(
+            o.Id,
+            o.TableId,
+            o.OrderStatus,
+            items,
+            total.Amount,
+            total.Currency
+        );
     }
 }

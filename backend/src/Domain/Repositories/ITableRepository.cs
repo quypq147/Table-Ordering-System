@@ -5,5 +5,5 @@ namespace Domain.Repositories;
 
 public interface ITableRepository
 {
-    Task<Table?> GetByIdAsync(string id);
+    Task<Table?> GetByIdAsync(Guid id);
 }

@@ -2,4 +2,4 @@ using Domain.Abstractions;
 
 namespace Domain.Events;
 
-public record OrderSubmitted(string OrderId) : IDomainEvent;
+public record OrderSubmitted(Guid OrderId) : IDomainEvent;

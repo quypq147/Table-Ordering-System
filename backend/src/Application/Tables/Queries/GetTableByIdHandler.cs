@@ -4,7 +4,7 @@ using Application.Dtos;
 using Application.Mappings;
 using Microsoft.EntityFrameworkCore;
 
-public sealed record GetTableByIdQuery(string Id) : IQuery<TableDto?>;
+public sealed record GetTableByIdQuery(Guid Id) : IQuery<TableDto?>;
 
 public sealed class GetTableByIdHandler
     : IQueryHandler<GetTableByIdQuery, TableDto?>
