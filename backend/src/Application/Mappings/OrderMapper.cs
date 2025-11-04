@@ -16,7 +16,7 @@ public static class OrderMapper
             i.UnitPrice.Amount,
             i.UnitPrice.Currency,
             i.Quantity.Value,
-            i.LineTotal.Amount
+            i.UnitPrice.Amount * i.Quantity.Value
         )).ToList();
 
         var total = o.Total();

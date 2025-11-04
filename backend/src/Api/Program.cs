@@ -9,12 +9,24 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("adminweb", p =>
+        p.WithOrigins("http://localhost:5039") // port AdminWeb
+         .AllowAnyHeader()
+         .AllowAnyMethod());
+});
+builder.Services.AddSwaggerGen(c =>
+{
+    // Use FullName to avoid schemaId collisions for nested types (nested types use '+')
+    c.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
+});
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 
-var app = builder.Build();  
+var app = builder.Build();
+app.UseCors("adminweb");
 
 if (app.Environment.IsDevelopment())
 {

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(TableOrderingDbContext))]
-    [Migration("20251102020303_Init")]
-    partial class Init
+    [Migration("20251103155514_Add_OrderItem_Note")]
+    partial class Add_OrderItem_Note
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -480,6 +480,10 @@ namespace Infrastructure.Migrations
                                 .IsRequired()
                                 .HasMaxLength(200)
                                 .HasColumnType("nvarchar(200)");
+
+                            b1.Property<string>("Note")
+                                .HasMaxLength(512)
+                                .HasColumnType("nvarchar(512)");
 
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uniqueidentifier");

@@ -36,16 +36,33 @@ public class Order : AggregateRoot<Guid>
     // Navigation (EF sẽ dùng backing field)
     public IReadOnlyCollection<OrderItem> Items => _items;
 
+    // NEW: ctor nhận code (chuẩn hoá và fallback)
+    private Order(Guid id, Guid tableId, string code) : base(id)
+    {
+        if (tableId == Guid.Empty) throw new ArgumentNullException(nameof(tableId));
+        TableId = tableId;
+        Code = string.IsNullOrWhiteSpace(code) ? NewFallbackCode() : code.Trim();
+    }
 
+    // Giữ ctor cũ để tương thích nếu nơi khác còn gọi (sẽ không set Code -> nên ưu tiên dùng overload Start có code)
     private Order(Guid id, Guid tableId) : base(id)
     {
         if (tableId == Guid.Empty) throw new ArgumentNullException(nameof(tableId));
         TableId = tableId;
     }
 
+    // NEW: factory chuẩn cho luồng Public (nhận code đã sinh ở Application)
+    public static Order Start(Guid id, Guid tableId, string code)
+    {
+        var order = new Order(id, tableId, code);
+        order.Raise(new OrderPlaced(id));
+        return order;
+    }
+
+    // Giữ overload cũ để không vỡ compile, đồng thời sinh fallback code
     public static Order Start(Guid id, Guid tableId)
     {
-        var order = new Order(id, tableId);
+        var order = new Order(id, tableId, NewFallbackCode());
         order.Raise(new OrderPlaced(id)); // nếu event đang nhận string, tạm ToString(); tốt hơn là đổi event sang Guid
         return order;
     }
@@ -148,6 +165,7 @@ public class Order : AggregateRoot<Guid>
     {
         if (OrderStatus != expected) throw new InvalidOperationException($"Đơn hàng phải ở trạng thái {expected}.");
     }
+
     public void ChangeItemQuantity(int orderItemId, int newQuantity)
     {
         if (newQuantity < 0)
@@ -165,6 +183,27 @@ public class Order : AggregateRoot<Guid>
 
         line.ChangeQuantity(new Quantity(newQuantity));   // xem #2 bên dưới
         // Nếu bạn có UpdatedAt/DomainEvent thì cập nhật ở đây
+    }
+
+    // NEW: Fallback code (OD-xxxx base36) để tương thích khi chỗ khác còn gọi Start(id, tableId)
+    private static string NewFallbackCode()
+    {
+        return "OD-" + Base36(Random.Shared.Next(36 * 36 * 36 * 36), 4);
+    }
+
+    private static string Base36(int value, int pad)
+    {
+        const string alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        Span<char> buf = stackalloc char[8];
+        var i = buf.Length;
+        var v = value;
+        do
+        {
+            buf[--i] = alphabet[v % 36];
+            v /= 36;
+        } while (v > 0);
+        var s = new string(buf[i..]);
+        return s.Length >= pad ? s : s.PadLeft(pad, '0');
     }
 }
 
