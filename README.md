@@ -84,4 +84,4 @@ Gợi ý:
 
 ## License
 
-Chưa thiết lập. Thêm LICENSE theo nhu cầu dự án.
+Chưa thiết lập.
