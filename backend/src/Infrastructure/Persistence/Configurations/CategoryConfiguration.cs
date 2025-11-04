@@ -9,27 +9,20 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
     public void Configure(EntityTypeBuilder<Category> b)
     {
         b.ToTable("Categories");
-        b.HasKey(x => x.Id);
+        b.HasKey(c => c.Id);
 
-        b.Property(x => x.Code)
+        b.Property(c => c.Code)
             .IsRequired()
-            .HasMaxLength(64);
+            .HasMaxLength(32);
 
-        b.Property(x => x.Name)
+        b.HasIndex(c => c.Code).IsUnique();
+
+        b.Property(c => c.Name)
             .IsRequired()
-            .HasMaxLength(120);
+            .HasMaxLength(200);
 
-        b.Property(x => x.Description)
-            .HasMaxLength(512);
-
-        b.Property(x => x.IsActive)
+        b.Property(c => c.IsActive)
             .HasDefaultValue(true);
-
-        b.Property(x => x.SortOrder)
-            .HasDefaultValue(0);
-
-        b.HasIndex(x => x.Code).IsUnique();
-        b.HasIndex(x => x.Name);
     }
 }
 

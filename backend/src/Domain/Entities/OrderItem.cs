@@ -1,4 +1,5 @@
-﻿using Domain.ValueObjects;
+﻿using System;
+using Domain.ValueObjects;
 
 namespace Domain.Entities;
 
@@ -12,31 +13,27 @@ public class OrderItem
     public string NameSnapshot { get; private set; } = default!;
     public Money UnitPrice { get; private set; }
     public Quantity Quantity { get; private set; }
+
+    // NEW: allow customer note per cart line
     public string? Note { get; private set; }
 
     private OrderItem() { } // EF
 
-    public OrderItem(Guid menuItemId, string nameSnapshot, Money unitPrice, Quantity quantity)
+    public OrderItem(Guid menuItemId, string nameSnapshot, Money unitPrice, Quantity quantity, string? note = null)
     {
-        if (menuItemId == Guid.Empty) throw new ArgumentNullException(nameof(menuItemId));
-        if (string.IsNullOrWhiteSpace(nameSnapshot)) throw new ArgumentNullException(nameof(nameSnapshot));
+        if (menuItemId == Guid.Empty) throw new ArgumentException("MenuItemId is required.", nameof(menuItemId));
+        if (string.IsNullOrWhiteSpace(nameSnapshot)) throw new ArgumentException("NameSnapshot is required.", nameof(nameSnapshot));
+
         MenuItemId = menuItemId;
         NameSnapshot = nameSnapshot.Trim();
         UnitPrice = unitPrice;
         Quantity = quantity;
-        Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        ChangeNote(note);
     }
 
-    public Money LineTotal => new Money(UnitPrice.Amount * Quantity.Value, UnitPrice.Currency);
+    public void ChangeQuantity(Quantity q) => Quantity = q;
 
-    public void ChangeQuantity(Quantity q)
-    {
-        if (q.Value <= 0) throw new ArgumentOutOfRangeException(nameof(q.Value));
-        Quantity = q;
-    }
     public void ChangeNote(string? note)
-    {
-        Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
-    }
+        => Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
 }
 

@@ -2,6 +2,7 @@
 using Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.Persistence.Configurations;
@@ -13,41 +14,27 @@ public sealed class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
         b.ToTable("MenuItems");
         b.HasKey(x => x.Id);
 
-        b.Property(x => x.Name)
-            .IsRequired()
-            .HasMaxLength(200);
-
-        b.Property(x => x.Sku)
-            .IsRequired()
-            .HasMaxLength(64);
-
+        b.Property(x => x.Name).IsRequired().HasMaxLength(200);
+        b.Property(x => x.Sku).IsRequired().HasMaxLength(64);
         b.HasIndex(x => x.Sku).IsUnique();
 
-        b.Property(x => x.IsActive)
-            .HasDefaultValue(true);
-
-        // Money -> decimal (default currency "VND")
-        var moneyToDecimal = new ValueConverter<Money, decimal>(
-            v => v.Amount,
-            v => new Money(v, "VND")
-        );
+        b.Property(x => x.IsActive).HasDefaultValue(true);
 
         b.Property(x => x.Price)
-            .HasConversion(moneyToDecimal)
-            .HasColumnName("Price")
-            .HasPrecision(18, 2)
-            .IsRequired();
+         .HasConversion(Converters.Converters.MoneyToDecimal)
+         .HasPrecision(18, 2)
+         .IsRequired();
 
-        // CategoryId mapping and FK (optional by default due to Guid?)
+        // Required Category + index for filtering and listing
         b.Property(x => x.CategoryId).IsRequired();
-        b.HasIndex(x => x.CategoryId);
+        b.HasIndex(x => new { x.CategoryId, x.IsActive });
 
         b.HasOne(x => x.Category)
-            .WithMany()
-            .HasForeignKey(x => x.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict);
+         .WithMany()
+         .HasForeignKey(x => x.CategoryId)
+         .OnDelete(DeleteBehavior.Restrict);
 
-        // Concurrency token (shadow)
+        // Optional row version for optimistic concurrency
         b.Property<byte[]>("RowVersion").IsRowVersion();
     }
 }

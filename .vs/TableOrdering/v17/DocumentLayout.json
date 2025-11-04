@@ -1,12 +1,37 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E316D3E7-3351-435C-9D7F-03F248F40D64}|backend\\src\\Domain\\Domain.csproj|e:\\project\\repo\\tableordering\\backend\\src\\domain\\entities\\order.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E316D3E7-3351-435C-9D7F-03F248F40D64}|backend\\src\\Domain\\Domain.csproj|solutionrelative:backend\\src\\domain\\entities\\order.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Order.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Domain\\Entities\\Order.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Domain\\Entities\\Order.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Domain\\Entities\\Order.cs",
+              "RelativeToolTip": "backend\\src\\Domain\\Entities\\Order.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-04T04:41:57.586Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }
