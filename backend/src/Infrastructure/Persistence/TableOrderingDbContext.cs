@@ -9,7 +9,7 @@ using System.Reflection.Emit;
 namespace Infrastructure.Persistence;
 
 public sealed class TableOrderingDbContext
-    : IdentityDbContext<ApplicationUser>, IApplicationDbContext // ⬅️ đổi base & dùng interface KHÔNG generic
+    : IdentityDbContext<AppUser, AppRole, Guid>, IApplicationDbContext // ⬅️ đổi base & dùng interface KHÔNG generic
 {
     public TableOrderingDbContext(DbContextOptions<TableOrderingDbContext> options) : base(options) { }
 
@@ -22,7 +22,7 @@ public sealed class TableOrderingDbContext
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
-        base.OnModelCreating(mb); // ⬅️ BẮT BUỘC để tạo bảng AspNetUsers, AspNetRoles, ...
+        base.OnModelCreating(mb);
         mb.ApplyConfigurationsFromAssembly(typeof(TableOrderingDbContext).Assembly);
         mb.HasSequence<int>("CategoryNoSeq").StartsAt(1).IncrementsBy(1);
         mb.HasSequence<int>("MenuItemNoSeq").StartsAt(1).IncrementsBy(1);

@@ -9,7 +9,7 @@ public static class IdentityExtensions
 {
     public static IServiceCollection AddApiIdentity(this IServiceCollection services)
     {
-        services.AddIdentityCore<ApplicationUser>(o =>
+        services.AddIdentityCore<AppUser>(o =>
         {
             o.User.RequireUniqueEmail = true;
             o.Password.RequiredLength = 6;
@@ -17,7 +17,7 @@ public static class IdentityExtensions
             o.Password.RequireUppercase = false;
             o.Password.RequireNonAlphanumeric = false;
         })
-        .AddRoles<IdentityRole>()
+        .AddRoles<AppRole>()
         .AddEntityFrameworkStores<TableOrderingDbContext>()
         .AddSignInManager()
         .AddDefaultTokenProviders();
