@@ -1,9 +1,22 @@
 ﻿using AdminWeb.Dtos;
+using AdminWeb.Services.Models;
 
 namespace AdminWeb.Services
 {
     public interface IBackendApiClient
     {
+        // AUTH
+        Task<(string token, string displayName, string[] roles)> LoginAsync(string userOrEmail, string password);
+
+        // USERS
+        Task<List<UserVm>> ListUsersAsync();
+        Task<UserDetailVm> GetUserAsync(Guid id);
+        Task<Guid> CreateUserAsync(CreateUserVm vm);
+        Task UpdateUserAsync(Guid id, UpdateUserVm vm);
+        Task ChangePasswordAsync(Guid id, string newPassword);
+        Task SetRolesAsync(Guid id, List<string> roles, CancellationToken ct = default);
+        Task DeactivateUserAsync(Guid id);
+
         // MENU
         Task<List<MenuItemDto>> GetMenuAsync(CancellationToken ct = default);
         Task<List<MenuItemDto>> GetMenuAsync(string? search, Guid? categoryId, bool? onlyActive, CancellationToken ct = default);
@@ -31,5 +44,8 @@ namespace AdminWeb.Services
         Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default);
+
+        // Dashboard
+        Task<DashboardVm?> GetDashboardAsync(CancellationToken ct = default);
     }
 }

@@ -1,38 +1,40 @@
 ﻿@model AdminWeb.Dtos.CreateTableRequest
 @{
-    ViewData["Title"] = "Tạo bàn";
+ ViewData["Title"] = "Tạo bàn";
 }
 
-<section class="card">
-    <div class="card-head"><h3>Bàn mới</h3></div>
-    <form method="post" class="form">
-        @Html.AntiForgeryToken()
-        <div class="grid" style="grid-template-columns:repeat(2,1fr);gap:12px">
-            <div>
-                <label>Mã bàn</label>
-                <input class="input" asp-for="Code" />
-                <span asp-validation-for="Code" class="text-danger"></span>
-            </div>
-            <div>
-                <label>Số ghế</label>
-                <!-- >>> đổi Capacity -> Seats <<< -->
-                <input class="input" asp-for="Seats" type="number" min="1" />
-                <span asp-validation-for="Seats" class="text-danger"></span>
-            </div>
-            <div>
-                <label>Trạng thái</label>
-                <select class="input" asp-for="Status">
-                    <option value="1">Đang hoạt động</option>
-                    <option value="0">Không hoạt động</option>
-                </select>
-            </div>
-        </div>
-        <div style="margin-top:14px">
-            <button class="ghost" type="submit">Lưu</button>
-            <a class="ghost" asp-action="Index">Hủy tạo bàn</a>
-        </div>
-    </form>
-</section>
+<div class="card shadow-sm">
+ <div class="card-body" style="max-width:720px">
+ <h2 class="h4 mb-3">Bàn mới</h2>
+ <form method="post">
+ @Html.AntiForgeryToken()
+ <div class="row g-3">
+ <div class="col-md-6">
+ <label class="form-label">Mã bàn</label>
+ <input class="form-control" asp-for="Code" />
+ <span asp-validation-for="Code" class="text-danger"></span>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Số ghế</label>
+ <input class="form-control" asp-for="Seats" type="number" min="1" />
+ <span asp-validation-for="Seats" class="text-danger"></span>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Trạng thái</label>
+ <select class="form-select" asp-for="Status">
+ <option value="1">Đang hoạt động</option>
+ <option value="0">Không hoạt động</option>
+ </select>
+ </div>
+ </div>
+ <div class="mt-3">
+ <button class="btn btn-primary" type="submit">Lưu</button>
+ <a class="btn btn-secondary ms-2" asp-action="Index">Hủy</a>
+ </div>
+ </form>
+ </div>
+</div>
+@section Scripts{<partial name="_ValidationScriptsPartial" />}
 
 
 

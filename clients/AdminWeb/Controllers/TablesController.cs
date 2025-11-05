@@ -1,9 +1,11 @@
 ﻿using AdminWeb.Dtos;
 using AdminWeb.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminWeb.Controllers
 {
+    [Authorize(Policy = "RequireSignedIn")]
     public class TablesController : Controller
     {
         private readonly IBackendApiClient _api;

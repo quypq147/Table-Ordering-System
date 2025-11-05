@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 
 namespace Infrastructure.Identity;
 
-public class ApplicationUser : IdentityUser
+public class AppUser : IdentityUser<Guid>
 {
-    public string FullName { get; set; } = string.Empty;
+    public string? FullName { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
-

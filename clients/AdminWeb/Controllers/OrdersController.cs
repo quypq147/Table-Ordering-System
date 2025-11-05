@@ -1,8 +1,10 @@
 ﻿using AdminWeb.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminWeb.Controllers
 {
+    [Authorize(Policy = "RequireSignedIn")]
     public class OrdersController(IBackendApiClient api) : Controller
     {
         public async Task<IActionResult> Index(int page = 1)

@@ -1,9 +1,11 @@
 ﻿using System.Text.Json;
 using AdminWeb.Dtos;
 using AdminWeb.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
+[Authorize(Policy = "RequireSignedIn")]
 public class MenuController(IBackendApiClient api) : Controller
 {
     [HttpGet]

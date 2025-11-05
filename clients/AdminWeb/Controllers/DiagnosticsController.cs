@@ -1,9 +1,11 @@
 ﻿// Controllers/DiagnosticsController.cs
 using AdminWeb.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminWeb.Controllers
 {
+    [Authorize(Policy = "RequireSignedIn")]
     public class DiagnosticsController(IBackendApiClient api) : Controller
     {
         private readonly IBackendApiClient _api = api;

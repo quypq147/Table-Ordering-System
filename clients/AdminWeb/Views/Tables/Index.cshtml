@@ -1,34 +1,82 @@
 ﻿@model List<AdminWeb.Dtos.DiningTableDto>
 @{
-    ViewData["Title"] = "Bàn ăn";
+ ViewData["Title"] = "Bàn ăn";
+ var total = Model?.Count ??0;
 }
 
-<section class="card">
-    <div class="card-head between">
-        <h3>Quản lý bàn</h3>
-        <a class="ghost" asp-action="Create">+ Thêm bàn ăn</a>
-    </div>
+<div class="d-flex align-items-center justify-content-between mb-3">
+ <div>
+ <h2 class="mb-0">Quản lý bàn</h2>
+ <small class="text-muted">Tổng số: <span class="fw-semibold">@total</span></small>
+ </div>
+ <div>
+ <a class="btn btn-success" asp-action="Create">+ Thêm bàn ăn</a>
+ </div>
+</div>
 
-    <div class="table-wrap">
-        <table class="table">
-            <thead>
-                <tr><th>Mã bàn</th><th>Số ghế</th><th>Trạng thái</th></tr>
-            </thead>
-            <tbody>
-                @foreach (var t in Model)
-                {
-                    <tr>
-                        <td>@t.Code</td>
-                        <td>@t.Seats</td>
-                        <td>
-                            
-               @(t.Status == 0 ? "Đang hoạt động" : "Không hoạt động")
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</section>
+@if (TempData["Success"] is string ok)
+{
+ <div class="alert alert-success alert-dismissible fade show" role="alert">
+ @ok
+ <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+ </div>
+}
+@if (TempData["Error"] is string err)
+{
+ <div class="alert alert-danger alert-dismissible fade show" role="alert">
+ @err
+ <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+ </div>
+}
+
+<div class="card shadow-sm">
+ <div class="card-body p-0">
+ <div class="table-responsive" style="max-height:65vh;">
+ <table class="table table-hover table-striped align-middle mb-0">
+ <thead class="table-light" style="position: sticky; top:0; z-index:1;">
+ <tr>
+ <th>Mã bàn</th>
+ <th class="text-center" style="width:140px">Số ghế</th>
+ <th style="width:180px">Trạng thái</th>
+ </tr>
+ </thead>
+ <tbody>
+ @foreach (var t in Model)
+ {
+ <tr>
+ <td class="fw-semibold">@t.Code</td>
+ <td class="text-center">@t.Seats</td>
+ <td>
+ @if (t.Status == 0)
+ {
+ <span class="badge rounded-pill bg-success">Đang hoạt động</span>
+ }
+ else
+ {
+ <span class="badge rounded-pill bg-secondary">Không hoạt động</span>
+ }
+ </td>
+ </tr>
+ }
+ </tbody>
+ </table>
+ </div>
+
+ @if (!Model.Any())
+ {
+ <div class="p-4">
+ <div class="alert alert-info mb-0">
+ <div class="d-flex align-items-center gap-2">
+ <div>ℹ️</div>
+ <div>
+ <div class="fw-semibold">Chưa có bàn nào.</div>
+ <div class="small text-muted">Hãy nhấn "+ Thêm bàn ăn" để tạo mới.</div>
+ </div>
+ </div>
+ </div>
+ </div>
+ }
+ </div>
+</div>
 
 
