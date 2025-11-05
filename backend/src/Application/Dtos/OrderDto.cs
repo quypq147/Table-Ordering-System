@@ -12,7 +12,8 @@ public sealed record OrderItemDto(
     decimal UnitPrice,
     string Currency,
     int Quantity,
-    decimal LineTotal
+    decimal LineTotal,
+    string? Note
 );
 
 public sealed record OrderDto(
