@@ -1,105 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{61BAED57-AC6F-4D3D-B63B-6DF2B4483EB0}|backend\\src\\Infrastructure\\Infrastructure.csproj|e:\\project\\repo\\tableordering\\backend\\src\\infrastructure\\identity\\identityseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{61BAED57-AC6F-4D3D-B63B-6DF2B4483EB0}|backend\\src\\Infrastructure\\Infrastructure.csproj|solutionrelative:backend\\src\\infrastructure\\identity\\identityseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|e:\\project\\repo\\tableordering\\backend\\src\\application\\dashboard\\listdashboardmetricsquery.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|solutionrelative:backend\\src\\application\\dashboard\\listdashboardmetricsquery.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\admin\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\admin\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\menuitemscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\menuitemscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 2,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "MenuItemsController.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "RelativeToolTip": "backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "ViewState": "AgIAAGUAAAAAAAAAAABRwAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-05T02:52:28.67Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "UsersController.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\Admin\\UsersController.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\Admin\\UsersController.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\Admin\\UsersController.cs",
-              "RelativeToolTip": "backend\\src\\Api\\Controllers\\Admin\\UsersController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADgAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-05T02:39:29.146Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "UsersController.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\UsersController.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\UsersController.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\UsersController.cs",
-              "RelativeToolTip": "backend\\src\\Api\\Controllers\\UsersController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-05T02:37:44.916Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "ListDashboardMetricsQuery.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Dashboard\\ListDashboardMetricsQuery.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Application\\Dashboard\\ListDashboardMetricsQuery.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Dashboard\\ListDashboardMetricsQuery.cs",
-              "RelativeToolTip": "backend\\src\\Application\\Dashboard\\ListDashboardMetricsQuery.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAABAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-05T01:48:17.878Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "IdentitySeeder.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "RelativeToolTip": "backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "ViewState": "AgIAABMAAAAAAAAAAAAQwBcAAAA0AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-05T01:33:01.641Z",
-              "EditorCaption": ""
-            }
-          ]
-        }
-      ]
+      "DocumentGroups": []
     }
   ]
 }
