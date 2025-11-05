@@ -14,9 +14,13 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         b.Property(x => x.TableId).IsRequired();
         b.Property(x => x.Code).IsRequired().HasMaxLength(32);
         b.HasIndex(x => x.Code).IsUnique();
-        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
         b.Property(x => x.OrderStatus).HasConversion<string>().HasMaxLength(16).IsRequired();
         b.Property(x => x.CreatedAtUtc).IsRequired();
+
+        // sequence for Number
+        b.Property(x => x.Number)
+            .HasDefaultValueSql("NEXT VALUE FOR OrderNoSeq")
+            .ValueGeneratedOnAdd();
 
         b.HasIndex(x => new { x.TableId, x.OrderStatus });
         b.HasIndex(x => x.CreatedAtUtc);
@@ -38,7 +42,6 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
             nb.Property(i => i.UnitPrice).HasConversion(moneyToDecimal).HasPrecision(18, 2).IsRequired();
             nb.Property(i => i.Quantity).HasConversion(qtyToInt).IsRequired();
-            // NEW
             nb.Property(i => i.Note).HasMaxLength(512);
 
             nb.HasIndex(i => i.MenuItemId);

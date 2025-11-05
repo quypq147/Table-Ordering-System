@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using CustomerWeb.Dtos;
+using TableOrdering.Contracts;
 
 namespace CustomerWeb.Services;
 

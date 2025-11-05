@@ -1,4 +1,5 @@
-﻿@model List<AdminWeb.Dtos.DiningTableDto>
+﻿@using TableOrdering.Contracts
+@model List<DiningTableDto>
 @{
  ViewData["Title"] = "Bàn ăn";
  var total = Model?.Count ??0;
@@ -47,7 +48,7 @@
  <td class="fw-semibold">@t.Code</td>
  <td class="text-center">@t.Seats</td>
  <td>
- @if (t.Status == 0)
+ @if (t.Status ==0)
  {
  <span class="badge rounded-pill bg-success">Đang hoạt động</span>
  }

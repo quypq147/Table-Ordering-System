@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KdsWeb", "KdsWeb\KdsWeb.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomerWeb", "CustomerWeb\CustomerWeb.csproj", "{E3401671-EC4F-4DF4-8F2E-78B8455C5A42}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TableOrdering.Contracts", "TableOrdering.Contracts\TableOrdering.Contracts.csproj", "{71B72645-FC30-429F-8EF6-B9138FF83D9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{E3401671-EC4F-4DF4-8F2E-78B8455C5A42}.Release|x64.Build.0 = Release|Any CPU
 		{E3401671-EC4F-4DF4-8F2E-78B8455C5A42}.Release|x86.ActiveCfg = Release|Any CPU
 		{E3401671-EC4F-4DF4-8F2E-78B8455C5A42}.Release|x86.Build.0 = Release|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Debug|x64.Build.0 = Debug|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Debug|x86.Build.0 = Debug|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x64.ActiveCfg = Release|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x64.Build.0 = Release|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x86.ActiveCfg = Release|Any CPU
+		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

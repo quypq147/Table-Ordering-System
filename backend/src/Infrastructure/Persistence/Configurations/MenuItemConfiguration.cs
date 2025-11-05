@@ -25,6 +25,11 @@ public sealed class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
          .HasPrecision(18, 2)
          .IsRequired();
 
+        // map sequence to Number
+        b.Property(x => x.Number)
+         .HasDefaultValueSql("NEXT VALUE FOR MenuItemNoSeq")
+         .ValueGeneratedOnAdd();
+
         // Required Category + index for filtering and listing
         b.Property(x => x.CategoryId).IsRequired();
         b.HasIndex(x => new { x.CategoryId, x.IsActive });

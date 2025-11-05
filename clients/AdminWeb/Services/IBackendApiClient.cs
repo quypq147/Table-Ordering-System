@@ -1,5 +1,6 @@
-﻿using AdminWeb.Dtos;
+﻿using TableOrdering.Contracts;
 using AdminWeb.Services.Models;
+using AdminWeb.Dtos;
 
 namespace AdminWeb.Services
 {
@@ -25,7 +26,7 @@ namespace AdminWeb.Services
         Task<HttpResponseMessage> DeactivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
 
         // ORDERS
-        Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+        Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page =1, int pageSize =20, CancellationToken cancellationToken = default);
         Task<OrderDetailDto?> GetOrderAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> UpdateOrderStatusAsync(Guid id, string status, CancellationToken cancellationToken = default);
 
@@ -38,7 +39,7 @@ namespace AdminWeb.Services
         Task<HttpResponseMessage> UpdateTableAsync(Guid id, UpdateTableRequest req, CancellationToken cancellationToken = default);
 
         // ===== Categories =====
-        Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+        Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page =1, int pageSize =50, CancellationToken cancellationToken = default);
         Task<CategoryDto?> GetCategoryAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default);

@@ -1,5 +1,5 @@
 ﻿// AdminWeb/Controllers/CategoriesController.cs
-using AdminWeb.Dtos;
+using TableOrdering.Contracts;
 using AdminWeb.Services;
 using Microsoft.AspNetCore.Mvc;
 

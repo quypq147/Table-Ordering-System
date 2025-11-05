@@ -23,6 +23,11 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         b.Property(c => c.IsActive)
             .HasDefaultValue(true);
+
+        // map sequence to Number
+        b.Property(c => c.Number)
+            .HasDefaultValueSql("NEXT VALUE FOR CategoryNoSeq")
+            .ValueGeneratedOnAdd();
     }
 }
 

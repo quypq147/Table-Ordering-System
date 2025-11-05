@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Đọc URL backend (API) từ cấu hình
-var backendBase = builder.Configuration["BackendBaseUrl"] ?? "http://localhost:5075";
+var backendBase = builder.Configuration["Backend:BaseUrl"] ?? "http://localhost:5075";
 
 // MVC
 builder.Services.AddControllersWithViews();

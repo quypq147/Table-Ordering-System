@@ -2,6 +2,7 @@
 using Application.Abstractions;
 using Application.Dtos;
 using Application.Mappings;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 public sealed class GetActiveOrderByTableHandler
@@ -14,7 +15,7 @@ public sealed class GetActiveOrderByTableHandler
     {
         var order = await _db.Orders
             .Include(o => o.Items)
-            .Where(o => o.TableId == q.TableId && o.Status.ToString() != "Paid" && o.Status.ToString() != "Cancelled")
+            .Where(o => o.TableId == q.TableId && o.OrderStatus != OrderStatus.Paid && o.OrderStatus != OrderStatus.Cancelled)
             .OrderByDescending(o => o.CreatedAtUtc)
             .FirstOrDefaultAsync(ct);
         return order is null ? null : OrderMapper.ToDto(order);

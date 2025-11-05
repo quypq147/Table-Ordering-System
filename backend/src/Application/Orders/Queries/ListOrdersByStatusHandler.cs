@@ -1,12 +1,8 @@
 ﻿using Application.Abstractions;
 using Application.Dtos;
 using Application.Mappings;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Orders.Queries
 {
@@ -19,9 +15,11 @@ namespace Application.Orders.Queries
         public async Task<IReadOnlyList<OrderDto>> Handle(ListOrdersByStatusQuery q, CancellationToken ct)
         {
             var skip = (q.Page - 1) * q.PageSize;
+            if (!Enum.TryParse<OrderStatus>(q.Status, true, out var status))
+                throw new ArgumentException("Invalid status", nameof(q.Status));
             var orders = await _db.Orders
-                .Where(o => o.Status.ToString() == q.Status)
-                .OrderByDescending(o => o.CreatedAtUtc) // có CreatedAtUtc trong Domain :contentReference[oaicite:20]{index=20}
+                .Where(o => o.OrderStatus == status)
+                .OrderByDescending(o => o.CreatedAtUtc)
                 .Skip(skip).Take(q.PageSize)
                 .Include(o => o.Items)
                 .ToListAsync(ct);

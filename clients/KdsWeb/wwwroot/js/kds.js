@@ -1,6 +1,7 @@
 ﻿// Kết nối tới backend SignalR hub /hubs/kds (backend phải bật CORS cho origin của KdsWeb)
+const hubUrl = (window.__cfg && window.__cfg.kdsHub) || "/hubs/kds";
 const connection = new signalR.HubConnectionBuilder()
-    .withUrl("https://localhost:5001/hubs/kds") // chỉnh theo backend
+    .withUrl(hubUrl)
     .withAutomaticReconnect()
     .build();
 
@@ -20,7 +21,8 @@ connection.on("TicketNew", (ticket) => {
 connection.on("TicketUpdated", (ticket) => {
     const el = document.querySelector(`.ticket[data-id="${ticket.id}"]`);
     if (el) {
-        el.querySelector(".meta").innerText = "Status: " + ticket.status;
+        const metas = el.querySelectorAll(".meta");
+        if (metas.length > 0) metas[0].innerText = "Status: " + ticket.status;
     }
 });
 

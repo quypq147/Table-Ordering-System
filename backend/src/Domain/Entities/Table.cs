@@ -11,7 +11,7 @@ public class Table : Entity<Guid>
     public int Seats { get; private set; }
     public TableStatus Status { get; private set; } = TableStatus.Available;
 
-    
+    private Table() : base(default!) { } // EF-friendly constructor
 
     public Table(Guid id, string code, int seats) : base(id)
     {

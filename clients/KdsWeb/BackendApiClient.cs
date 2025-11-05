@@ -1,4 +1,4 @@
-﻿using AdminWeb.Dtos;
+﻿using TableOrdering.Contracts;
 public class BackendApiClient
 {
     private readonly HttpClient _http;
@@ -13,7 +13,7 @@ public class BackendApiClient
 
     // ORDERS
     public async Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page = 1, int pageSize = 20)
-        => await _http.GetFromJsonAsync<Paginated<OrderSummaryDto>>($"/api/orders?page={page}&pageSize={pageSize}") ?? new();
+        => await _http.GetFromJsonAsync<Paginated<OrderSummaryDto>>($"/api/orders?page={page}&pageSize={pageSize}") ?? new(new List<OrderSummaryDto>(), page, pageSize,0);
 
     public async Task<OrderDetailDto?> GetOrderAsync(Guid id)
         => await _http.GetFromJsonAsync<OrderDetailDto>($"/api/orders/{id}");

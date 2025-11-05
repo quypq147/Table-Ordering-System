@@ -5,13 +5,8 @@ namespace Domain.Abstractions;
 public abstract class Entity<TId>
 {
     public TId Id { get; protected set; }
-    public Guid Id1 { get; }
 
-    protected Entity(Guid id)
-    {
-        Id1 = id;
-    }
-
+    protected Entity() { }
     protected Entity(TId id) => Id = id;
 
     public override bool Equals(object? obj)
