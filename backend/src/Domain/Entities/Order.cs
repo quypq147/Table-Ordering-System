@@ -92,6 +92,13 @@ public class Order : AggregateRoot<Guid>
         _items.RemoveAll(i => i.Id == orderItemId);
     }
 
+    // NEW: Xoá toàn bộ dòng hàng trong giỏ (US14)
+    public void ClearItems()
+    {
+        EnsureDraft();
+        _items.Clear();
+    }
+
     public void Submit()
     {
         EnsureDraft();
@@ -183,6 +190,15 @@ public class Order : AggregateRoot<Guid>
 
         line.ChangeQuantity(new Quantity(newQuantity));   // xem #2 bên dưới
         // Nếu bạn có UpdatedAt/DomainEvent thì cập nhật ở đây
+    }
+
+    // NEW: đổi ghi chú cho dòng hàng
+    public void ChangeItemNote(int orderItemId, string? note)
+    {
+        EnsureDraft();
+        var line = _items.FirstOrDefault(i => i.Id == orderItemId)
+            ?? throw new KeyNotFoundException($"Không tìm thấy OrderItem {orderItemId}");
+        line.ChangeNote(note);
     }
 
     // NEW: Fallback code (OD-xxxx base36) để tương thích khi chỗ khác còn gọi Start(id, tableId)

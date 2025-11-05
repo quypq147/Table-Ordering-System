@@ -33,5 +33,9 @@ public class ClientController : Controller
 
     [HttpGet("/client/qr-help")]
     public IActionResult ScanHelp() => View();
+
+    // Trang quét QR trực tiếp bằng camera
+    [HttpGet("/client/qr")]
+    public IActionResult Scan() => View();
 }
 

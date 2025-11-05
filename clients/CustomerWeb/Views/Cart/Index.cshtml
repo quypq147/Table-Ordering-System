@@ -1,0 +1,189 @@
+﻿@{
+ Layout = "~/Views/Shared/_Layout.cshtml";
+ var orderId = (Guid)ViewBag.OrderId;
+ ViewData["Title"] = "Giỏ hàng";
+}
+
+<div class="container py-3">
+ <div class="d-flex justify-content-between align-items-center mb-3">
+ <h3 class="mb-0">Giỏ hàng</h3>
+ <div>
+ <a id="backMenu" class="btn btn-outline-secondary btn-sm" href="#">Quay lại Menu</a>
+ </div>
+ </div>
+
+ <div class="mb-2 small text-muted" id="cartMeta"></div>
+
+ <div class="table-responsive">
+ <table class="table align-middle" id="cartTable">
+ <thead>
+ <tr>
+ <th>Món</th>
+ <th style="width:220px">Ghi chú</th>
+ <th style="width:140px">Số lượng</th>
+ <th style="width:140px" class="text-end">Đơn giá</th>
+ <th style="width:160px" class="text-end">Thành tiền</th>
+ <th style="width:120px"></th>
+ </tr>
+ </thead>
+ <tbody id="cartBody">
+ <tr><td colspan="6" class="text-muted">Đang tải...</td></tr>
+ </tbody>
+ <tfoot>
+ <tr>
+ <td colspan="3"></td>
+ <td class="text-end">Tạm tính</td>
+ <td class="text-end" id="subtotal">0</td>
+ <td></td>
+ </tr>
+ <tr>
+ <td colspan="3"></td>
+ <td class="text-end">Phí phục vụ</td>
+ <td class="text-end" id="svc">0</td>
+ <td></td>
+ </tr>
+ <tr>
+ <td colspan="3"></td>
+ <td class="text-end">Thuế</td>
+ <td class="text-end" id="tax">0</td>
+ <td></td>
+ </tr>
+ <tr class="fw-bold">
+ <td colspan="3"></td>
+ <td class="text-end">Tổng cộng</td>
+ <td class="text-end" id="total">0</td>
+ <td></td>
+ </tr>
+ </tfoot>
+ </table>
+ </div>
+
+ <div class="d-flex gap-2">
+ <button id="btnClear" class="btn btn-outline-danger">Xóa hết</button>
+ <button id="btnSubmit" class="btn btn-primary">Gửi đơn hàng</button>
+ </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
+ <div id="toast" class="toast align-items-center text-bg-danger border-0">
+ <div class="d-flex">
+ <div class="toast-body" id="toastMsg">Đã có lỗi</div>
+ <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+ </div>
+ </div>
+</div>
+
+@section Scripts {
+<script>
+ const orderId = "@orderId";
+ let cart = null;
+
+ function fmt(x){ return (x||0).toLocaleString() + ' ₫'; }
+ function toast(msg, ok=false){
+ const el = document.getElementById("toast");
+ el.classList.toggle("text-bg-success", ok);
+ el.classList.toggle("text-bg-danger", !ok);
+ document.getElementById("toastMsg").textContent = msg || (ok ? "Thành công" : "Đã có lỗi");
+ bootstrap.Toast.getOrCreateInstance(el).show();
+ }
+ async function api(url, opt = {}) {
+ const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opt });
+ const raw = await r.text();
+ let data = raw; try { data = raw ? JSON.parse(raw) : null; } catch {}
+ if (!r.ok){ const msg = (data && typeof data === 'object' && (data.title || data.detail)) || raw || r.statusText; throw new Error(msg); }
+ return data;
+ }
+ async function load(){
+ const data = await api(`/proxy/public/cart/${orderId}`);
+ cart = data;
+ document.getElementById('cartMeta').textContent = `Bàn ${cart.tableCode} · Trạng thái: ${cart.status}`;
+ document.getElementById('subtotal').textContent = fmt(cart.subtotal);
+ document.getElementById('svc').textContent = fmt(cart.serviceCharge);
+ document.getElementById('tax').textContent = fmt(cart.tax);
+ document.getElementById('total').textContent = fmt(cart.total);
+ document.getElementById('backMenu').href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`;
+ renderItems(cart.items || []);
+ document.getElementById('btnSubmit').disabled = !(cart.items && cart.items.length);
+ document.getElementById('btnClear').disabled = !(cart.items && cart.items.length);
+ }
+ function renderItems(items){
+ const body = document.getElementById('cartBody');
+ if(!items.length){ body.innerHTML = '<tr><td colspan="6" class="text-muted">Giỏ hàng đang trống.</td></tr>'; return; }
+ body.innerHTML = items.map(it => `
+ <tr data-id="${it.id}">
+ <td>
+ <div class="fw-semibold">${it.name}</div>
+ </td>
+ <td>
+ <textarea class="form-control form-control-sm note" rows="1">${it.note || ''}</textarea>
+ </td>
+ <td>
+ <div class="input-group input-group-sm">
+ <button class="btn btn-outline-secondary btn-dec" type="button">-</button>
+ <input type="number" class="form-control text-center qty" min="1" value="${it.quantity}">
+ <button class="btn btn-outline-secondary btn-inc" type="button">+</button>
+ </div>
+ </td>
+ <td class="text-end">${fmt(it.unitPrice)}</td>
+ <td class="text-end line-total">${fmt(it.lineTotal)}</td>
+ <td class="text-end">
+ <div class="btn-group btn-group-sm">
+ <button class="btn btn-outline-primary btn-save">Cập nhật</button>
+ <button class="btn btn-outline-danger btn-del">Xóa</button>
+ </div>
+ </td>
+ </tr>
+ `).join('');
+
+ // wire events
+ body.querySelectorAll('tr[data-id]').forEach(tr =>{
+ const id = tr.getAttribute('data-id');
+ const qtyEl = tr.querySelector('.qty');
+ const noteEl = tr.querySelector('.note');
+ tr.querySelector('.btn-inc').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)+1); save(id, qtyEl.value, noteEl.value); };
+ tr.querySelector('.btn-dec').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)-1); save(id, qtyEl.value, noteEl.value); };
+ tr.querySelector('.btn-save').onclick = ()=> save(id, qtyEl.value, noteEl.value);
+ tr.querySelector('.btn-del').onclick = ()=> removeItem(id);
+ });
+ }
+ async function save(id, qty, note){
+ try{
+ qty = Math.max(1, parseInt(qty||'1',10));
+ await api(`/proxy/public/cart/${orderId}/items/${id}`, { method:'PUT', body: JSON.stringify({ quantity: qty, note: note || null })});
+ await load();
+ toast('Đã cập nhật', true);
+ }catch(e){ toast(e.message); }
+ }
+ async function removeItem(id){
+ try{
+ await api(`/proxy/public/cart/${orderId}/items/${id}`, { method:'DELETE' });
+ await load();
+ toast('Đã xóa', true);
+ }catch(e){ toast(e.message); }
+ }
+ async function clearAll(){
+ if(!confirm('Xóa tất cả món trong giỏ?')) return;
+ try{
+ await api(`/proxy/public/cart/${orderId}/clear`, { method:'POST' });
+ await load();
+ toast('Đã xóa hết', true);
+ }catch(e){ toast(e.message); }
+ }
+ async function submit(){
+ if(!cart || !(cart.items && cart.items.length)) { toast('Giỏ hàng đang trống'); return; }
+ if(!confirm('Gửi đơn hàng để bếp xử lý?')) return;
+ try{
+ await api(`/proxy/public/cart/${orderId}/submit`, { method:'POST', body: '{}' });
+ toast('Đã gửi đơn hàng!', true);
+ // khóa nút và điều hướng về menu
+ document.getElementById('btnSubmit').disabled = true;
+ document.getElementById('btnClear').disabled = true;
+ setTimeout(()=>{ window.location.href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`; },800);
+ }catch(e){ toast(e.message); }
+ }
+ document.getElementById('btnClear').addEventListener('click', clearAll);
+ document.getElementById('btnSubmit').addEventListener('click', submit);
+ (async()=>{ try{ await load(); } catch(e){ toast(e.message); } })();
+</script>
+}

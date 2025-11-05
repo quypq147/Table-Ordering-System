@@ -1,6 +1,6 @@
 ﻿@model List<AdminWeb.Dtos.UserVm>
 @{
- ViewData["Title"] = "Tài kho?n";
+ ViewData["Title"] = "Tài khoản";
  var total = Model?.Count ??0;
 }
 
@@ -18,14 +18,14 @@
 {
  <div class="alert alert-success alert-dismissible fade show" role="alert">
  @ok
- <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="?óng"></button>
+ <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
  </div>
 }
 @if (TempData["Error"] is string err)
 {
  <div class="alert alert-danger alert-dismissible fade show" role="alert">
  @err
- <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="?óng"></button>
+ <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
  </div>
 }
 
@@ -36,7 +36,7 @@
  <thead class="table-light" style="position: sticky; top:0; z-index:1;">
  <tr>
  <th>UserName</th>
- <th>H? tên</th>
+ <th>Họ và tên</th>
  <th>Email</th>
  <th>Vai trò</th>
  <th style="width:140px">Trạng thái</th>
@@ -54,11 +54,11 @@
  <td>
  @if (u.IsActive)
  {
- <span class="badge rounded-pill bg-success">Active</span>
+ <span class="badge rounded-pill bg-success">Đang hoạt động</span>
  }
  else
  {
- <span class="badge rounded-pill bg-secondary">Inactive</span>
+ <span class="badge rounded-pill bg-secondary">Vô hiệu</span>
  }
  </td>
  <td class="text-end">
