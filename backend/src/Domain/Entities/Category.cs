@@ -13,6 +13,7 @@ public class Category : Entity<Guid>
     private string? IconUrl { get; set; } = default!;
 
     // EF
+    private Category() : base(default!) { }
 
     public Category(Guid id, string code, string name, string? description, int sortOrder = 0) : base(id)
     {

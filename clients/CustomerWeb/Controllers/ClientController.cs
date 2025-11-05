@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿namespace CustomerWeb.Controllers;
 
-namespace ClientWeb.Controllers;
+using Microsoft.AspNetCore.Mvc;
 
 public class ClientController : Controller
 {

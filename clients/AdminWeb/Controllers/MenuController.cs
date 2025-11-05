@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using AdminWeb.Dtos;
+using TableOrdering.Contracts;
 using AdminWeb.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

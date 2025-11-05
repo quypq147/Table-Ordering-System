@@ -1,4 +1,4 @@
-using CustomerWeb.Dtos;
+using TableOrdering.Contracts;
 
 namespace CustomerWeb.Services;
 

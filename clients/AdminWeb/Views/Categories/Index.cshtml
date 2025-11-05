@@ -1,4 +1,5 @@
-﻿@model List<AdminWeb.Dtos.CategoryDto>
+﻿@using TableOrdering.Contracts
+@model List<CategoryDto>
 @{
  ViewData["Title"] = "Danh mục";
  var search = (string?)ViewBag.Search ?? "";

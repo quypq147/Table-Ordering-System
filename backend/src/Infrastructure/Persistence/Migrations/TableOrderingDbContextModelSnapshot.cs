@@ -55,7 +55,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("Number")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("NEXT VALUE FOR CategoryNoSeq");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
@@ -88,7 +90,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("Number")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("NEXT VALUE FOR MenuItemNoSeq");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
@@ -135,7 +139,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Number")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("NEXT VALUE FOR OrderNoSeq");
 
                     b.Property<string>("OrderStatus")
                         .IsRequired()
@@ -150,11 +156,6 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime?>("ServedAtUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
 
                     b.Property<DateTime?>("SubmittedAtUtc")
                         .HasColumnType("datetime2");
@@ -187,7 +188,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("Number")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("NEXT VALUE FOR TableNoSeq");
 
                     b.Property<int>("Seats")
                         .HasColumnType("int");
@@ -204,7 +207,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.ToTable("Tables", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Tables_Seats_Positive", "[Seats] >= 1");
+                            t.HasCheckConstraint("CK_Tables_Seats_Positive", "[Seats] >=1");
                         });
                 });
 

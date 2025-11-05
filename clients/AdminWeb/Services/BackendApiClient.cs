@@ -2,8 +2,9 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AdminWeb.Dtos;
+using TableOrdering.Contracts;
 using AdminWeb.Services.Models;
+using AdminWeb.Dtos; // for User* DTOs
 
 namespace AdminWeb.Services
 {
@@ -191,7 +192,7 @@ namespace AdminWeb.Services
                 {
                     var arr = JsonSerializer.Deserialize<List<OrderSummaryDto>>(text, JsonOptions);
                     if (arr is not null)
-                        return new Paginated<OrderSummaryDto> { Items = arr, Page = page, PageSize = pageSize, Total = arr.Count };
+                        return new Paginated<OrderSummaryDto>(arr, page, pageSize, arr.Count);
                 }
                 catch { }
 
@@ -207,7 +208,7 @@ namespace AdminWeb.Services
                         int total = arr.Count;
                         if (doc.RootElement.TryGetProperty("total", out var totalEl) && totalEl.TryGetInt32(out var t))
                             total = t;
-                        return new Paginated<OrderSummaryDto> { Items = arr, Page = page, PageSize = pageSize, Total = total };
+                        return new Paginated<OrderSummaryDto>(arr, page, pageSize, total);
                     }
                 }
                 catch { }

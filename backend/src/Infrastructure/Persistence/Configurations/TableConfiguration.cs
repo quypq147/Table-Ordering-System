@@ -21,8 +21,13 @@ public class TableConfiguration : IEntityTypeConfiguration<Table>
         // Lưu enum dạng string cho dễ đọc/log (có thể đổi sang int nếu ưu tiên hiệu năng)
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
 
-        // Seats >= 1
-        b.ToTable(x => x.HasCheckConstraint("CK_Tables_Seats_Positive", "[Seats] >= 1"));
+        // Seats >=1
+        b.ToTable(x => x.HasCheckConstraint("CK_Tables_Seats_Positive", "[Seats] >=1"));
+
+        // sequence for Number
+        b.Property(x => x.Number)
+            .HasDefaultValueSql("NEXT VALUE FOR TableNoSeq")
+            .ValueGeneratedOnAdd();
     }
 }
 

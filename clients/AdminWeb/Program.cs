@@ -76,7 +76,7 @@ builder.Services.AddAuthorization(opt =>
 builder.Services.AddHttpClient<IBackendApiClient, BackendApiClient>((sp, http) =>
 {
  var cfg = sp.GetRequiredService<IConfiguration>();
- http.BaseAddress = new Uri(cfg["BackendService:BaseUrl"]!);
+ http.BaseAddress = new Uri(cfg["Backend:BaseUrl"]!);
  var token = cfg["Backend:StaticBearer"];
  if (!string.IsNullOrWhiteSpace(token))
  http.DefaultRequestHeaders.Authorization =
