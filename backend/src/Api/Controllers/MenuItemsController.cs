@@ -21,12 +21,17 @@ public class MenuItemsController : ControllerBase
         [Required, StringLength(200, MinimumLength = 1)] string Name,
         [Required, StringLength(64, MinimumLength = 1)] string Sku, // NEW
         [Range(0.01, 1_000_000)] decimal Price,
-        [Required, StringLength(3, MinimumLength = 3)] string Currency
+        [Required, StringLength(3, MinimumLength = 3)] string Currency,
+        [StringLength(1024)] string? AvatarImageUrl,
+        [StringLength(1024)] string? BackgroundImageUrl
     );
 
     public sealed record RenameDto([property: Required, StringLength(200, MinimumLength = 1)] string NewName);
     public sealed record PriceDto([property: Range(0.01, 1_000_000)] decimal Price,
         [property: Required, StringLength(3, MinimumLength = 3)] string Currency);
+
+    // multipart form for image uploads
+    public sealed record UpdateImagesResponse(Guid Id, string? AvatarImageUrl, string? BackgroundImageUrl);
 
     // POST /api/menuitems
     [HttpPost]
@@ -39,11 +44,37 @@ public class MenuItemsController : ControllerBase
             body.Name.Trim(),
             body.Sku.Trim(),
             body.Price,
-            body.Currency.Trim().ToUpperInvariant()
+            body.Currency.Trim().ToUpperInvariant(),
+            body.AvatarImageUrl?.Trim(),
+            body.BackgroundImageUrl?.Trim()
         );
 
         var dto = await _sender.Send(cmd, ct);
         return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+    }
+
+    // PUT /api/menuitems/{id}/images
+    [HttpPut("{id:guid}/images")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<UpdateImagesResponse>> UpdateImages([FromRoute] Guid id, CancellationToken ct)
+    {
+        var form = await Request.ReadFormAsync(ct);
+        var avatar = form.Files["avatar"]; // file field name
+        var bg = form.Files["background"]; // file field name
+
+        Stream? avatarStream = avatar?.OpenReadStream();
+        Stream? bgStream = bg?.OpenReadStream();
+        var cmd = new UpdateMenuItemImagesCommand(
+            id,
+            avatarStream,
+            avatar?.FileName,
+            avatar?.ContentType,
+            bgStream,
+            bg?.FileName,
+            bg?.ContentType
+        );
+        var dto = await _sender.Send(cmd, ct);
+        return Ok(new UpdateImagesResponse(dto.Id, dto.AvatarImageUrl, dto.BackgroundImageUrl));
     }
 
     // GET /api/menuitems/{id}

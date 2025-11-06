@@ -34,7 +34,9 @@ public class MenuController(IBackendApiClient api) : Controller
             Name: "",
             Sku: "",
             Price: 0,
-            Currency: "VND"
+            Currency: "VND",
+            AvatarImageUrl: null,
+            BackgroundImageUrl: null
         );
 
         ViewBag.Categories = new SelectList(validCats, nameof(CategoryDto.Id), nameof(CategoryDto.Name), vm.CategoryId);

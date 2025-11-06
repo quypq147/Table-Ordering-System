@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MediatR;
+using Infrastructure.Files;
 
 namespace Infrastructure.DependencyInjection;
 
@@ -31,6 +32,9 @@ public static class ServiceCollectionExtensions
 
         // IApplicationDbContext -> DbContext
         services.AddScoped<IApplicationDbContext, TableOrderingDbContext>();
+
+        // File storage (local by default)
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
         return services;
     }
 }

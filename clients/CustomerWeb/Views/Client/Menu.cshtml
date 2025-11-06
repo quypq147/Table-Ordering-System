@@ -15,6 +15,14 @@
     <div id="items" class="row g-3 mt-3"></div>
 </div>
 
+<!-- Nút giỏ hàng nổi -->
+<div id="cartFloating" class="position-fixed bottom-0 end-0 p-3" style="z-index:1080; display:none;">
+    <a id="cartLink" class="btn btn-primary btn-lg rounded-pill shadow px-3 py-2" href="#" aria-disabled="true">
+        <span class="me-2">Giỏ hàng</span>
+        <span class="badge bg-light text-dark" id="cartCount">0</span>
+    </a>
+</div>
+
 <!-- Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog">
@@ -73,9 +81,37 @@
   }
   return data;  
 }
+        function setCartVisible(visible){
+          document.getElementById('cartFloating').style.display = visible ? 'block' : 'none';
+        }
+        function setCartEnabled(enabled){
+          const link = document.getElementById('cartLink');
+          link.classList.toggle('disabled', !enabled);
+          link.setAttribute('aria-disabled', (!enabled).toString());
+          link.tabIndex = enabled ?0 : -1;
+        }
+        function updateCartLink(){
+          const link = document.getElementById('cartLink');
+          if(orderId){
+            link.href = `/client/cart/${orderId}`;
+            setCartVisible(true);
+          }
+        }
+        async function refreshCartBadge(){
+          if(!orderId) return;
+          try{
+            const cart = await api(`/proxy/public/cart/${orderId}`);
+            const count = (cart.items||[]).reduce((s,it)=> s + (parseInt(it.quantity)||0),0);
+            document.getElementById('cartCount').textContent = count;
+            updateCartLink();
+            setCartEnabled(count >0);
+          }catch{ /* ignore badge error */ }
+        }
         async function startCart(){
           const res = await api("/proxy/public/cart/start", { method:"POST", body: JSON.stringify({ tableCode }) });
           orderId = res.orderId;
+          updateCartLink();
+          await refreshCartBadge();
         }
         async function loadCategories() {
   const sel = document.getElementById("category");
@@ -124,6 +160,7 @@
           });
           bootstrap.Modal.getOrCreateInstance(document.getElementById("addModal")).hide();
           toast("Đã thêm vào giỏ!", true);
+          await refreshCartBadge();
         }
         document.getElementById("btnAdd").addEventListener("click", async ()=>{ try{ await addToCart(); } catch(e){ toast(e.message); }});
         (async()=>{ try{ await startCart(); await loadCategories(); } catch(e){ toast(e.message); }})();

@@ -147,6 +147,9 @@ namespace AdminWeb.Services
         public Task<HttpResponseMessage> CreateMenuItemAsync(CreateMenuItemRequest req, CancellationToken cancellationToken = default)
             => _http.PostAsJsonAsync("/api/menuitems", req, JsonOptions, cancellationToken);
 
+        public Task<HttpResponseMessage> UpdateMenuItemImagesAsync(Guid id, UpdateMenuItemImagesRequest req, CancellationToken cancellationToken = default)
+            => _http.PutAsJsonAsync($"/api/menuitems/{id}/images", req, JsonOptions, cancellationToken);
+
         // New: Activate/Deactivate
         public Task<HttpResponseMessage> ActivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default)
             => _http.PostAsync($"/api/menuitems/{id}/activate", content: null, cancellationToken);
@@ -213,6 +216,37 @@ namespace AdminWeb.Services
                 }
                 catch { }
 
+                // 4) Fallback: array of unknown order objects -> map to OrderSummaryDto
+                try
+                {
+                    using var doc = JsonDocument.Parse(text);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    {
+                        var list = new List<OrderSummaryDto>();
+                        foreach (var el in doc.RootElement.EnumerateArray())
+                        {
+                            var id = TryGetGuid(el, "id") ?? TryGetGuid(el, "orderId") ?? Guid.Empty;
+                            if (id == Guid.Empty)
+                                continue;
+
+                            string code = TryGetString(el, "code") ?? TryGetString(el, "orderCode") ?? TryGetString(el, "tableCode") ?? id.ToString("N").Substring(0,8).ToUpperInvariant();
+
+                            string status = TryGetString(el, "status") ?? TryGetInt(el, "status")?.ToString() ?? TryGetString(el, "state") ?? "Unknown";
+
+                            decimal total = TryGetDecimal(el, "total") ?? TryGetDecimal(el, "amount") ??0m;
+
+                            DateTime created = TryGetDateTime(el, "createdAt")
+                                ?? TryGetDateTime(el, "created")
+                                ?? TryGetDateTime(el, "createdOn")
+                                ?? DateTime.UtcNow;
+
+                            list.Add(new OrderSummaryDto(id, code, status, total, created));
+                        }
+                        return new Paginated<OrderSummaryDto>(list, page, pageSize, list.Count);
+                    }
+                }
+                catch { }
+
                 var head = text.Length > 400 ? text[..400] + "..." : text;
                 throw new JsonException($"Orders response JSON shape not recognized from {url}. First bytes: {head}");
             }
@@ -220,8 +254,124 @@ namespace AdminWeb.Services
             throw new HttpRequestException("No valid orders endpoint found. Tried: " + string.Join(", ", candidates));
         }
 
-        public Task<OrderDetailDto?> GetOrderAsync(Guid id, CancellationToken cancellationToken = default)
-            => GetOrDefaultAsync<OrderDetailDto>($"/api/orders/{id}", cancellationToken);
+        private static bool TryGetPropertyCaseInsensitive(JsonElement el, string name, out JsonElement value)
+        {
+            if (el.ValueKind != JsonValueKind.Object)
+            {
+                value = default;
+                return false;
+            }
+            if (el.TryGetProperty(name, out value)) return true;
+            // Try simple first-letter casing swap
+            if (name.Length > 0)
+            {
+                var alt = char.IsLower(name[0]) ? char.ToUpperInvariant(name[0]) + name[1..] : char.ToLowerInvariant(name[0]) + name[1..];
+                if (el.TryGetProperty(alt, out value)) return true;
+            }
+            // As a last resort, linear scan ignoring case
+            foreach (var p in el.EnumerateObject())
+            {
+                if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = p.Value;
+                    return true;
+                }
+            }
+            value = default;
+            return false;
+        }
+
+        private static Guid? TryGetGuid(JsonElement el, string name)
+            => TryGetPropertyCaseInsensitive(el, name, out var v)
+            ? v.ValueKind == JsonValueKind.String && Guid.TryParse(v.GetString(), out var g) ? g : null
+            : null;
+
+        private static string? TryGetString(JsonElement el, string name)
+            => TryGetPropertyCaseInsensitive(el, name, out var v)
+            ? v.ValueKind == JsonValueKind.String ? v.GetString() : v.ValueKind == JsonValueKind.Number ? v.GetRawText() : null
+            : null;
+
+        private static int? TryGetInt(JsonElement el, string name)
+            => TryGetPropertyCaseInsensitive(el, name, out var v)
+            ? v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : null
+            : null;
+
+        private static decimal? TryGetDecimal(JsonElement el, string name)
+            => TryGetPropertyCaseInsensitive(el, name, out var v)
+            ? v.ValueKind == JsonValueKind.Number ? v.GetDecimal() : (v.ValueKind == JsonValueKind.String && decimal.TryParse(v.GetString(), out var d) ? d : null)
+            : null;
+
+        private static DateTime? TryGetDateTime(JsonElement el, string name)
+        {
+            if (!TryGetPropertyCaseInsensitive(el, name, out var v)) return null;
+            try
+            {
+                return v.ValueKind == JsonValueKind.String ? DateTime.Parse(v.GetString()!, null, System.Globalization.DateTimeStyles.RoundtripKind) : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<OrderDetailDto?> GetOrderAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/orders/{id}";
+            using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            if (resp.StatusCode == HttpStatusCode.NotFound) return null;
+
+            var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
+
+            // Try direct deserialize first
+            try
+            {
+                return JsonSerializer.Deserialize<OrderDetailDto>(text, JsonOptions);
+            }
+            catch
+            {
+                // Fallback: tolerant mapping
+                try
+                {
+                    using var doc = JsonDocument.Parse(text);
+                    var root = doc.RootElement;
+                    if (root.ValueKind != JsonValueKind.Object) return null;
+
+                    var oid = TryGetGuid(root, "id") ?? TryGetGuid(root, "orderId") ?? id;
+                    var code = TryGetString(root, "code") ?? TryGetString(root, "orderCode") ?? TryGetString(root, "tableCode") ?? oid.ToString("N").Substring(0,8).ToUpperInvariant();
+                    var status = TryGetString(root, "status") ?? TryGetInt(root, "status")?.ToString() ?? TryGetString(root, "state") ?? "Unknown";
+                    var subtotal = TryGetDecimal(root, "subtotal");
+                    var discount = TryGetDecimal(root, "discount") ?? TryGetDecimal(root, "discountAmount") ??0m;
+                    var total = TryGetDecimal(root, "total") ??0m;
+                    var created = TryGetDateTime(root, "createdAt") ?? TryGetDateTime(root, "created") ?? TryGetDateTime(root, "createdOn") ?? DateTime.UtcNow;
+
+                    var items = new List<OrderItemRow>();
+                    if (TryGetPropertyCaseInsensitive(root, "items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var it in itemsEl.EnumerateArray())
+                        {
+                            var name = TryGetString(it, "name") ?? TryGetString(it, "itemName") ?? "Item";
+                            var qty = TryGetInt(it, "quantity") ?? TryGetInt(it, "qty") ??1;
+                            var unit = TryGetDecimal(it, "unitPrice") ?? TryGetDecimal(it, "price") ??0m;
+                            var line = TryGetDecimal(it, "lineTotal") ?? TryGetDecimal(it, "total") ?? (unit * qty);
+                            var note = TryGetString(it, "note") ?? TryGetString(it, "remark");
+                            items.Add(new OrderItemRow(name, qty, unit, line, note));
+                        }
+                    }
+
+                    // compute subtotal if missing
+                    var sub = subtotal ?? (items.Count >0 ? items.Sum(x => x.LineTotal) : total);
+                    var det = new OrderDetailDto(oid, code, status, sub, discount, total ==0m && sub !=0m ? sub - discount : total, created, items);
+                    return det;
+                }
+                catch
+                {
+                    // give up -> null
+                    return null;
+                }
+            }
+        }
 
         public Task<HttpResponseMessage> UpdateOrderStatusAsync(Guid id, string status, CancellationToken cancellationToken = default)
             => _http.PatchAsJsonAsync($"/api/orders/{id}/status", new { status }, JsonOptions, cancellationToken);

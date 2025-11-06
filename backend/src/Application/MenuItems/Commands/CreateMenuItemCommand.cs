@@ -8,5 +8,7 @@ public sealed record CreateMenuItemCommand(
     string Name,
     string Sku, // accept Sku
     decimal Price,
-    string Currency
+    string Currency,
+    string? AvatarImageUrl = null,
+    string? BackgroundImageUrl = null
 ) : ICommand<MenuItemDto>;
