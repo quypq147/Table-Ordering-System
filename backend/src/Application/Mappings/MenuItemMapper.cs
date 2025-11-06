@@ -14,7 +14,9 @@ public static class MenuItemMapper
             m.Name,
             m.Price.Amount,
             m.Price.Currency,
-            m.IsActive
+            m.IsActive,
+            m.AvatarImageUrl,
+            m.BackgroundImageUrl
         );
 }
 

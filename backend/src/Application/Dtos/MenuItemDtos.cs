@@ -7,7 +7,9 @@ public sealed record MenuItemDto(
     string Name,
     decimal Price,
     string Currency,
-    bool IsActive
+    bool IsActive,
+    string? AvatarImageUrl,
+    string? BackgroundImageUrl
 )
 {
    

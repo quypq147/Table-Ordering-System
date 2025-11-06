@@ -1,37 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\menuitemscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\menuitemscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "MenuItemsController.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "RelativeToolTip": "backend\\src\\Api\\Controllers\\MenuItemsController.cs",
-              "ViewState": "AgIAAEAAAAAAAAAAAAAwwGMAAAAmAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-06T02:16:37.226Z",
-              "EditorCaption": ""
-            }
-          ]
-        }
-      ]
+      "DocumentGroups": []
     }
   ]
 }

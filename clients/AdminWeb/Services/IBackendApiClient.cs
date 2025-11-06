@@ -22,6 +22,7 @@ namespace AdminWeb.Services
         Task<List<MenuItemDto>> GetMenuAsync(CancellationToken ct = default);
         Task<List<MenuItemDto>> GetMenuAsync(string? search, Guid? categoryId, bool? onlyActive, CancellationToken ct = default);
         Task<HttpResponseMessage> CreateMenuItemAsync(CreateMenuItemRequest req, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> UpdateMenuItemImagesAsync(Guid id, UpdateMenuItemImagesRequest req, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> ActivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> DeactivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
 

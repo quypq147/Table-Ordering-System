@@ -39,6 +39,10 @@ public sealed class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
          .HasForeignKey(x => x.CategoryId)
          .OnDelete(DeleteBehavior.Restrict);
 
+        // Optional images
+        b.Property(x => x.AvatarImageUrl).HasMaxLength(1024);
+        b.Property(x => x.BackgroundImageUrl).HasMaxLength(1024);
+
         // Optional row version for optimistic concurrency
         b.Property<byte[]>("RowVersion").IsRowVersion();
     }

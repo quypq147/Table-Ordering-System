@@ -3,9 +3,7 @@ using System.Threading.Tasks;
 using Application.Abstractions;
 using Application.Dtos;
 using Microsoft.EntityFrameworkCore;
-
-// (Option nếu bạn đã có mapper chung):
-// using Application.Mappings;              // MenuItemMapper
+using Application.Mappings;
 
 namespace Application.MenuItems.Queries;
 
@@ -21,21 +19,7 @@ public sealed class GetMenuItemByIdHandler
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == q.Id, ct);
 
-        if (m is null) return null;
-
-        // Nếu bạn có mapper dùng tiền tệ/VO sẵn:
-        // return MenuItemMapper.ToDto(m);
-
-        // Fallback map thẳng (điều chỉnh fields theo MenuItemDto của bạn):
-        return new MenuItemDto(
-            Id: m.Id,
-            CategoryId: m.CategoryId,         // Added missing argument for CategoryId
-            Sku: m.Sku,
-            Name: m.Name,
-            Price: m.Price.Amount,
-            Currency: m.Price.Currency,
-            IsActive: m.IsActive
-        );
+        return m is null ? null : MenuItemMapper.ToDto(m);
     }
 }
 

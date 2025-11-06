@@ -10,8 +10,9 @@ public record UpdateCategoryRequest(string Name, int DisplayOrder, bool IsActive
 public record RenameCategoryRequest(string Name);
 
 // Menu Items
-public record MenuItemDto(Guid Id, Guid CategoryId, string Name, string Sku, decimal Price, bool IsActive);
-public record CreateMenuItemRequest(Guid CategoryId, string Name, string Sku, decimal Price, string Currency);
+public record MenuItemDto(Guid Id, Guid CategoryId, string Name, string Sku, decimal Price, string Currency, bool IsActive, string? AvatarImageUrl, string? BackgroundImageUrl);
+public record CreateMenuItemRequest(Guid CategoryId, string Name, string Sku, decimal Price, string Currency, string? AvatarImageUrl, string? BackgroundImageUrl);
+public record UpdateMenuItemImagesRequest(Guid Id, string? AvatarImageUrl, string? BackgroundImageUrl);
 
 // Orders
 public record OrderItemRow(string Name, int Qty, decimal UnitPrice, decimal LineTotal, string? Note);
