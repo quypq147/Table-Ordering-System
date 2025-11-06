@@ -3,8 +3,8 @@
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{61BAED57-AC6F-4D3D-B63B-6DF2B4483EB0}|backend\\src\\Infrastructure\\Infrastructure.csproj|e:\\project\\repo\\tableordering\\backend\\src\\infrastructure\\identity\\identityseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{61BAED57-AC6F-4D3D-B63B-6DF2B4483EB0}|backend\\src\\Infrastructure\\Infrastructure.csproj|solutionrelative:backend\\src\\infrastructure\\identity\\identityseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\menuitemscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\menuitemscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,14 +19,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "IdentitySeeder.cs",
-              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "RelativeDocumentMoniker": "backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "RelativeToolTip": "backend\\src\\Infrastructure\\Identity\\IdentitySeeder.cs",
-              "ViewState": "AgIAAAgAAAAAAAAAAAAxwBcAAABCAAAAAAAAAA==",
+              "Title": "MenuItemsController.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\MenuItemsController.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\MenuItemsController.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\MenuItemsController.cs",
+              "RelativeToolTip": "backend\\src\\Api\\Controllers\\MenuItemsController.cs",
+              "ViewState": "AgIAAEAAAAAAAAAAAAAwwGMAAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-05T18:31:59.285Z",
+              "WhenOpened": "2025-11-06T02:16:37.226Z",
               "EditorCaption": ""
             }
           ]
