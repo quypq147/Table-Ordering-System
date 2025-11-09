@@ -5,6 +5,7 @@ using Application.Dtos;
 using Application.Common.CQRS; // custom CQRS ISender
 using MediatR; // MediatR ISender for public flows
 using Microsoft.AspNetCore.Mvc;
+using Domain.Enums; // for OrderStatus
 
 namespace Api.Controllers.Public;
 
@@ -24,15 +25,24 @@ public class CartController : ControllerBase
     [HttpPost("start")]
     public async Task<ActionResult<object>> Start([FromBody] StartDto body, CancellationToken ct)
     {
-        var orderId = await _mediator.Send(new StartCartByTableCodeCommand(body.TableCode), ct);
-        return Ok(new { OrderId = orderId });
+        try
+        {
+            var orderId = await _mediator.Send(new StartCartByTableCodeCommand(body.TableCode), ct);
+            return Ok(new { OrderId = orderId });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // table not found =>404
+            if (ex.Message.Contains("Bàn không t?n t?i")) return NotFound(new { error = ex.Message });
+            throw;
+        }
     }
 
     // GET /api/public/cart/{orderId}
     [HttpGet("{orderId:guid}")]
-    public async Task<ActionResult<OrderDto>> Get(Guid orderId, CancellationToken ct)
+    public async Task<ActionResult<CartDto>> Get(Guid orderId, CancellationToken ct)
     {
-        var dto = await _cqrs.Send(new GetOrderByIdQuery(orderId), ct);
+        var dto = await _cqrs.Send(new GetCartByIdQuery(orderId), ct);
         return dto is null ? NotFound() : Ok(dto);
     }
 
@@ -78,17 +88,34 @@ public class CartController : ControllerBase
 
     // DELETE /api/public/cart/{orderId}/all
     [HttpDelete("{orderId:guid}/all")]
-    public async Task<ActionResult<OrderDto>> Clear(Guid orderId, CancellationToken ct)
+    public async Task<ActionResult<CartDto>> Clear(Guid orderId, CancellationToken ct)
     {
         var dto = await _cqrs.Send(new ClearCartCommand(orderId), ct);
-        return Ok(dto);
+        // Map OrderDto -> CartDto for return after clear
+        var mapped = await _cqrs.Send(new GetCartByIdQuery(orderId), ct);
+        return Ok(mapped);
     }
 
     // POST /api/public/cart/{orderId}/submit
     [HttpPost("{orderId:guid}/submit")]
-    public async Task<ActionResult<OrderDto>> Submit(Guid orderId, CancellationToken ct)
+    public async Task<ActionResult<CartDto>> Submit(Guid orderId, CancellationToken ct)
     {
-        var dto = await _cqrs.Send(new SubmitOrderCommand(orderId), ct);
-        return Ok(dto);
+        var orderDto = await _cqrs.Send(new SubmitOrderCommand(orderId), ct);
+        var cartDto = await _cqrs.Send(new GetCartByIdQuery(orderId), ct);
+        return Ok(cartDto);
+    }
+
+    // POST /api/public/cart/{orderId}/close-session
+    // Beacon-friendly: always return204. Only cancel Draft to avoid abusing public endpoint.
+    [HttpPost("{orderId:guid}/close-session")]
+    public async Task<ActionResult> CloseSession(Guid orderId, CancellationToken ct)
+    {
+        var orderDto = await _cqrs.Send(new GetOrderByIdQuery(orderId), ct);
+        if (orderDto is not null && orderDto.Status == OrderStatus.Draft)
+        {
+            // Reuse Cancel command; domain prevents cancelling Paid
+            await _cqrs.Send(new CancelOrderCommand(orderId), ct);
+        }
+        return NoContent();
     }
 }

@@ -9,7 +9,7 @@
 
 <h2>Thêm món</h2>
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
@@ -48,14 +48,14 @@
 
     <div class="row g-3 mt-1">
         <div class="col-md-6">
-            <label class="form-label">Ảnh đại diện (URL)</label>
-            <input asp-for="AvatarImageUrl" class="form-control" placeholder="https://.../image.jpg" />
-            <span asp-validation-for="AvatarImageUrl" class="text-danger"></span>
+            <label class="form-label">Ảnh đại diện</label>
+            <input name="avatarFile" type="file" accept="image/*" class="form-control" />
+            <div class="form-text">Hỗ trợ JPG, PNG, WEBP, GIF. Tối đa5 MB.</div>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Ảnh nền (URL)</label>
-            <input asp-for="BackgroundImageUrl" class="form-control" placeholder="https://.../background.jpg" />
-            <span asp-validation-for="BackgroundImageUrl" class="text-danger"></span>
+            <label class="form-label">Ảnh nền</label>
+            <input name="backgroundFile" type="file" accept="image/*" class="form-control" />
+            <div class="form-text">Hỗ trợ JPG, PNG, WEBP, GIF. Tối đa5 MB.</div>
         </div>
     </div>
 

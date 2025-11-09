@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AdminWeb.Models;
 using AdminWeb.Services;
+using AdminWeb.Services.Models; // for DashboardVm
 
 namespace AdminWeb.Controllers;
 
@@ -14,7 +15,18 @@ public class HomeController(IBackendApiClient api) : Controller
 
     public async Task<IActionResult> Index()
     {
-        var vm = await _api.GetDashboardAsync();
+        DashboardVm vm;
+        try
+        {
+            vm = await _api.GetDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            // Graceful fallback so the page still renders
+            vm = new DashboardVm();
+            ViewBag.DashboardError = ex.Message;
+        }
+
         var json = JsonSerializer.Serialize(vm, new JsonSerializerOptions { PropertyNamingPolicy = null });
         ViewBag.DashboardJson = json;
         return View();

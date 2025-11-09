@@ -5,8 +5,8 @@ using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MediatR;
 using Infrastructure.Files;
+using Infrastructure.DomainEvents;
 
 namespace Infrastructure.DependencyInjection;
 
@@ -14,14 +14,16 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
+        // Domain events dispatcher
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddScoped<IApplicationDbContext, TableOrderingDbContext>();
+
         // DbContext
         services.AddDbContext<TableOrderingDbContext>(opt =>
         {
             var cs = config.GetConnectionString("DefaultConnection");
             opt.UseSqlServer(cs);
         });
-
-        // ❌ BỎ: AddIdentityCore / AddJwtBearer / AddAuthorization (đưa sang API)
 
         // Repositories + UoW
         services.AddScoped<IOrderRepository, OrderRepository>();
@@ -30,11 +32,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // IApplicationDbContext -> DbContext
-        services.AddScoped<IApplicationDbContext, TableOrderingDbContext>();
-
         // File storage (local by default)
         services.AddSingleton<IFileStorage, LocalFileStorage>();
+
         return services;
     }
 }

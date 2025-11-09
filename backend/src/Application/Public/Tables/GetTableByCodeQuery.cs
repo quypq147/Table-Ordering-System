@@ -14,10 +14,10 @@ public sealed class GetTableByCodeHandler : IRequestHandler<GetTableByCodeQuery,
     public async Task<Guid?> Handle(GetTableByCodeQuery q, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(q.Code)) return null;
-        var code = q.Code.Trim();
+        var code = q.Code.Trim().ToUpperInvariant();
 
         var table = await _db.Tables
-            .Where(t => t.Code == code)
+            .Where(t => t.Code.ToUpper() == code)
             .Select(t => (Guid?)t.Id)
             .FirstOrDefaultAsync(ct);
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Domain.Abstractions;
 
-public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id)
+public abstract class AggregateRoot<TId>(TId id) : Entity<TId>(id), IHasDomainEvents
 {
     private readonly List<IDomainEvent> _domainEvents = [];
     

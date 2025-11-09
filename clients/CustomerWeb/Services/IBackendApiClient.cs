@@ -11,7 +11,7 @@ public interface IBackendApiClient
 
     // Cart operations
     Task<CartDto> GetCartAsync(Guid orderId, CancellationToken ct = default);
-    Task UpdateCartItemAsync(Guid orderId, Guid cartItemId, int quantity, string? note, CancellationToken ct = default);
-    Task RemoveCartItemAsync(Guid orderId, Guid cartItemId, CancellationToken ct = default);
+    Task UpdateCartItemAsync(Guid orderId, int cartItemId, int quantity, string? note, CancellationToken ct = default);
+    Task RemoveCartItemAsync(Guid orderId, Guid menuItemId, CancellationToken ct = default);
     Task SubmitCartAsync(Guid orderId, CancellationToken ct = default);
 }

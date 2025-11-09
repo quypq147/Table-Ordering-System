@@ -9,6 +9,17 @@
     var total = Model?.Count ?? 0;
 }
 
+@inject IConfiguration Configuration
+@{
+    var apiBase = Configuration["Backend:BaseUrl"]?.TrimEnd('/');
+    string Img(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "";
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+        return $"{apiBase}{url}";
+    }
+}
+
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
         <h2 class="mb-0">Quản lý món</h2>
@@ -94,7 +105,7 @@
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(m.AvatarImageUrl))
                                 {
-                                    <img src="@m.AvatarImageUrl" alt="@m.Name" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />
+                                    <img src="@Img(m.AvatarImageUrl)" alt="@m.Name" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />
                                 }
                                 else
                                 {

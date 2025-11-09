@@ -3,7 +3,10 @@
     var tableCode = (string)ViewBag.TableCode;
     ViewData["Title"] = $"Menu · Bàn {tableCode}";
 }
-
+@inject IConfiguration Configuration
+@{
+    var apiBase = Configuration["Backend:BaseUrl"]?.TrimEnd('/');
+}
 <div class="container py-3">
     <h3 class="mb-3">Menu · Bàn @tableCode</h3>
 
@@ -13,6 +16,10 @@
     </select>
 
     <div id="items" class="row g-3 mt-3"></div>
+
+    <div class="mt-4 d-flex gap-2">
+        <button id="btnLeave" class="btn btn-outline-danger btn-sm d-none">Rời bàn</button>
+    </div>
 </div>
 
 <!-- Nút giỏ hàng nổi -->
@@ -29,6 +36,7 @@
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title" id="addTitle"></h5></div>
             <div class="modal-body">
+                <img id="addImg" class="img-fluid rounded mb-2 d-none" alt="Ảnh món" />
                 <div class="mb-2 text-muted small" id="addSkuPrice"></div>
                 <div class="mb-2">
                     <label class="form-label">Số lượng</label>
@@ -58,110 +66,165 @@
 </div>
 
 @section Scripts {
-<script>
+    <script>
         const tableCode = "@tableCode";
-        let orderId = null, selectedItemId = null, selectedItemSku = null, selectedItemPrice =0;
+        const apiBase = "@apiBase"; // Backend base (ví dụ http://localhost:5075)
+        function fullImg(u){
+        if(!u) return null;
+        if(u.startsWith('http://') || u.startsWith('https://')) return u;
+        if(u.startsWith('/')) return apiBase + u; // /uploads/...
+        return apiBase + '/' + u;
+        }
+        let orderId = null, selectedItemId = null, selectedItemSku = null, selectedItemPrice =0, selectedItemImg = null;
+        let cartStatus = null; // track current cart status
 
         function toast(msg, ok=false){
-          const el = document.getElementById("toast");
-          el.classList.toggle("text-bg-success", ok);
-          el.classList.toggle("text-bg-danger", !ok);
-          document.getElementById("toastMsg").textContent = msg || (ok ? "Thành công" : "Đã có lỗi");
-          bootstrap.Toast.getOrCreateInstance(el).show();
+        const el = document.getElementById("toast");
+        el.classList.toggle("text-bg-success", ok);
+        el.classList.toggle("text-bg-danger", !ok);
+        document.getElementById("toastMsg").textContent = msg || (ok ? "Thành công" : "Đã có lỗi");
+        bootstrap.Toast.getOrCreateInstance(el).show();
         }
         async function api(url, opt = {}) {
-  const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opt });
-  const raw = await r.text();          // luôn đọc text trước
-  let data = raw;
-  try { data = raw ? JSON.parse(raw) : null; } catch {}   // thử parse JSON
+        const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opt });
+        const raw = await r.text(); // luôn đọc text trước
+        let data = raw;
+        try { data = raw ? JSON.parse(raw) : null; } catch {} // thử parse JSON
 
-  if (!r.ok) {
-    const msg = (data && typeof data === "object" && (data.title || data.detail)) || raw || r.statusText;
-    throw new Error(msg);
-  }
-  return data;  
-}
+        if (!r.ok) {
+        const msg = (data && typeof data === "object" && (data.title || data.detail || data.message)) || raw || r.statusText;
+        throw new Error(msg);
+        }
+        return data;
+        }
         function setCartVisible(visible){
-          document.getElementById('cartFloating').style.display = visible ? 'block' : 'none';
+        document.getElementById('cartFloating').style.display = visible ? 'block' : 'none';
         }
         function setCartEnabled(enabled){
-          const link = document.getElementById('cartLink');
-          link.classList.toggle('disabled', !enabled);
-          link.setAttribute('aria-disabled', (!enabled).toString());
-          link.tabIndex = enabled ?0 : -1;
+        const link = document.getElementById('cartLink');
+        link.classList.toggle('disabled', !enabled);
+        link.setAttribute('aria-disabled', (!enabled).toString());
+        link.tabIndex = enabled ?0 : -1;
         }
         function updateCartLink(){
-          const link = document.getElementById('cartLink');
-          if(orderId){
-            link.href = `/client/cart/${orderId}`;
-            setCartVisible(true);
-          }
+        const link = document.getElementById('cartLink');
+        if(orderId){
+        link.href = `/client/cart/${orderId}`;
+        setCartVisible(true);
+        document.getElementById('btnLeave').classList.remove('d-none');
+        }
+        }
+        function setAddEnabled(enabled){
+        document.querySelectorAll('#items button[data-id]')
+        .forEach(btn => { btn.disabled = !enabled; btn.title = enabled ? '' : 'Đơn hàng đã gửi, không thể thêm món.'; });
         }
         async function refreshCartBadge(){
-          if(!orderId) return;
-          try{
-            const cart = await api(`/proxy/public/cart/${orderId}`);
-            const count = (cart.items||[]).reduce((s,it)=> s + (parseInt(it.quantity)||0),0);
-            document.getElementById('cartCount').textContent = count;
-            updateCartLink();
-            setCartEnabled(count >0);
-          }catch{ /* ignore badge error */ }
+        if(!orderId) return;
+        try{
+        const cart = await api(`/proxy/public/cart/${orderId}`);
+        const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
+        const count = items.reduce((s,it)=> s + (parseInt(it.quantity)||0),0);
+        document.getElementById('cartCount').textContent = count;
+        cartStatus = cart?.status || null; // capture status
+        updateCartLink();
+        setCartEnabled(count >0);
+        // Disable add buttons when not Draft
+        setAddEnabled(cartStatus === 'Draft');
+        }catch{ /* ignore badge error */ }
         }
         async function startCart(){
-          const res = await api("/proxy/public/cart/start", { method:"POST", body: JSON.stringify({ tableCode }) });
-          orderId = res.orderId;
-          updateCartLink();
-          await refreshCartBadge();
+        const res = await api("/proxy/public/cart/start", { method:"POST", body: JSON.stringify({ tableCode }) });
+        orderId = res.orderId;
+        updateCartLink();
+        await refreshCartBadge();
         }
         async function loadCategories() {
-  const sel = document.getElementById("category");
-  const cats = await api("/proxy/public/menu/categories");
+        const sel = document.getElementById("category");
+        const cats = await api("/proxy/public/menu/categories");
 
-  const list = Array.isArray(cats) ? cats : [];
-  sel.innerHTML = `<option value="">-- Chọn danh mục --</option>` +
-                  list.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
-  sel.disabled = false;
-  sel.onchange = e => { if (e.target.value) loadItems(e.target.value); };
-}
-        async function loadItems(categoryId){
-          const host = document.getElementById("items");
-          host.innerHTML = `<div class="col-12 text-muted">Đang tải...</div>`;
-          const items = await api(`/proxy/public/menu/by-category/${categoryId}`);
-          if(!items.length){ host.innerHTML=`<div class="col-12 text-muted">Danh mục chưa có món.</div>`; return; }
-          host.innerHTML = items.map(i => `
-            <div class="col-12 col-md-6 col-lg-4">
-              <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                  <h5>${i.name}</h5>
-                  <div class="small text-muted">SKU: ${i.sku}</div>
-                  <div class="fw-bold mt-1">${(i.price||0).toLocaleString()} ₫</div>
-                  <button class="btn btn-sm btn-primary mt-2" data-id="${i.id}" data-name="${i.name}" data-sku="${i.sku}" data-price="${i.price}">Chọn</button>
-                </div>
-              </div>
-            </div>`).join("");
-          host.querySelectorAll("button[data-id]").forEach(b => b.onclick = () => openAddModal(b.dataset.id, b.dataset.name, b.dataset.sku, b.dataset.price));
+        const list = Array.isArray(cats) ? cats : [];
+        sel.innerHTML = `<option value="">-- Chọn danh mục --</option>` +
+        list.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+        sel.disabled = false;
+        sel.onchange = e => { if (e.target.value) loadItems(e.target.value); };
         }
-        function openAddModal(id, name, sku, price){
-          selectedItemId = id;
-          selectedItemSku = sku;
-          selectedItemPrice = parseFloat(price||0);
-          document.getElementById("addTitle").textContent = name;
-          document.getElementById("addSkuPrice").textContent = `SKU: ${sku} · Giá: ${(selectedItemPrice||0).toLocaleString()} ₫`;
-          document.getElementById("qty").value =1;
-          document.getElementById("note").value = "";
-          bootstrap.Modal.getOrCreateInstance(document.getElementById("addModal")).show();
+        async function loadItems(categoryId){
+        const host = document.getElementById("items");
+        host.innerHTML = `<div class="col-12 text-muted">Đang tải...</div>`;
+        const items = await api(`/proxy/public/menu/by-category/${categoryId}`);
+        if(!items.length){ host.innerHTML=`<div class="col-12 text-muted">Danh mục chưa có món.</div>`; return; }
+        host.innerHTML = items.map(i => {
+        const rawImg = i.avatarImageUrl || i.backgroundImageUrl || null;
+        const img = fullImg(rawImg);
+        const price = (i.price||0).toLocaleString();
+        const disabled = cartStatus && cartStatus !== 'Draft' ? 'disabled' : '';
+        return `
+        <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+        ${img ? `<img src="${img}" class="card-img-top" alt="${i.name}" style="object-fit:cover; height:180px;">` : ''}
+        <div class="card-body">
+        <h5 class="card-title">${i.name}</h5>
+        <div class="small text-muted">SKU: ${i.sku}</div>
+        <div class="fw-bold mt-1">${price} ₫</div>
+        <button class="btn btn-sm btn-primary mt-2" data-id="${i.id}" data-name="${i.name}" data-sku="${i.sku}" data-price="${i.price}" data-avatar="${i.avatarImageUrl||''}" data-bg="${i.backgroundImageUrl||''}" ${disabled}>Chọn</button>
+        </div>
+        </div>
+        </div>`;
+        }).join("");
+        host.querySelectorAll("button[data-id]").forEach(b => b.onclick = () => openAddModal(b.dataset.id, b.dataset.name, b.dataset.sku, b.dataset.price, b.dataset.avatar, b.dataset.bg));
+        // ensure state reflects status
+        setAddEnabled(cartStatus === 'Draft');
+        }
+        function openAddModal(id, name, sku, price, avatar, bg){
+        if(cartStatus && cartStatus !== 'Draft'){ toast('Đơn hàng đã được gửi hoặc không thể chỉnh sửa.', false); return; }
+        selectedItemId = id;
+        selectedItemSku = sku;
+        selectedItemPrice = parseFloat(price||0);
+        selectedItemImg = fullImg(avatar) || fullImg(bg) || null;
+        document.getElementById("addTitle").textContent = name;
+        document.getElementById("addSkuPrice").textContent = `SKU: ${sku} · Giá: ${(selectedItemPrice||0).toLocaleString()} ₫`;
+        const imgEl = document.getElementById("addImg");
+        if(selectedItemImg){ imgEl.src = selectedItemImg; imgEl.classList.remove('d-none'); }
+        else { imgEl.src = ''; imgEl.classList.add('d-none'); }
+        document.getElementById("qty").value =1;
+        document.getElementById("note").value = "";
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("addModal")).show();
         }
         async function addToCart(){
-          const qty = Math.max(1, parseInt(document.getElementById("qty").value||"1",10));
-          const note = document.getElementById("note").value || null;
-          await api(`/proxy/public/cart/${orderId}/items`, {
-            method:"POST",
-            body: JSON.stringify({ menuItemId: selectedItemId, quantity: qty, note })
-          });
-          bootstrap.Modal.getOrCreateInstance(document.getElementById("addModal")).hide();
-          toast("Đã thêm vào giỏ!", true);
-          await refreshCartBadge();
+        if(!orderId){ toast('Chưa có đơn hàng'); return; }
+        if(cartStatus && cartStatus !== 'Draft'){ toast('Đơn hàng đã được gửi hoặc không thể chỉnh sửa.', false); return; }
+        const qty = Math.max(1, parseInt(document.getElementById("qty").value||"1",10));
+        const note = document.getElementById("note").value || null;
+        await api(`/proxy/public/cart/${orderId}/items`, {
+        method:"POST",
+        body: JSON.stringify({ menuItemId: selectedItemId, quantity: qty, note })
+        });
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("addModal")).hide();
+        toast("Đã thêm vào giỏ!", true);
+        await refreshCartBadge();
         }
+        async function leaveTable(){
+        if(!orderId) return;
+        if(!confirm('Kết thúc phiên và xoá giỏ hàng (nếu chưa gửi)?')) return;
+        try{
+        await api(`/proxy/public/cart/${orderId}/close-session`, { method:'POST', body:'{}' });
+        toast('Đã rời bàn', true);
+        orderId = null;
+        document.getElementById('btnLeave').classList.add('d-none');
+        setCartVisible(false);
+        setCartEnabled(false);
+        setTimeout(()=> window.location.href='/client/qr-help',800);
+        }catch(e){ toast(e.message); }
+        }
+        window.addEventListener('beforeunload', () => {
+        try {
+        if(orderId){
+        const data = new Blob([], { type: 'application/json' });
+        navigator.sendBeacon(`/proxy/public/cart/${orderId}/close-session`, data);
+        }
+        } catch { }
+        });
+        document.getElementById('btnLeave').addEventListener('click', leaveTable);
         document.getElementById("btnAdd").addEventListener("click", async ()=>{ try{ await addToCart(); } catch(e){ toast(e.message); }});
         (async()=>{ try{ await startCart(); await loadCategories(); } catch(e){ toast(e.message); }})();
     </script>

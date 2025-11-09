@@ -4,14 +4,24 @@ using AdminWeb.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 
 [Authorize(Policy = "RequireSignedIn")]
-public class MenuController(IBackendApiClient api) : Controller
+public class MenuController(IBackendApiClient api, IWebHostEnvironment env) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, Guid? categoryId, bool? onlyActive)
     {
-        var items = await api.GetMenuAsync();
+        // Load categories for filter dropdown
+        var categories = await api.GetCategoriesAsync();
+        ViewBag.Categories = categories;
+        ViewBag.Search = search;
+        ViewBag.CategoryId = categoryId;
+        ViewBag.OnlyActive = onlyActive ?? false;
+
+        // Fetch filtered menu
+        var items = await api.GetMenuAsync(search, categoryId, onlyActive);
         return View(items);
     }
 
@@ -46,7 +56,7 @@ public class MenuController(IBackendApiClient api) : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CreateMenuItemRequest req)
+    public async Task<IActionResult> Create(CreateMenuItemRequest req, IFormFile? avatarFile, IFormFile? backgroundFile)
     {
         // reload dropdown
         async Task LoadDropdownsAsync()
@@ -75,11 +85,59 @@ public class MenuController(IBackendApiClient api) : Controller
             }
         }
 
+        // Validate and handle uploads (upload to Backend server, not AdminWeb)
+        string? avatarUrl = null;
+        string? bgUrl = null;
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        const long maxSize = 5L * 1024 * 1024; // 5MB
+
+        async Task<string?> UploadToServerAsync(IFormFile file, string folder)
+        {
+            if (file == null || file.Length == 0) return null;
+            if (file.Length > maxSize)
+            {
+                ModelState.AddModelError("", $"Tệp {file.FileName} vượt quá dung lượng tối đa 5MB.");
+                return null;
+            }
+            var ext = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(ext) || !allowed.Contains(ext))
+            {
+                ModelState.AddModelError("", $"Định dạng tệp không hỗ trợ: {ext}. Chỉ chấp nhận JPG, PNG, WEBP, GIF.");
+                return null;
+            }
+
+            try
+            {
+                // Upload to backend API
+                await using var stream = file.OpenReadStream();
+                var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+                var url = await api.UploadImageAsync(stream, file.FileName, contentType, folder);
+                return url;
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Tải ảnh lên máy chủ thất bại: {ex.Message}");
+                return null;
+            }
+        }
+
+        if (avatarFile != null)
+        {
+            avatarUrl = await UploadToServerAsync(avatarFile, folder: "menu");
+        }
+        if (backgroundFile != null)
+        {
+            bgUrl = await UploadToServerAsync(backgroundFile, folder: "menu");
+        }
+
         if (!ModelState.IsValid)
         {
             await LoadDropdownsAsync();
             return View(req);
         }
+
+        if (avatarUrl != null) req = req with { AvatarImageUrl = avatarUrl };
+        if (bgUrl != null) req = req with { BackgroundImageUrl = bgUrl };
 
         var res = await api.CreateMenuItemAsync(req);
         if (!res.IsSuccessStatusCode)

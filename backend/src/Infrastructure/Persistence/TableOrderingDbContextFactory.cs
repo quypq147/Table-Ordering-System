@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using Application.Abstractions;
 
 namespace Infrastructure.Persistence;
 
@@ -30,7 +31,15 @@ public class TableOrderingDbContextFactory : IDesignTimeDbContextFactory<TableOr
             .UseSqlServer(conn)
             .Options;
 
-        return new TableOrderingDbContext(options);
+        // During design-time, we don't need real dispatching. Use a no-op dispatcher.
+        var dispatcher = new NoOpDispatcher();
+
+        return new TableOrderingDbContext(options, dispatcher);
+    }
+
+    private sealed class NoOpDispatcher : IDomainEventDispatcher
+    {
+        public Task DispatchAsync(IEnumerable<Domain.Abstractions.IDomainEvent> domainEvents, CancellationToken ct = default) => Task.CompletedTask;
     }
 }
 

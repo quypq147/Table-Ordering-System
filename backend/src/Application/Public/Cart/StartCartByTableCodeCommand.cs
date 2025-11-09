@@ -22,10 +22,10 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
     {
         if (string.IsNullOrWhiteSpace(c.TableCode))
             throw new ArgumentNullException(nameof(c.TableCode));
-        var code = c.TableCode.Trim();
+        var codeNorm = c.TableCode.Trim().ToUpperInvariant();
 
         var table = await _db.Tables
-            .Where(t => t.Code == code)
+            .Where(t => t.Code.ToUpper() == codeNorm)
             .Select(t => new { t.Id, t.Code })
             .FirstOrDefaultAsync(ct);
         if (table is null) throw new InvalidOperationException("Bàn không tồn tại.");

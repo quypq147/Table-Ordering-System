@@ -28,5 +28,5 @@ public record CreateTableRequest(string Code, int Seats, int Status);
 public record UpdateTableRequest(string Code, int Seats, int Status);
 
 // Public Cart (Customer)
-public record CartItemDto(Guid Id, Guid MenuItemId, string Name, decimal UnitPrice, int Quantity, string? Note, decimal LineTotal);
+public record CartItemDto(int Id, Guid MenuItemId, string Name, decimal UnitPrice, int Quantity, string? Note, decimal LineTotal);
 public record CartDto(Guid OrderId, string TableCode, string Status, IReadOnlyList<CartItemDto> Items, decimal Subtotal, decimal ServiceCharge, decimal Tax, decimal Total);
