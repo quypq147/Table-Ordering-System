@@ -31,6 +31,30 @@ namespace AdminWeb.Controllers
                 TempData["Success"] = "Đã cập nhật trạng thái";
             return RedirectToAction(nameof(Detail), new { id });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(Guid id)
+        {
+            var res = await api.CancelOrderAsync(id);
+            if (!res.IsSuccessStatusCode)
+                TempData["Error"] = "Huỷ đơn thất bại";
+            else
+                TempData["Success"] = "Đã huỷ đơn";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CloseSession(Guid id)
+        {
+            var res = await api.CloseSessionAsync(id);
+            if (!res.IsSuccessStatusCode)
+                TempData["Error"] = "Đóng phiên thất bại";
+            else
+                TempData["Success"] = "Đã đóng phiên";
+            return RedirectToAction(nameof(Detail), new { id });
+        }
     }
 
 }

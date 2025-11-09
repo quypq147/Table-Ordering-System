@@ -38,6 +38,7 @@ public static class JwtExtensions
         services.AddAuthorization(options =>
         {
             options.AddPolicy("RequireAdmin", p => p.RequireRole("Admin"));
+            options.AddPolicy("RequireStaffOrAdmin", p => p.RequireRole("Staff", "Admin"));
         });
 
         return services;

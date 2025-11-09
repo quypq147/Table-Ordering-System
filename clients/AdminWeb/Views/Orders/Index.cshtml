@@ -1,4 +1,5 @@
 ﻿@using TableOrdering.Contracts
+@using AdminWeb
 @model Paginated<OrderSummaryDto>
 @{
     ViewData["Title"] = "Đơn hàng";
@@ -12,6 +13,21 @@
     </div>
 </div>
 
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @ok
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @err
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
 <div class="card">
     <div class="card-head">
         <h3>Danh sách</h3>
@@ -24,7 +40,7 @@
                     <th>Trạng thái</th>
                     <th>Tổng</th>
                     <th>Thời gian</th>
-                    <th style="width:120px"></th>
+                    <th style="width:220px" class="text-end">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -35,35 +51,28 @@
                         <tr>
                             <td class="fw-semibold">@o.Code</td>
                             <td>
-                                @switch (o.Status)
-                                {
-                                    case "Placed":
-                                        <span class="badge rounded-pill bg-secondary">Mới tạo</span>;
-                                        break;
-                                    case "InKitchen":
-                                        <span class="badge rounded-pill bg-info text-dark">Đang chế biến</span>;
-                                        break;
-                                    case "Ready":
-                                        <span class="badge rounded-pill bg-primary">Sẵn sàng</span>;
-                                        break;
-                                    case "Served":
-                                        <span class="badge rounded-pill bg-success">Đã phục vụ</span>;
-                                        break;
-                                    case "Cancelled":
-                                        <span class="badge rounded-pill bg-danger">Đã hủy</span>;
-                                        break;
-                                    case "Paid":
-                                        <span class="badge rounded-pill bg-success">Đã thanh toán</span>;
-                                        break;
-                                    default:
-                                        <span class="badge rounded-pill bg-secondary">@o.Status</span>;
-                                        break;
-                                }
+                                <span class="badge rounded-pill @UiText.OrderStatusBadgeClass(o.Status)">@UiText.OrderStatusLabel(o.Status)</span>
                             </td>
                             <td>@o.Total.ToString("N0")</td>
                             <td>@o.CreatedAt.ToLocalTime()</td>
-                            <td>
-                                <a class="ghost" asp-action="Detail" asp-route-id="@o.Id">Chi tiết</a>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a class="btn btn-outline-primary" asp-action="Detail" asp-route-id="@o.Id">Chi tiết</a>
+                                    @if (o.Status is "Placed" or "InKitchen")
+                                    {
+                                        <form method="post" asp-action="Cancel" asp-route-id="@o.Id" onsubmit="return confirm('Huỷ đơn này?');" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger">Huỷ</button>
+                                        </form>
+                                    }
+                                    @if (o.Status is "Ready" or "Served")
+                                    {
+                                        <form method="post" asp-action="CloseSession" asp-route-id="@o.Id" onsubmit="return confirm('Đóng phiên / kết thúc đơn này?');" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-success">Đóng phiên</button>
+                                        </form>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }

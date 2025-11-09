@@ -1,5 +1,6 @@
 ﻿// Infrastructure/Persistence/TableOrderingDbContext.cs
 using Application.Abstractions;
+using Domain.Abstractions;
 using Domain.Entities;
 using Infrastructure.Identity;                                // ⬅️ thêm
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;      // ⬅️ thêm
@@ -11,7 +12,12 @@ namespace Infrastructure.Persistence;
 public sealed class TableOrderingDbContext
     : IdentityDbContext<AppUser, AppRole, Guid>, IApplicationDbContext // ⬅️ đổi base & dùng interface KHÔNG generic
 {
-    public TableOrderingDbContext(DbContextOptions<TableOrderingDbContext> options) : base(options) { }
+    private readonly IDomainEventDispatcher _dispatcher;
+
+    public TableOrderingDbContext(DbContextOptions<TableOrderingDbContext> options, IDomainEventDispatcher dispatcher) : base(options)
+    {
+        _dispatcher = dispatcher;
+    }
 
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
@@ -19,6 +25,7 @@ public sealed class TableOrderingDbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Table> Tables => Set<Table>(); // ⬅️ đổi cho khớp entity
     public DbSet<Voucher> Vouchers => Set<Voucher>();
+    public DbSet<KitchenTicket> KitchenTickets => Set<KitchenTicket>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -30,9 +37,37 @@ public sealed class TableOrderingDbContext
         mb.HasSequence<int>("TableNoSeq").StartsAt(1).IncrementsBy(1);
     }
 
+    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    {
+        // Collect and clear domain events before save
+        var domainEventEntities = ChangeTracker.Entries<IHasDomainEvents>()
+            .Select(e => e.Entity)
+            .ToList();
+        var domainEvents = domainEventEntities
+            .SelectMany(e => e.DomainEvents)
+            .ToList();
+        foreach (var e in domainEventEntities)
+        {
+            e.ClearDomainEvents();
+        }
+
+        var result = await base.SaveChangesAsync(ct);
+
+        if (domainEvents.Count > 0)
+        {
+            await _dispatcher.DispatchAsync(domainEvents, ct);
+        }
+
+        return result;
+    }
+
     // Nếu IApplicationDbContext yêu cầu:
-    Task<int> IApplicationDbContext.SaveChangesAsync(CancellationToken ct) => base.SaveChangesAsync(ct);
+    Task<int> IApplicationDbContext.SaveChangesAsync(CancellationToken ct) => SaveChangesAsync(ct);
 }
+
+
+
+
 
 
 

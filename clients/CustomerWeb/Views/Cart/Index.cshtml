@@ -1,7 +1,7 @@
 ﻿@{
- Layout = "~/Views/Shared/_Layout.cshtml";
- var orderId = (Guid)ViewBag.OrderId;
- ViewData["Title"] = "Giỏ hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var orderId = (Guid)ViewBag.OrderId;
+    ViewData["Title"] = "Giỏ hàng";
 }
 
 <div class="container py-3">
@@ -9,6 +9,7 @@
  <h3 class="mb-0">Giỏ hàng</h3>
  <div>
  <a id="backMenu" class="btn btn-outline-secondary btn-sm" href="#">Quay lại Menu</a>
+ <button id="btnLeave" class="btn btn-outline-danger btn-sm ms-2">Rời bàn</button>
  </div>
  </div>
 
@@ -75,9 +76,19 @@
 </div>
 
 @section Scripts {
-<script>
+ <script>
  const orderId = "@orderId";
  let cart = null;
+ let statusTimer = null;
+
+ const statusMap = {
+ Draft: 'Đang chọn món',
+ Submitted: 'Đã gửi bếp',
+ InProgress: 'Đang chế biến',
+ Ready: 'Món đã sẵn sàng',
+ Served: 'Đã phục vụ',
+ Cancelled: 'Đã hủy'
+ };
 
  function fmt(x){ return (x||0).toLocaleString() + ' ₫'; }
  function toast(msg, ok=false){
@@ -91,74 +102,98 @@
  const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opt });
  const raw = await r.text();
  let data = raw; try { data = raw ? JSON.parse(raw) : null; } catch {}
- if (!r.ok){ const msg = (data && typeof data === 'object' && (data.title || data.detail)) || raw || r.statusText; throw new Error(msg); }
+ if (!r.ok){ const msg = (data && typeof data === 'object' && (data.title || data.detail || data.message)) || raw || r.statusText; throw new Error(msg); }
  return data;
  }
- async function load(){
+ function renderMeta(){
+ const statusText = statusMap[cart?.status] ?? cart?.status ?? '';
+ document.getElementById('cartMeta').textContent = cart?.tableCode ? `Bàn ${cart.tableCode} · Trạng thái: ${statusText}` : 'Giỏ hàng';
+ }
+ function updateBackLink(){
+ const backHref = cart?.tableCode ? `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}` : '#';
+ const back = document.getElementById('backMenu');
+ back.href = backHref;
+ back.classList.toggle('disabled', backHref === '#');
+ }
+ async function load(showErrorToast = true){
+ const prevTable = cart && cart.tableCode ? cart.tableCode : null;
+ try{
  const data = await api(`/proxy/public/cart/${orderId}`);
- cart = data;
- document.getElementById('cartMeta').textContent = `Bàn ${cart.tableCode} · Trạng thái: ${cart.status}`;
- document.getElementById('subtotal').textContent = fmt(cart.subtotal);
- document.getElementById('svc').textContent = fmt(cart.serviceCharge);
- document.getElementById('tax').textContent = fmt(cart.tax);
- document.getElementById('total').textContent = fmt(cart.total);
- document.getElementById('backMenu').href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`;
- renderItems(cart.items || []);
- document.getElementById('btnSubmit').disabled = !(cart.items && cart.items.length);
- document.getElementById('btnClear').disabled = !(cart.items && cart.items.length);
+ cart = (data && typeof data === 'object') ? data : { items: [] };
+ }catch(e){
+ cart = { items: [] };
+ if (showErrorToast) toast(e.message);
+ }
+ if(!cart.tableCode && prevTable) cart.tableCode = prevTable;
+ const items = Array.isArray(cart.items) ? cart.items : [];
+ renderMeta();
+ document.getElementById('subtotal').textContent = fmt(cart.subtotal ||0);
+ document.getElementById('svc').textContent = fmt(cart.serviceCharge ||0);
+ document.getElementById('tax').textContent = fmt(cart.tax ||0);
+ document.getElementById('total').textContent = fmt(cart.total ||0);
+ updateBackLink();
+ renderItems(items);
+ const hasItems = items.length >0;
+ document.getElementById('btnSubmit').disabled = !hasItems || cart.status !== 'Draft';
+ document.getElementById('btnClear').disabled = !hasItems || cart.status !== 'Draft';
+ document.getElementById('btnLeave').disabled = !orderId;
  }
  function renderItems(items){
  const body = document.getElementById('cartBody');
  if(!items.length){ body.innerHTML = '<tr><td colspan="6" class="text-muted">Giỏ hàng đang trống.</td></tr>'; return; }
  body.innerHTML = items.map(it => `
- <tr data-id="${it.id}">
- <td>
- <div class="fw-semibold">${it.name}</div>
- </td>
- <td>
- <textarea class="form-control form-control-sm note" rows="1">${it.note || ''}</textarea>
- </td>
+ <tr data-id="${it.id}" data-menu-id="${it.menuItemId}" data-order-item-id="${it.orderItemId||0}">
+ <td><div class="fw-semibold">${it.name || ''}</div></td>
+ <td><textarea class="form-control form-control-sm note" rows="1" ${cart?.status !== 'Draft' ? 'disabled' : ''}>${it.note || ''}</textarea></td>
  <td>
  <div class="input-group input-group-sm">
- <button class="btn btn-outline-secondary btn-dec" type="button">-</button>
- <input type="number" class="form-control text-center qty" min="1" value="${it.quantity}">
- <button class="btn btn-outline-secondary btn-inc" type="button">+</button>
+ <button class="btn btn-outline-secondary btn-dec" type="button" ${cart?.status !== 'Draft' ? 'disabled' : ''}>-</button>
+ <input type="number" class="form-control text-center qty" min="1" value="${it.quantity ||1}" ${cart?.status !== 'Draft' ? 'disabled' : ''}>
+ <button class="btn btn-outline-secondary btn-inc" type="button" ${cart?.status !== 'Draft' ? 'disabled' : ''}>+</button>
  </div>
  </td>
  <td class="text-end">${fmt(it.unitPrice)}</td>
  <td class="text-end line-total">${fmt(it.lineTotal)}</td>
  <td class="text-end">
  <div class="btn-group btn-group-sm">
- <button class="btn btn-outline-primary btn-save">Cập nhật</button>
- <button class="btn btn-outline-danger btn-del">Xóa</button>
+ <button class="btn btn-outline-primary btn-save" ${cart?.status !== 'Draft' ? 'disabled' : ''}>Cập nhật</button>
+ <button class="btn btn-outline-danger btn-del" ${cart?.status !== 'Draft' ? 'disabled' : ''}>Xóa</button>
  </div>
  </td>
- </tr>
- `).join('');
+ </tr>`).join('');
 
- // wire events
+ if(cart?.status === 'Draft'){
  body.querySelectorAll('tr[data-id]').forEach(tr =>{
- const id = tr.getAttribute('data-id');
  const qtyEl = tr.querySelector('.qty');
  const noteEl = tr.querySelector('.note');
- tr.querySelector('.btn-inc').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)+1); save(id, qtyEl.value, noteEl.value); };
- tr.querySelector('.btn-dec').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)-1); save(id, qtyEl.value, noteEl.value); };
- tr.querySelector('.btn-save').onclick = ()=> save(id, qtyEl.value, noteEl.value);
- tr.querySelector('.btn-del').onclick = ()=> removeItem(id);
+ tr.querySelector('.btn-inc').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)+1); save(tr, qtyEl.value, noteEl.value); };
+ tr.querySelector('.btn-dec').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)-1); save(tr, qtyEl.value, noteEl.value); };
+ tr.querySelector('.btn-save').onclick = ()=> save(tr, qtyEl.value, noteEl.value);
+ tr.querySelector('.btn-del').onclick = ()=> removeItem(tr.getAttribute('data-menu-id'));
  });
  }
- async function save(id, qty, note){
+ }
+ async function save(rowEl, qty, note){
  try{
  qty = Math.max(1, parseInt(qty||'1',10));
- await api(`/proxy/public/cart/${orderId}/items/${id}`, { method:'PUT', body: JSON.stringify({ quantity: qty, note: note || null })});
- await load();
+ const orderItemId = parseInt(rowEl.getAttribute('data-order-item-id')||'0',10);
+ if(!orderItemId){ throw new Error('Thiếu orderItemId'); }
+ // Patch quantity then note to match backend
+ await api(`/proxy/public/cart/${orderId}/items/${orderItemId}`, { method:'PATCH', body: JSON.stringify({ quantity: qty })});
+ await api(`/proxy/public/cart/${orderId}/items/${orderItemId}/note`, { method:'PATCH', body: JSON.stringify({ note: note || null })});
+ await load(false);
  toast('Đã cập nhật', true);
  }catch(e){ toast(e.message); }
  }
- async function removeItem(id){
+ async function removeItem(menuItemId){
+ if(!confirm('Xóa món này khỏi giỏ?')) return;
  try{
- await api(`/proxy/public/cart/${orderId}/items/${id}`, { method:'DELETE' });
- await load();
+ await api(`/proxy/public/cart/${orderId}/items`, { method:'DELETE', body: JSON.stringify({ menuItemId }) });
+ // Cập nhật ngay giao diện để không hiển thị món đã xóa
+ cart.items = (cart.items || []).filter(x => x.menuItemId !== menuItemId);
+ renderItems(cart.items);
+ // Đồng bộ lại từ server (không hiện toast lỗi nếu trễ)
+ setTimeout(()=> load(false),200);
  toast('Đã xóa', true);
  }catch(e){ toast(e.message); }
  }
@@ -166,24 +201,64 @@
  if(!confirm('Xóa tất cả món trong giỏ?')) return;
  try{
  await api(`/proxy/public/cart/${orderId}/clear`, { method:'POST' });
- await load();
+ if(statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+ // Xóa local thay vì chờ load trả về
+ cart.items = [];
+ renderItems(cart.items);
+ document.getElementById('subtotal').textContent = fmt(0);
+ document.getElementById('svc').textContent = fmt(0);
+ document.getElementById('tax').textContent = fmt(0);
+ document.getElementById('total').textContent = fmt(0);
+ document.getElementById('btnSubmit').disabled = true;
+ document.getElementById('btnClear').disabled = true;
+ // Tải lại sau một chút để đồng bộ trạng thái khác (nếu có)
+ setTimeout(()=> load(false),300);
  toast('Đã xóa hết', true);
  }catch(e){ toast(e.message); }
  }
  async function submit(){
- if(!cart || !(cart.items && cart.items.length)) { toast('Giỏ hàng đang trống'); return; }
- if(!confirm('Gửi đơn hàng để bếp xử lý?')) return;
+ const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
+ if(items.length ===0) { toast('Giỏ hàng đang trống'); return; }
+ if(cart.status !== 'Draft'){ toast('Đơn hàng đã được gửi / không thể gửi lại'); return; }
+ if(!confirm('Gửi đơn hàng tới bếp?')) return;
  try{
  await api(`/proxy/public/cart/${orderId}/submit`, { method:'POST', body: '{}' });
  toast('Đã gửi đơn hàng!', true);
- // khóa nút và điều hướng về menu
  document.getElementById('btnSubmit').disabled = true;
  document.getElementById('btnClear').disabled = true;
- setTimeout(()=>{ window.location.href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`; },800);
+ if(statusTimer) clearInterval(statusTimer);
+ statusTimer = setInterval(()=> load(false),5000);
  }catch(e){ toast(e.message); }
  }
+ async function leaveTable(){
+ if(!orderId) return;
+ if(!confirm('Kết thúc phiên và xoá giỏ hàng (nếu chưa gửi)?')) return;
+ try{
+ await api(`/proxy/public/cart/${orderId}/close-session`, { method:'POST', body:'{}' });
+ toast('Đã rời bàn', true);
+ setTimeout(()=> window.location.href='/client/qr-help',800);
+ }catch(e){ toast(e.message); }
+ }
+ // Xử lý click quay lại menu ngay cả khi href '#' (chưa load xong)
+ document.getElementById('backMenu').addEventListener('click', (e)=>{
+ const href = e.currentTarget.getAttribute('href');
+ if(href === '#'){
+ e.preventDefault();
+ if(!cart) { load(false); return; }
+ if(cart.tableCode){ window.location.href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`; }
+ }
+ });
+ window.addEventListener('beforeunload', () => {
+ try {
+ if(orderId){
+ const data = new Blob([], { type: 'application/json' });
+ navigator.sendBeacon(`/proxy/public/cart/${orderId}/close-session`, data);
+ }
+ } catch { }
+ });
+ document.getElementById('btnLeave').addEventListener('click', leaveTable);
  document.getElementById('btnClear').addEventListener('click', clearAll);
  document.getElementById('btnSubmit').addEventListener('click', submit);
  (async()=>{ try{ await load(); } catch(e){ toast(e.message); } })();
-</script>
+ </script>
 }

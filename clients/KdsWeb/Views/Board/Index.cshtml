@@ -1,17 +1,17 @@
 ﻿@using TableOrdering.Contracts
 @model List<KitchenTicketDto>
 @{
-    ViewData["Title"] = "KDS Board";
+    ViewData["Title"] = "Bảng bếp (KDS)";
     Layout = "_Layout";
 }
-<h1>KDS Station</h1>
+<h1>Trạm bếp</h1>
 
 <div id="tickets" class="board">
     @foreach (var t in Model)
     {
         <div class="ticket" data-id="@t.Id">
             <div class="code"><b>@t.ItemName</b> x @t.Qty</div>
-            <div class="meta">Status: @t.Status</div>
+            <div class="meta">Trạng thái: @t.Status</div>
             <div class="meta">@t.CreatedAt.ToLocalTime()</div>
         </div>
     }

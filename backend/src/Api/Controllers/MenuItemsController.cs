@@ -6,6 +6,7 @@ using Application.MenuItems.Commands;          // CreateMenuItemCommand, ChangeM
 using Application.MenuItems.Queries;           // ListMenuItemsQuery, GetMenuItemByIdQuery
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;                // for IFormCollection/IFormFile
 
 namespace Api.Controllers;
 
@@ -53,29 +54,62 @@ public class MenuItemsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
     }
 
+    // Helper to pick files from common field names
+    private static (IFormFile? avatar, IFormFile? background) GetImageFilesFromForm(IFormCollection form)
+    {
+        IFormFile? Pick(params string[] names)
+        {
+            foreach (var n in names)
+            {
+                var f = form.Files.GetFile(n);
+                if (f is not null) return f;
+            }
+            return null;
+        }
+
+        var avatar = Pick("avatar", "image", "file", "files[0]", "files");
+        var background = Pick("background", "bg", "image2", "files[1]");
+
+        if (avatar is null && form.Files.Count > 0) avatar = form.Files[0];
+        if (background is null && form.Files.Count > 1) background = form.Files[1];
+
+        return (avatar, background);
+    }
+
     // PUT /api/menuitems/{id}/images
     [HttpPut("{id:guid}/images")]
     [Consumes("multipart/form-data")]
+    [RequestFormLimits(MultipartBodyLengthLimit = 64 * 1024 * 1024)]
     public async Task<ActionResult<UpdateImagesResponse>> UpdateImages([FromRoute] Guid id, CancellationToken ct)
     {
         var form = await Request.ReadFormAsync(ct);
-        var avatar = form.Files["avatar"]; // file field name
-        var bg = form.Files["background"]; // file field name
+        var (avatarFile, bgFile) = GetImageFilesFromForm(form);
 
-        Stream? avatarStream = avatar?.OpenReadStream();
-        Stream? bgStream = bg?.OpenReadStream();
+        Stream? avatarStream = avatarFile?.OpenReadStream();
+        Stream? bgStream = bgFile?.OpenReadStream();
+
+        if (avatarStream is null && bgStream is null)
+            return BadRequest("Không tìm thấy tệp ảnh trong form-data");
+
         var cmd = new UpdateMenuItemImagesCommand(
             id,
             avatarStream,
-            avatar?.FileName,
-            avatar?.ContentType,
+            avatarFile?.FileName,
+            avatarFile?.ContentType,
             bgStream,
-            bg?.FileName,
-            bg?.ContentType
+            bgFile?.FileName,
+            bgFile?.ContentType
         );
         var dto = await _sender.Send(cmd, ct);
         return Ok(new UpdateImagesResponse(dto.Id, dto.AvatarImageUrl, dto.BackgroundImageUrl));
     }
+
+    // Some uploaders only support POST; map POST to the same handler
+    [HttpPost("{id:guid}/images")]
+    [Consumes("multipart/form-data")]
+    [RequestFormLimits(MultipartBodyLengthLimit = 64 * 1024 * 1024)]
+    public Task<ActionResult<UpdateImagesResponse>> UploadImages([FromRoute] Guid id, CancellationToken ct)
+        => UpdateImages(id, ct);
 
     // GET /api/menuitems/{id}
     [HttpGet("{id:guid}")]

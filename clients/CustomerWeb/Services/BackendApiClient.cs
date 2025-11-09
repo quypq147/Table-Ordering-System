@@ -29,16 +29,26 @@ public sealed class BackendApiClient(HttpClient http) : IBackendApiClient
     public Task<CartDto> GetCartAsync(Guid orderId, CancellationToken ct = default)
         => http.GetFromJsonAsync<CartDto>($"/api/public/cart/{orderId}", ct)!;
 
-    public async Task UpdateCartItemAsync(Guid orderId, Guid cartItemId, int quantity, string? note, CancellationToken ct = default)
+    public async Task UpdateCartItemAsync(Guid orderId, int cartItemId, int quantity, string? note, CancellationToken ct = default)
     {
-        var res = await http.PutAsJsonAsync($"/api/public/cart/{orderId}/items/{cartItemId}",
-            new { quantity, note }, ct);
-        res.EnsureSuccessStatusCode();
+        // Align with backend: PATCH quantity then optional PATCH note
+        var resQty = await http.PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{cartItemId}", new { newQuantity = quantity }, ct);
+        resQty.EnsureSuccessStatusCode();
+
+        if (!string.IsNullOrWhiteSpace(note))
+        {
+            var resNote = await http.PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{cartItemId}/note", new { note }, ct);
+            resNote.EnsureSuccessStatusCode();
+        }
     }
 
-    public async Task RemoveCartItemAsync(Guid orderId, Guid cartItemId, CancellationToken ct = default)
+    public async Task RemoveCartItemAsync(Guid orderId, Guid menuItemId, CancellationToken ct = default)
     {
-        var res = await http.DeleteAsync($"/api/public/cart/{orderId}/items/{cartItemId}", ct);
+        var req = new HttpRequestMessage(HttpMethod.Delete, $"/api/public/cart/{orderId}/items")
+        {
+            Content = JsonContent.Create(new { menuItemId })
+        };
+        var res = await http.SendAsync(req, ct);
         res.EnsureSuccessStatusCode();
     }
 

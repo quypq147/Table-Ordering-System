@@ -26,10 +26,15 @@ namespace AdminWeb.Services
         Task<HttpResponseMessage> ActivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> DeactivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default);
 
+        // Image/File uploads to Backend Server
+        Task<string> UploadImageAsync(Stream content, string fileName, string contentType, string folder, CancellationToken ct = default);
+
         // ORDERS
         Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page =1, int pageSize =20, CancellationToken cancellationToken = default);
         Task<OrderDetailDto?> GetOrderAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> UpdateOrderStatusAsync(Guid id, string status, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> CancelOrderAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> CloseSessionAsync(Guid id, CancellationToken cancellationToken = default);
 
         // KDS
         Task<List<KitchenTicketDto>> GetTicketsAsync(Guid stationId, CancellationToken cancellationToken = default);

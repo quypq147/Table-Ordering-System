@@ -95,7 +95,7 @@ namespace AdminWeb.Services
             using var res = await _http.PostAsJsonAsync("/api/users", vm, JsonOptions);
             var text = await res.Content.ReadAsStringAsync();
             if (!res.IsSuccessStatusCode) throw new HttpRequestException($"POST /api/users failed {(int)res.StatusCode}: {text}");
-            try { using var doc = JsonDocument.Parse(text); if (doc.RootElement.TryGetProperty("id", out var idEl) && Guid.TryParse(idEl.GetString(), out var id)) return id; } catch {}
+            try { using var doc = JsonDocument.Parse(text); if (doc.RootElement.TryGetProperty("id", out var idEl) && Guid.TryParse(idEl.GetString(), out var id)) return id; } catch { }
             // fallback try location header
             if (res.Headers.Location is Uri u && Guid.TryParse(u.Segments.LastOrDefault(), out var gid)) return gid;
             throw new InvalidOperationException("Create user response missing id");
@@ -156,6 +156,122 @@ namespace AdminWeb.Services
 
         public Task<HttpResponseMessage> DeactivateMenuItemAsync(Guid id, CancellationToken cancellationToken = default)
             => _http.PostAsync($"/api/menuitems/{id}/deactivate", content: null, cancellationToken);
+
+        // ===== Image/File Uploads =====
+        public async Task<string> UploadImageAsync(Stream content, string fileName, string contentType, string folder, CancellationToken ct = default)
+        {
+            if (content == null) throw new ArgumentNullException(nameof(content));
+            if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("fileName is required", nameof(fileName));
+            if (string.IsNullOrWhiteSpace(contentType)) contentType = "application/octet-stream";
+            if (string.IsNullOrWhiteSpace(folder)) folder = "menu";
+
+            AttachBearer();
+
+            // Buffer stream so we can retry across multiple endpoints safely
+            using var ms = new MemoryStream();
+            await content.CopyToAsync(ms, ct).ConfigureAwait(false);
+            var bytes = ms.ToArray();
+
+            // Candidate endpoints (tolerant to naming differences)
+            var endpoints = new[]
+            {
+ "/api/uploads/images",
+ "/api/uploads/image",
+ "/api/upload/images",
+ "/api/upload/image",
+ "/api/files/images"
+ };
+
+            foreach (var url in endpoints)
+            {
+                using var form = new MultipartFormDataContent();
+                var fileContent = new ByteArrayContent(bytes);
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                form.Add(fileContent, "file", fileName);
+                form.Add(new StringContent(folder), "folder");
+
+                using var resp = await _http.PostAsync(url, form, ct).ConfigureAwait(false);
+                var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    // thử endpoint tiếp theo
+                    continue;
+                }
+
+                // Try parse variants (camelCase expected)
+                try
+                {
+                    using var doc = JsonDocument.Parse(text);
+                    var root = doc.RootElement;
+
+                    // If response is string directly
+                    if (root.ValueKind == JsonValueKind.String)
+                    {
+                        var direct = root.GetString();
+                        if (!string.IsNullOrWhiteSpace(direct))
+                            return direct!;
+                    }
+
+                    // Helper local function to extract first meaningful string
+                    string? ExtractUrl(JsonElement el)
+                    {
+                        // Common property names
+                        string[] names = ["url", "imageUrl", "avatarImageUrl", "backgroundImageUrl", "path", "filePath"];
+                        foreach (var n in names)
+                        {
+                            if (el.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.String)
+                            {
+                                var s = v.GetString();
+                                if (!string.IsNullOrWhiteSpace(s)) return s;
+                            }
+                        }
+                        return null;
+                    }
+
+                    // Direct properties
+                    var found = ExtractUrl(root);
+                    if (found != null) return found;
+
+                    // data object wrapper
+                    if (root.TryGetProperty("data", out var dataEl))
+                    {
+                        if (dataEl.ValueKind == JsonValueKind.String)
+                        {
+                            var s = dataEl.GetString();
+                            if (!string.IsNullOrWhiteSpace(s)) return s!;
+                        }
+                        else if (dataEl.ValueKind == JsonValueKind.Object)
+                        {
+                            var inner = ExtractUrl(dataEl);
+                            if (inner != null) return inner;
+                        }
+                    }
+
+                    // If looks like full MenuItemDto or UpdateImagesResponse
+                    if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("avatarImageUrl", out var a) && a.ValueKind == JsonValueKind.String)
+                    {
+                        var s = a.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) return s!; // prefer avatar when uploading single file
+                    }
+                    if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("backgroundImageUrl", out var b) && b.ValueKind == JsonValueKind.String)
+                    {
+                        var s = b.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) return s!;
+                    }
+                }
+                catch { }
+
+                // fallback: if raw text itself is or contains a URL or relative path
+                var trimmed = text.Trim('"', '\'', ' ', '\n', '\r', '\t');
+                if (Uri.TryCreate(trimmed, UriKind.Absolute, out var abs))
+                    return abs.ToString();
+                if (trimmed.StartsWith("/uploads", StringComparison.OrdinalIgnoreCase))
+                    return trimmed; // relative path accepted
+            }
+
+            throw new HttpRequestException("No working upload endpoint found or response missing URL (đã thử: " + string.Join(", ", endpoints) + ").");
+        }
 
         // ===== ORDERS =====
         public async Task<Paginated<OrderSummaryDto>> GetOrdersAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
@@ -229,11 +345,11 @@ namespace AdminWeb.Services
                             if (id == Guid.Empty)
                                 continue;
 
-                            string code = TryGetString(el, "code") ?? TryGetString(el, "orderCode") ?? TryGetString(el, "tableCode") ?? id.ToString("N").Substring(0,8).ToUpperInvariant();
+                            string code = TryGetString(el, "code") ?? TryGetString(el, "orderCode") ?? TryGetString(el, "tableCode") ?? id.ToString("N").Substring(0, 8).ToUpperInvariant();
 
                             string status = TryGetString(el, "status") ?? TryGetInt(el, "status")?.ToString() ?? TryGetString(el, "state") ?? "Unknown";
 
-                            decimal total = TryGetDecimal(el, "total") ?? TryGetDecimal(el, "amount") ??0m;
+                            decimal total = TryGetDecimal(el, "total") ?? TryGetDecimal(el, "amount") ?? 0m;
 
                             DateTime created = TryGetDateTime(el, "createdAt")
                                 ?? TryGetDateTime(el, "created")
@@ -339,11 +455,11 @@ namespace AdminWeb.Services
                     if (root.ValueKind != JsonValueKind.Object) return null;
 
                     var oid = TryGetGuid(root, "id") ?? TryGetGuid(root, "orderId") ?? id;
-                    var code = TryGetString(root, "code") ?? TryGetString(root, "orderCode") ?? TryGetString(root, "tableCode") ?? oid.ToString("N").Substring(0,8).ToUpperInvariant();
+                    var code = TryGetString(root, "code") ?? TryGetString(root, "orderCode") ?? TryGetString(root, "tableCode") ?? oid.ToString("N").Substring(0, 8).ToUpperInvariant();
                     var status = TryGetString(root, "status") ?? TryGetInt(root, "status")?.ToString() ?? TryGetString(root, "state") ?? "Unknown";
                     var subtotal = TryGetDecimal(root, "subtotal");
-                    var discount = TryGetDecimal(root, "discount") ?? TryGetDecimal(root, "discountAmount") ??0m;
-                    var total = TryGetDecimal(root, "total") ??0m;
+                    var discount = TryGetDecimal(root, "discount") ?? TryGetDecimal(root, "discountAmount") ?? 0m;
+                    var total = TryGetDecimal(root, "total") ?? 0m;
                     var created = TryGetDateTime(root, "createdAt") ?? TryGetDateTime(root, "created") ?? TryGetDateTime(root, "createdOn") ?? DateTime.UtcNow;
 
                     var items = new List<OrderItemRow>();
@@ -352,8 +468,8 @@ namespace AdminWeb.Services
                         foreach (var it in itemsEl.EnumerateArray())
                         {
                             var name = TryGetString(it, "name") ?? TryGetString(it, "itemName") ?? "Item";
-                            var qty = TryGetInt(it, "quantity") ?? TryGetInt(it, "qty") ??1;
-                            var unit = TryGetDecimal(it, "unitPrice") ?? TryGetDecimal(it, "price") ??0m;
+                            var qty = TryGetInt(it, "quantity") ?? TryGetInt(it, "qty") ?? 1;
+                            var unit = TryGetDecimal(it, "unitPrice") ?? TryGetDecimal(it, "price") ?? 0m;
                             var line = TryGetDecimal(it, "lineTotal") ?? TryGetDecimal(it, "total") ?? (unit * qty);
                             var note = TryGetString(it, "note") ?? TryGetString(it, "remark");
                             items.Add(new OrderItemRow(name, qty, unit, line, note));
@@ -361,8 +477,8 @@ namespace AdminWeb.Services
                     }
 
                     // compute subtotal if missing
-                    var sub = subtotal ?? (items.Count >0 ? items.Sum(x => x.LineTotal) : total);
-                    var det = new OrderDetailDto(oid, code, status, sub, discount, total ==0m && sub !=0m ? sub - discount : total, created, items);
+                    var sub = subtotal ?? (items.Count > 0 ? items.Sum(x => x.LineTotal) : total);
+                    var det = new OrderDetailDto(oid, code, status, sub, discount, total == 0m && sub != 0m ? sub - discount : total, created, items);
                     return det;
                 }
                 catch
@@ -375,6 +491,12 @@ namespace AdminWeb.Services
 
         public Task<HttpResponseMessage> UpdateOrderStatusAsync(Guid id, string status, CancellationToken cancellationToken = default)
             => _http.PatchAsJsonAsync($"/api/orders/{id}/status", new { status }, JsonOptions, cancellationToken);
+
+        public Task<HttpResponseMessage> CancelOrderAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.PostAsync($"/api/orders/{id}/cancel", content: null, cancellationToken);
+
+        public Task<HttpResponseMessage> CloseSessionAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.PostAsync($"/api/orders/{id}/close-session", content: null, cancellationToken);
 
         // ===== KDS =====
         public async Task<List<KitchenTicketDto>> GetTicketsAsync(Guid stationId, CancellationToken cancellationToken = default)
@@ -391,73 +513,75 @@ namespace AdminWeb.Services
             => _http.PutAsJsonAsync($"/api/tables/{id}", req, JsonOptions, cancellationToken);
 
         // ===== CATEGORIES =====
-        public async Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page =1, int pageSize =50, CancellationToken cancellationToken = default)
- {
- var url = $"/api/categories?search={Uri.EscapeDataString(search ?? string.Empty)}&page={page}&pageSize={pageSize}";
- if (onlyActive is not null) url += $"&onlyActive={(onlyActive.Value ? "true" : "false")}";
+        public async Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/categories?search={Uri.EscapeDataString(search ?? string.Empty)}&page={page}&pageSize={pageSize}";
+            if (onlyActive is not null) url += $"&onlyActive={(onlyActive.Value ? "true" : "false")}";
 
 
- using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
- var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
- if (!resp.IsSuccessStatusCode)
- throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
+            using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
 
- var list = JsonSerializer.Deserialize<List<CategoryDto>>(text, JsonOptions) ?? new List<CategoryDto>();
- return list;
- }
+            var list = JsonSerializer.Deserialize<List<CategoryDto>>(text, JsonOptions) ?? new List<CategoryDto>();
+            return list;
+        }
 
- public async Task<CategoryDto?> GetCategoryAsync(Guid id, CancellationToken cancellationToken = default)
- {
- var url = $"/api/categories/{id}";
- using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
- if (resp.StatusCode == HttpStatusCode.NotFound) return null;
+        public async Task<CategoryDto?> GetCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var url = $"/api/categories/{id}";
+            using var resp = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            if (resp.StatusCode == HttpStatusCode.NotFound) return null;
 
- var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
- if (!resp.IsSuccessStatusCode)
- throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
+            var text = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
 
- return JsonSerializer.Deserialize<CategoryDto>(text, JsonOptions);
- }
+            return JsonSerializer.Deserialize<CategoryDto>(text, JsonOptions);
+        }
 
- public Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default)
- => _http.PostAsJsonAsync("/api/categories", req, JsonOptions, cancellationToken);
+        public Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default)
+        => _http.PostAsJsonAsync("/api/categories", req, JsonOptions, cancellationToken);
 
- public Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default)
- => _http.PostAsJsonAsync($"/api/categories/{id}/rename", req, JsonOptions, cancellationToken);
+        public Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default)
+        => _http.PostAsJsonAsync($"/api/categories/{id}/rename", req, JsonOptions, cancellationToken);
 
- public Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
- => _http.PostAsync($"/api/categories/{id}/activate", content: null, cancellationToken);
+        public Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+        => _http.PostAsync($"/api/categories/{id}/activate", content: null, cancellationToken);
 
- public Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
- => _http.PostAsync($"/api/categories/{id}/deactivate", content: null, cancellationToken);
+        public Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+        => _http.PostAsync($"/api/categories/{id}/deactivate", content: null, cancellationToken);
 
- // ===== DASHBOARD =====
- public async Task<DashboardVm?> GetDashboardAsync(CancellationToken ct = default)
- {
- using var req = new HttpRequestMessage(HttpMethod.Get, "/api/admin/dashboard");
- // Đính kèm Bearer token nếu bạn đang lưu ở cookie:
- var token = _ctx.HttpContext?.Request.Cookies["admin_token"];
- if (!string.IsNullOrEmpty(token))
- req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        // ===== DASHBOARD =====
+        public async Task<DashboardVm?> GetDashboardAsync(CancellationToken ct = default)
+        {
+            AttachBearer();
+            using var resp = await _http.GetAsync("/api/admin/dashboard", ct).ConfigureAwait(false);
+            var raw = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
- using var res = await _http.SendAsync(req, ct).ConfigureAwait(false);
- var raw = await res.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
- if (!res.IsSuccessStatusCode)
- throw new InvalidOperationException(TryExtractError(raw) ?? $"{(int)res.StatusCode} {res.ReasonPhrase}");
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+                return null; // no dashboard yet
 
- return JsonSerializer.Deserialize<DashboardVm>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
- }
+            if (!resp.IsSuccessStatusCode)
+            {
+                var msg = TryExtractError(raw) ?? $"{(int)resp.StatusCode} {resp.ReasonPhrase}";
+                throw new HttpRequestException(msg);
+            }
 
- // ===== Helpers =====
- private async Task<T?> GetOrDefaultAsync<T>(string requestUri, CancellationToken cancellationToken)
- {
- using var resp = await _http.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+            return JsonSerializer.Deserialize<DashboardVm>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
 
- if (resp.StatusCode == HttpStatusCode.NotFound)
- return default;
+        // ===== Helpers =====
+        private async Task<T?> GetOrDefaultAsync<T>(string requestUri, CancellationToken cancellationToken)
+        {
+            using var resp = await _http.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
 
- resp.EnsureSuccessStatusCode();
- return await resp.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken).ConfigureAwait(false);
- }
- }
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+                return default;
+
+            resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken).ConfigureAwait(false);
+        }
+    }
 }
