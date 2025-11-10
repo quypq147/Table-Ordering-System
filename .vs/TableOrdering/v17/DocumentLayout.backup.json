@@ -1,12 +1,139 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|e:\\project\\repo\\tableordering\\backend\\src\\application\\public\\cart\\addcartitembymenuitemidcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|solutionrelative:backend\\src\\application\\public\\cart\\addcartitembymenuitemidcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|e:\\project\\repo\\tableordering\\backend\\src\\application\\public\\cart\\startcartbytablecodecommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|solutionrelative:backend\\src\\application\\public\\cart\\startcartbytablecodecommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|e:\\project\\repo\\tableordering\\backend\\src\\application\\orders\\commands\\removeitemcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|solutionrelative:backend\\src\\application\\orders\\commands\\removeitemcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|e:\\project\\repo\\tableordering\\backend\\src\\application\\orders\\commands\\removeitemhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|solutionrelative:backend\\src\\application\\orders\\commands\\removeitemhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|e:\\project\\repo\\tableordering\\backend\\src\\application\\orders\\queries\\removeitemhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7B3B7200-A043-4E09-AE68-088EFFC17A31}|backend\\src\\Application\\Application.csproj|solutionrelative:backend\\src\\application\\orders\\queries\\removeitemhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\orderscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\orderscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\public\\cartcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\public\\cartcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 6,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "CartController.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\Public\\CartController.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\Public\\CartController.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\Public\\CartController.cs",
+              "RelativeToolTip": "backend\\src\\Api\\Controllers\\Public\\CartController.cs",
+              "ViewState": "AgIAAHcAAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:36:03.601Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "OrdersController.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\OrdersController.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\OrdersController.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\OrdersController.cs",
+              "RelativeToolTip": "backend\\src\\Api\\Controllers\\OrdersController.cs",
+              "ViewState": "AgIAAGAAAAAAAAAAAIBJwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:35:36.109Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "RemoveItemHandler.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Orders\\Queries\\RemoveItemHandler.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Application\\Orders\\Queries\\RemoveItemHandler.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Orders\\Queries\\RemoveItemHandler.cs",
+              "RelativeToolTip": "backend\\src\\Application\\Orders\\Queries\\RemoveItemHandler.cs",
+              "ViewState": "AgIAABYAAAAAAAAAAEBVwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:35:21.616Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "RemoveItemHandler.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Orders\\Commands\\RemoveItemHandler.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Application\\Orders\\Commands\\RemoveItemHandler.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Orders\\Commands\\RemoveItemHandler.cs",
+              "RelativeToolTip": "backend\\src\\Application\\Orders\\Commands\\RemoveItemHandler.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAIBZwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:35:16.767Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "RemoveItemCommand.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Orders\\Commands\\RemoveItemCommand.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Application\\Orders\\Commands\\RemoveItemCommand.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Orders\\Commands\\RemoveItemCommand.cs",
+              "RelativeToolTip": "backend\\src\\Application\\Orders\\Commands\\RemoveItemCommand.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAABZwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:35:11.921Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "StartCartByTableCodeCommand.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Public\\Cart\\StartCartByTableCodeCommand.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Application\\Public\\Cart\\StartCartByTableCodeCommand.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Public\\Cart\\StartCartByTableCodeCommand.cs",
+              "RelativeToolTip": "backend\\src\\Application\\Public\\Cart\\StartCartByTableCodeCommand.cs",
+              "ViewState": "AgIAADQAAAAAAAAAAEBVwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:35:07.856Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AddCartItemByMenuItemIdCommand.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Public\\Cart\\AddCartItemByMenuItemIdCommand.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Application\\Public\\Cart\\AddCartItemByMenuItemIdCommand.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Application\\Public\\Cart\\AddCartItemByMenuItemIdCommand.cs",
+              "RelativeToolTip": "backend\\src\\Application\\Public\\Cart\\AddCartItemByMenuItemIdCommand.cs",
+              "ViewState": "AgIAABQAAAAAAAAAAAAwwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-10T04:34:59.769Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -83,11 +83,11 @@ public class OrdersController : ControllerBase
         => Ok(await _sender.Send(new ChangeItemQuantityCommand(id, orderItemId, body.NewQuantity)));        // :contentReference[oaicite:25]{index=25}
 
     // DELETE /api/orders/{id}/items
-    // Lưu ý: RemoveItemCommand nhận MenuItemId -> nếu có nhiều dòng trùng MenuItemId sẽ mơ hồ
-    public sealed record RemoveItemDto(Guid MenuItemId);
+    // Đổi sang OrderItemId để tránh mơ hồ khi có nhiều dòng cùng MenuItemId
+    public sealed record RemoveItemDto(int OrderItemId);
     [HttpDelete("{id}/items")]
     public async Task<ActionResult<OrderDto>> RemoveItem(Guid id, [FromBody] RemoveItemDto body)
-        => Ok(await _sender.Send(new RemoveItemCommand(id, body.MenuItemId)));  // :contentReference[oaicite:26]{index=26}
+        => Ok(await _sender.Send(new RemoveItemCommand(id, body.OrderItemId)));
 
     // GET /api/orders/all?page=1&pageSize=20
     [HttpGet("all")]

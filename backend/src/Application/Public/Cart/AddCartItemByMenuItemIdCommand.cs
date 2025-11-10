@@ -23,14 +23,20 @@ public sealed class AddCartItemByMenuItemIdHandler
 
         var qty = new Quantity(Math.Max(1, c.Quantity));
 
-        // Thêm dòng theo Domain hiện tại (chưa nhận Note)
+        // Thêm dòng (Domain có thể gộp nếu cùng MenuItem + Currency)
         order.AddItem(menu.Id, menu.Name, menu.Price, qty);
 
-        // Gán Note nếu có (dòng mới nhất hoặc dòng vừa gộp)
-        var line = order.Items.OrderByDescending(i => i.Id).FirstOrDefault();
-        if (line is not null && !string.IsNullOrWhiteSpace(c.Note))
+        // Gán Note đúng cho dòng tương ứng (kể cả khi bị gộp)
+        if (!string.IsNullOrWhiteSpace(c.Note))
         {
-            line.ChangeNote(c.Note);
+            var line = order.Items
+                .Where(i => i.MenuItemId == menu.Id && i.UnitPrice.Currency.Equals(menu.Price.Currency, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(i => i.Id)
+                .FirstOrDefault();
+            if (line is not null)
+            {
+                line.ChangeNote(c.Note);
+            }
         }
 
         await _db.SaveChangesAsync(ct);

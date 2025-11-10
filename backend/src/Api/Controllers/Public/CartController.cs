@@ -76,13 +76,13 @@ public class CartController : ControllerBase
         return NoContent();
     }
 
-    public sealed record RemoveItemDto(Guid MenuItemId);
+    public sealed record RemoveItemDto(int OrderItemId);
 
     // DELETE /api/public/cart/{orderId}/items
     [HttpDelete("{orderId:guid}/items")]
     public async Task<ActionResult> RemoveItem(Guid orderId, [FromBody] RemoveItemDto body, CancellationToken ct)
     {
-        await _cqrs.Send(new RemoveItemCommand(orderId, body.MenuItemId), ct);
+        await _cqrs.Send(new RemoveItemCommand(orderId, body.OrderItemId), ct);
         return NoContent();
     }
 

@@ -15,7 +15,14 @@
 
  <div class="mb-2 small text-muted" id="cartMeta"></div>
 
- <div class="table-responsive">
+ <div class="table-responsive position-relative">
+ <!-- Inline loading overlay -->
+ <div id="pageLoading" class="loading-overlay d-none">
+ <div class="loading-box">
+ <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+ <div class="ms-2">Đang xử lý...</div>
+ </div>
+ </div>
  <table class="table align-middle" id="cartTable">
  <thead>
  <tr>
@@ -67,19 +74,43 @@
 
 <!-- Toast -->
 <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
- <div id="toast" class="toast align-items-center text-bg-danger border-0">
+ <div id="toast" class="toast align-items-center text-bg-danger border-0" data-bs-delay="2800" data-bs-autohide="true">
  <div class="d-flex">
- <div class="toast-body" id="toastMsg">Đã có lỗi</div>
+ <div class="toast-body d-flex align-items-center">
+ <span id="toastIcon" class="me-2">⚠️</span>
+ <span id="toastMsg">Đã có lỗi</span>
+ </div>
  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
  </div>
  </div>
 </div>
 
 @section Scripts {
+ <style>
+ .loading-overlay {
+ position: absolute;
+ inset:0;
+ background: rgba(255,255,255,0.7);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ }
+
+ .loading-overlay .loading-box {
+ display: flex;
+ align-items: center;
+ padding: .75rem1rem; /* fixed missing space */
+ background: #fff;
+ border:1px solid rgba(0,0,0,.1);
+ border-radius: .5rem;
+ box-shadow:0 .25rem .5rem rgba(0,0,0,.1);
+ }
+ </style>
  <script>
  const orderId = "@orderId";
  let cart = null;
  let statusTimer = null;
+ let firstLoadDone = false;
 
  const statusMap = {
  Draft: 'Đang chọn món',
@@ -90,20 +121,48 @@
  Cancelled: 'Đã hủy'
  };
 
+ function isDraft(c){
+ const s = c && c.status;
+ if (typeof s === 'number') return s ===0;
+ if (typeof s === 'string') {
+ const t = s.trim().toLowerCase();
+ if (t === 'draft' || t === '0') return true;
+ }
+ // Default: if status missing, allow editing (assume draft)
+ return !s;
+ }
+
  function fmt(x){ return (x||0).toLocaleString() + ' ₫'; }
- function toast(msg, ok=false){
+ function setLoading(show){
+ const el = document.getElementById('pageLoading');
+ if(!el) return;
+ el.classList.toggle('d-none', !show);
+ }
+ function toast(msg, typeOrOk=false){
  const el = document.getElementById("toast");
- el.classList.toggle("text-bg-success", ok);
- el.classList.toggle("text-bg-danger", !ok);
- document.getElementById("toastMsg").textContent = msg || (ok ? "Thành công" : "Đã có lỗi");
+ const msgEl = document.getElementById("toastMsg");
+ const iconEl = document.getElementById("toastIcon");
+ // Backward compat: boolean => success/error
+ let type = typeof typeOrOk === 'boolean' ? (typeOrOk ? 'success' : 'danger') : (typeOrOk || 'info');
+ const cls = ['text-bg-success','text-bg-danger','text-bg-warning','text-bg-info'];
+ el.classList.remove(...cls);
+ el.classList.add(`text-bg-${type}`);
+ const icons = { success: '✅', danger: '⚠️', warning: '⚠️', info: 'ℹ️' };
+ if(iconEl) iconEl.textContent = icons[type] || '';
+ msgEl.textContent = msg || (type === 'success' ? 'Thành công' : 'Đã có lỗi');
  bootstrap.Toast.getOrCreateInstance(el).show();
  }
- async function api(url, opt = {}) {
+ async function api(url, opt = {}, showLoading = false) {
+ try{
+ if (showLoading) setLoading(true);
  const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opt });
  const raw = await r.text();
  let data = raw; try { data = raw ? JSON.parse(raw) : null; } catch {}
  if (!r.ok){ const msg = (data && typeof data === 'object' && (data.title || data.detail || data.message)) || raw || r.statusText; throw new Error(msg); }
  return data;
+ } finally {
+ if (showLoading) setLoading(false);
+ }
  }
  function renderMeta(){
  const statusText = statusMap[cart?.status] ?? cart?.status ?? '';
@@ -115,14 +174,14 @@
  back.href = backHref;
  back.classList.toggle('disabled', backHref === '#');
  }
- async function load(showErrorToast = true){
+ async function load(showErrorToast = true, withOverlay = false){
  const prevTable = cart && cart.tableCode ? cart.tableCode : null;
  try{
- const data = await api(`/proxy/public/cart/${orderId}`);
+ const data = await api(`/proxy/public/cart/${orderId}`, {}, withOverlay);
  cart = (data && typeof data === 'object') ? data : { items: [] };
  }catch(e){
  cart = { items: [] };
- if (showErrorToast) toast(e.message);
+ if (showErrorToast) toast(e.message, 'danger');
  }
  if(!cart.tableCode && prevTable) cart.tableCode = prevTable;
  const items = Array.isArray(cart.items) ? cart.items : [];
@@ -134,73 +193,92 @@
  updateBackLink();
  renderItems(items);
  const hasItems = items.length >0;
- document.getElementById('btnSubmit').disabled = !hasItems || cart.status !== 'Draft';
- document.getElementById('btnClear').disabled = !hasItems || cart.status !== 'Draft';
+ const editable = isDraft(cart);
+ document.getElementById('btnSubmit').disabled = !hasItems || !editable;
+ document.getElementById('btnClear').disabled = !hasItems || !editable;
  document.getElementById('btnLeave').disabled = !orderId;
+ firstLoadDone = true;
  }
  function renderItems(items){
  const body = document.getElementById('cartBody');
  if(!items.length){ body.innerHTML = '<tr><td colspan="6" class="text-muted">Giỏ hàng đang trống.</td></tr>'; return; }
+ const editable = isDraft(cart);
  body.innerHTML = items.map(it => `
  <tr data-id="${it.id}" data-menu-id="${it.menuItemId}" data-order-item-id="${it.orderItemId||0}">
  <td><div class="fw-semibold">${it.name || ''}</div></td>
- <td><textarea class="form-control form-control-sm note" rows="1" ${cart?.status !== 'Draft' ? 'disabled' : ''}>${it.note || ''}</textarea></td>
+ <td><textarea class="form-control form-control-sm note" rows="1" ${editable ? '' : 'disabled'}>${it.note || ''}</textarea></td>
  <td>
  <div class="input-group input-group-sm">
- <button class="btn btn-outline-secondary btn-dec" type="button" ${cart?.status !== 'Draft' ? 'disabled' : ''}>-</button>
- <input type="number" class="form-control text-center qty" min="1" value="${it.quantity ||1}" ${cart?.status !== 'Draft' ? 'disabled' : ''}>
- <button class="btn btn-outline-secondary btn-inc" type="button" ${cart?.status !== 'Draft' ? 'disabled' : ''}>+</button>
+ <button class="btn btn-outline-secondary btn-dec" type="button" ${editable ? '' : 'disabled'}>-</button>
+ <input type="number" class="form-control text-center qty" min="1" value="${it.quantity ||1}" ${editable ? '' : 'disabled'}>
+ <button class="btn btn-outline-secondary btn-inc" type="button" ${editable ? '' : 'disabled'}>+</button>
  </div>
  </td>
  <td class="text-end">${fmt(it.unitPrice)}</td>
  <td class="text-end line-total">${fmt(it.lineTotal)}</td>
  <td class="text-end">
  <div class="btn-group btn-group-sm">
- <button class="btn btn-outline-primary btn-save" ${cart?.status !== 'Draft' ? 'disabled' : ''}>Cập nhật</button>
- <button class="btn btn-outline-danger btn-del" ${cart?.status !== 'Draft' ? 'disabled' : ''}>Xóa</button>
+ <button class="btn btn-outline-primary btn-save" ${editable ? '' : 'disabled'}>Cập nhật</button>
+ <button class="btn btn-outline-danger btn-del" ${editable ? '' : 'disabled'}>Xóa</button>
  </div>
  </td>
  </tr>`).join('');
 
- if(cart?.status === 'Draft'){
+ if(editable){
  body.querySelectorAll('tr[data-id]').forEach(tr =>{
  const qtyEl = tr.querySelector('.qty');
  const noteEl = tr.querySelector('.note');
- tr.querySelector('.btn-inc').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)+1); save(tr, qtyEl.value, noteEl.value); };
- tr.querySelector('.btn-dec').onclick = ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)-1); save(tr, qtyEl.value, noteEl.value); };
- tr.querySelector('.btn-save').onclick = ()=> save(tr, qtyEl.value, noteEl.value);
- tr.querySelector('.btn-del').onclick = ()=> removeItem(tr.getAttribute('data-menu-id'));
+ const btnSave = tr.querySelector('.btn-save');
+ const btnInc = tr.querySelector('.btn-inc');
+ const btnDec = tr.querySelector('.btn-dec');
+ const btnDel = tr.querySelector('.btn-del');
+ const setRowBusy = (busy)=>{
+ [btnSave, btnInc, btnDec, btnDel, qtyEl, noteEl].forEach(el=>{ if(el) el.disabled = !!busy; });
+ if(btnSave){ btnSave.dataset.originalText = btnSave.textContent; btnSave.innerHTML = busy ? '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu' : (btnSave.dataset.originalText || 'Cập nhật'); }
+ };
+ btnInc.onclick = async ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)+1); setRowBusy(true); await save(tr, qtyEl.value, noteEl.value, true).finally(()=> setRowBusy(false)); };
+ btnDec.onclick = async ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)-1); setRowBusy(true); await save(tr, qtyEl.value, noteEl.value, true).finally(()=> setRowBusy(false)); };
+ btnSave.onclick = async ()=>{ setRowBusy(true); await save(tr, qtyEl.value, noteEl.value, true).finally(()=> setRowBusy(false)); };
+ btnDel.onclick = () => {
+ const id = parseInt(tr.getAttribute('data-order-item-id') || '0',10);
+ removeItem(id);
+ };
  });
  }
  }
- async function save(rowEl, qty, note){
+ async function save(rowEl, qty, note, showOverlay=false){
  try{
  qty = Math.max(1, parseInt(qty||'1',10));
  const orderItemId = parseInt(rowEl.getAttribute('data-order-item-id')||'0',10);
  if(!orderItemId){ throw new Error('Thiếu orderItemId'); }
- // Patch quantity then note to match backend
- await api(`/proxy/public/cart/${orderId}/items/${orderItemId}`, { method:'PATCH', body: JSON.stringify({ quantity: qty })});
- await api(`/proxy/public/cart/${orderId}/items/${orderItemId}/note`, { method:'PATCH', body: JSON.stringify({ note: note || null })});
+ // Patch quantity then note to match backend (proxy translates to backend payloads)
+ await api(`/proxy/public/cart/${orderId}/items/${orderItemId}`, { method:'PATCH', body: JSON.stringify({ quantity: qty })}, showOverlay);
+ await api(`/proxy/public/cart/${orderId}/items/${orderItemId}/note`, { method:'PATCH', body: JSON.stringify({ note: note || null })}, false);
  await load(false);
- toast('Đã cập nhật', true);
- }catch(e){ toast(e.message); }
+ toast('Đã cập nhật', 'success');
+ }catch(e){ toast(e.message, 'danger'); }
  }
- async function removeItem(menuItemId){
+ async function removeItem(orderItemId){
+ if(!orderItemId) { toast('Thiếu OrderItemId', 'danger'); return; }
  if(!confirm('Xóa món này khỏi giỏ?')) return;
  try{
- await api(`/proxy/public/cart/${orderId}/items`, { method:'DELETE', body: JSON.stringify({ menuItemId }) });
- // Cập nhật ngay giao diện để không hiển thị món đã xóa
- cart.items = (cart.items || []).filter(x => x.menuItemId !== menuItemId);
+ document.querySelectorAll('.btn-del').forEach(b=> b.disabled = true);
+ await api(`/proxy/public/cart/${orderId}/items`, { method:'DELETE', body: JSON.stringify({ orderItemId }) }, true);
+ // Cập nhật local để không hiển thị món đã xóa
+ cart.items = (cart.items || []).filter(x => x.orderItemId !== orderItemId);
  renderItems(cart.items);
  // Đồng bộ lại từ server (không hiện toast lỗi nếu trễ)
  setTimeout(()=> load(false),200);
- toast('Đã xóa', true);
- }catch(e){ toast(e.message); }
+ toast('Đã xóa', 'success');
+ }catch(e){ toast(e.message, 'danger'); }
+ finally{ document.querySelectorAll('.btn-del').forEach(b=> b.disabled = false); }
  }
  async function clearAll(){
  if(!confirm('Xóa tất cả món trong giỏ?')) return;
+ const btn = document.getElementById('btnClear');
  try{
- await api(`/proxy/public/cart/${orderId}/clear`, { method:'POST' });
+ btn.disabled = true; const old = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xóa';
+ await api(`/proxy/public/cart/${orderId}/clear`, { method:'POST' }, true);
  if(statusTimer) { clearInterval(statusTimer); statusTimer = null; }
  // Xóa local thay vì chờ load trả về
  cart.items = [];
@@ -213,52 +291,52 @@
  document.getElementById('btnClear').disabled = true;
  // Tải lại sau một chút để đồng bộ trạng thái khác (nếu có)
  setTimeout(()=> load(false),300);
- toast('Đã xóa hết', true);
- }catch(e){ toast(e.message); }
+ toast('Đã xóa hết', 'success');
+ }catch(e){ toast(e.message, 'danger'); }
+ finally{ btn.innerHTML = 'Xóa hết'; btn.disabled = false; }
  }
  async function submit(){
  const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
- if(items.length ===0) { toast('Giỏ hàng đang trống'); return; }
- if(cart.status !== 'Draft'){ toast('Đơn hàng đã được gửi / không thể gửi lại'); return; }
+ if(items.length ===0) { toast('Giỏ hàng đang trống', 'warning'); return; }
+ if(!isDraft(cart)){ toast('Đơn hàng đã được gửi / không thể gửi lại', 'warning'); return; }
  if(!confirm('Gửi đơn hàng tới bếp?')) return;
+ const btn = document.getElementById('btnSubmit');
  try{
- await api(`/proxy/public/cart/${orderId}/submit`, { method:'POST', body: '{}' });
- toast('Đã gửi đơn hàng!', true);
+ btn.disabled = true; const old = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi';
+ await api(`/proxy/public/cart/${orderId}/submit`, { method:'POST', body: '{}' }, true);
+ toast('Đã gửi đơn hàng!', 'success');
  document.getElementById('btnSubmit').disabled = true;
  document.getElementById('btnClear').disabled = true;
  if(statusTimer) clearInterval(statusTimer);
  statusTimer = setInterval(()=> load(false),5000);
- }catch(e){ toast(e.message); }
+ }catch(e){ toast(e.message, 'danger'); }
+ finally{ btn.innerHTML = 'Gửi đơn hàng'; }
  }
  async function leaveTable(){
  if(!orderId) return;
- if(!confirm('Kết thúc phiên và xoá giỏ hàng (nếu chưa gửi)?')) return;
+ if(!confirm('Kết thúc phiên và xoà giỏ hàng (nếu chưa gửi)?')) return;
+ const btn = document.getElementById('btnLeave');
  try{
- await api(`/proxy/public/cart/${orderId}/close-session`, { method:'POST', body:'{}' });
- toast('Đã rời bàn', true);
+ btn.disabled = true; const old = btn.innerHTML; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang rời bàn';
+ await api(`/proxy/public/cart/${orderId}/close-session`, { method:'POST', body:'{}' }, true);
+ toast('Đã rời bàn', 'success');
  setTimeout(()=> window.location.href='/client/qr-help',800);
- }catch(e){ toast(e.message); }
+ }catch(e){ toast(e.message, 'danger'); }
+ finally{ btn.innerHTML = 'Rời bàn'; btn.disabled = false; }
  }
  // Xử lý click quay lại menu ngay cả khi href '#' (chưa load xong)
  document.getElementById('backMenu').addEventListener('click', (e)=>{
  const href = e.currentTarget.getAttribute('href');
  if(href === '#'){
  e.preventDefault();
- if(!cart) { load(false); return; }
+ if(!cart) { load(false, true); return; }
  if(cart.tableCode){ window.location.href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`; }
  }
  });
- window.addEventListener('beforeunload', () => {
- try {
- if(orderId){
- const data = new Blob([], { type: 'application/json' });
- navigator.sendBeacon(`/proxy/public/cart/${orderId}/close-session`, data);
- }
- } catch { }
- });
+ // Bỏ auto-close khi đóng tab / reload: trước đây gửi beacon tới close-session, đã gỡ bỏ theo yêu cầu.
  document.getElementById('btnLeave').addEventListener('click', leaveTable);
  document.getElementById('btnClear').addEventListener('click', clearAll);
  document.getElementById('btnSubmit').addEventListener('click', submit);
- (async()=>{ try{ await load(); } catch(e){ toast(e.message); } })();
+ (async()=>{ try{ await load(true, true); } catch(e){ toast(e.message, 'danger'); } })();
  </script>
 }
