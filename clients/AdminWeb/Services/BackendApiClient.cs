@@ -506,11 +506,17 @@ namespace AdminWeb.Services
         public async Task<List<DiningTableDto>> GetTablesAsync(CancellationToken cancellationToken = default)
             => await GetOrDefaultAsync<List<DiningTableDto>>("/api/tables", cancellationToken).ConfigureAwait(false) ?? new List<DiningTableDto>();
 
+        public async Task<DiningTableDto?> GetTableAsync(Guid id, CancellationToken cancellationToken = default)
+            => await GetOrDefaultAsync<DiningTableDto>($"/api/tables/{id}", cancellationToken).ConfigureAwait(false);
+
         public Task<HttpResponseMessage> CreateTableAsync(CreateTableRequest req, CancellationToken cancellationToken = default)
             => _http.PostAsJsonAsync("/api/tables", req, JsonOptions, cancellationToken);
 
         public Task<HttpResponseMessage> UpdateTableAsync(Guid id, UpdateTableRequest req, CancellationToken cancellationToken = default)
             => _http.PutAsJsonAsync($"/api/tables/{id}", req, JsonOptions, cancellationToken);
+
+        public Task<HttpResponseMessage> DeleteTableAsync(Guid id, CancellationToken cancellationToken = default)
+            => _http.DeleteAsync($"/api/tables/{id}", cancellationToken);
 
         // ===== CATEGORIES =====
         public async Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default)

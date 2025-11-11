@@ -14,7 +14,7 @@ public class PublicProxyController : ControllerBase
     private readonly IHttpClientFactory _factory;
     public PublicProxyController(IHttpClientFactory factory) => _factory = factory;
 
-    private HttpClient B() => _factory.CreateClient("backend");     
+    private HttpClient B() => _factory.CreateClient("backend");
 
     private static async Task<IActionResult> Pipe(HttpResponseMessage res)
     {
@@ -29,45 +29,48 @@ public class PublicProxyController : ControllerBase
     // Backend change qty dto
     public sealed record ChangeQtyDto(int Quantity);
     public sealed record ChangeNoteDto(string? Note);
-    public sealed record RemoveItemDto(Guid MenuItemId);
+    public sealed record RemoveItemDto(int OrderItemId);
+
+    // Voucher preview request
+    public sealed record VoucherReq(string Code);
 
     // Public cart (CartDto-like) used by CustomerWeb
     public sealed record CartItemOut(
-        Guid Id,
-        Guid MenuItemId,
-        string Name,
-        decimal UnitPrice,
-        int Quantity,
-        string? Note,
-        decimal LineTotal,
-        int OrderItemId // extra to support patch by order item id
+    Guid Id,
+    Guid MenuItemId,
+    string Name,
+    decimal UnitPrice,
+    int Quantity,
+    string? Note,
+    decimal LineTotal,
+    int OrderItemId // extra to support patch by order item id
     );
     public sealed record CartOut(
-        Guid OrderId,
-        string? TableCode,
-        string Status,
-        List<CartItemOut> Items,
-        decimal Subtotal,
-        decimal ServiceCharge,
-        decimal Tax,
-        decimal Total
+    Guid OrderId,
+    string? TableCode,
+    string Status,
+    List<CartItemOut> Items,
+    decimal Subtotal,
+    decimal ServiceCharge,
+    decimal Tax,
+    decimal Total
     );
 
     [HttpPost("cart/start")]
     public async Task<IActionResult> Start([FromBody] StartDto dto)
-        => await Pipe(await B().PostAsJsonAsync("/api/public/cart/start", dto));
+    => await Pipe(await B().PostAsJsonAsync("/api/public/cart/start", dto));
 
     [HttpGet("menu/categories")]
     public async Task<IActionResult> Cats()
-        => await Pipe(await B().GetAsync("/api/public/menu/categories"));
+    => await Pipe(await B().GetAsync("/api/public/menu/categories"));
 
     [HttpGet("menu/by-category/{id:guid}")]
     public async Task<IActionResult> Items(Guid id)
-        => await Pipe(await B().GetAsync($"/api/public/menu/by-category/{id}"));
+    => await Pipe(await B().GetAsync($"/api/public/menu/by-category/{id}"));
 
     [HttpPost("cart/{orderId:guid}/items")]
     public async Task<IActionResult> Add(Guid orderId, [FromBody] AddItemDto dto)
-        => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/items", dto));
+    => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/items", dto));
 
     // Get cart and map OrderDto -> CartDto-like shape
     [HttpGet("cart/{orderId:guid}")]
@@ -83,17 +86,41 @@ public class PublicProxyController : ControllerBase
             var root = doc.RootElement;
 
             var id = root.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String && Guid.TryParse(idEl.GetString(), out var gid)
-                ? gid : orderId;
-            // Map status: handle string or numeric enum
+            ? gid : orderId;
+            // Map status: handle string or numeric enum (backend có thể trả về số hoặc chuỗi số)
             string status = string.Empty;
             if (root.TryGetProperty("status", out var stEl))
             {
                 if (stEl.ValueKind == JsonValueKind.String)
-                    status = stEl.GetString() ?? string.Empty;
+                {
+                    var sRaw = stEl.GetString() ?? string.Empty;
+                    if (int.TryParse(sRaw, out var sInt))
+                    {
+                        status = sInt switch {0 => "Draft",1 => "Submitted",2 => "InProgress",3 => "Ready",4 => "Served",5 => "Cancelled",6 => "WaitingForPayment",7 => "Paid", _ => sInt.ToString() };
+                    }
+                    else
+                    {
+                        status = sRaw; // chuỗi tên enum chuẩn
+                    }
+                }
                 else if (stEl.ValueKind == JsonValueKind.Number && stEl.TryGetInt32(out var s))
-                    status = s switch {0 => "Draft",1 => "Submitted",2 => "InProgress",3 => "Ready",4 => "Served",5 => "Cancelled", _ => s.ToString() };
+                {
+                    status = s switch {0 => "Draft",1 => "Submitted",2 => "InProgress",3 => "Ready",4 => "Served",5 => "Cancelled",6 => "WaitingForPayment",7 => "Paid", _ => s.ToString() };
+                }
                 else
+                {
                     status = stEl.GetRawText();
+                }
+            }
+
+            // Default to Draft if backend omits or returns empty/invalid
+            if (string.IsNullOrWhiteSpace(status)) status = "Draft";
+
+            // Try get table code if backend provides it
+            string? tableCode = null;
+            if (root.TryGetProperty("tableCode", out var tcEl) && tcEl.ValueKind == JsonValueKind.String)
+            {
+                tableCode = tcEl.GetString();
             }
 
             decimal total =0m;
@@ -106,7 +133,13 @@ public class PublicProxyController : ControllerBase
             {
                 foreach (var it in itemsEl.EnumerateArray())
                 {
-                    int orderItemId = it.TryGetProperty("orderItemId", out var oiEl) && oiEl.ValueKind == JsonValueKind.Number ? oiEl.GetInt32() :0;
+                    // Fallback: backend có thể dùng "orderItemId" hoặc "id" cho item id
+                    int orderItemId =0;
+                    if (it.TryGetProperty("orderItemId", out var oiEl) && oiEl.ValueKind == JsonValueKind.Number)
+                        orderItemId = oiEl.GetInt32();
+                    else if (it.TryGetProperty("id", out var oi2) && oi2.ValueKind == JsonValueKind.Number)
+                        orderItemId = oi2.GetInt32();
+
                     Guid menuItemId = it.TryGetProperty("menuItemId", out var miEl) && miEl.ValueKind == JsonValueKind.String && Guid.TryParse(miEl.GetString(), out var mid) ? mid : Guid.Empty;
                     string name = it.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? string.Empty : string.Empty;
                     int quantity = it.TryGetProperty("quantity", out var qEl) && qEl.ValueKind == JsonValueKind.Number ? qEl.GetInt32() :0;
@@ -116,20 +149,19 @@ public class PublicProxyController : ControllerBase
 
                     subtotal += lineTotal;
 
-                    // Id in public cart = MenuItemId (Guid) for stable UI ops; include orderItemId extra
                     itemsOut.Add(new CartItemOut(menuItemId, menuItemId, name, unitPrice, quantity, note, lineTotal, orderItemId));
                 }
             }
 
             var cart = new CartOut(
-                OrderId: id,
-                TableCode: null, // unknown from OrderDto; client will preserve previous value
-                Status: status,
-                Items: itemsOut,
-                Subtotal: subtotal,
-                ServiceCharge:0m,
-                Tax:0m,
-                Total: total ==0m ? subtotal : total
+            OrderId: id,
+            TableCode: tableCode, // keep if provided by backend
+            Status: status,
+            Items: itemsOut,
+            Subtotal: subtotal,
+            ServiceCharge:0m,
+            Tax:0m,
+            Total: total ==0m ? subtotal : total
             );
 
             var json = JsonSerializer.Serialize(cart, new JsonSerializerOptions
@@ -149,14 +181,14 @@ public class PublicProxyController : ControllerBase
     // Update quantity (PATCH) aligning with backend
     [HttpPatch("cart/{orderId:guid}/items/{orderItemId:int}")]
     public async Task<IActionResult> ChangeQty(Guid orderId, int orderItemId, [FromBody] ChangeQtyDto dto)
-        => await Pipe(await B().PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{orderItemId}", dto));
+    => await Pipe(await B().PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{orderItemId}", new { newQuantity = dto.Quantity }));
 
     // Update note (PATCH)
     [HttpPatch("cart/{orderId:guid}/items/{orderItemId:int}/note")]
     public async Task<IActionResult> ChangeNote(Guid orderId, int orderItemId, [FromBody] ChangeNoteDto dto)
-        => await Pipe(await B().PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{orderItemId}/note", dto));
+    => await Pipe(await B().PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{orderItemId}/note", new { note = dto.Note }));
 
-    // Remove cart item by MenuItemId in body (align with backend)
+    // Remove cart item by OrderItemId in body (align với backend)
     [HttpDelete("cart/{orderId:guid}/items")]
     public async Task<IActionResult> RemoveItem(Guid orderId, [FromBody] RemoveItemDto dto)
     {
@@ -171,21 +203,38 @@ public class PublicProxyController : ControllerBase
     // Clear all (align with backend: DELETE /all)
     [HttpDelete("cart/{orderId:guid}/clear")]
     public async Task<IActionResult> Clear(Guid orderId)
-        => await Pipe(await B().DeleteAsync($"/api/public/cart/{orderId}/all"));
+    => await Pipe(await B().DeleteAsync($"/api/public/cart/{orderId}/all"));
 
     // Backward-compat: keep POST clear to not break older clients
     [HttpPost("cart/{orderId:guid}/clear")]
     public async Task<IActionResult> ClearPost(Guid orderId)
-        => await Clear(orderId);
+    => await Clear(orderId);
 
     // Submit cart
     [HttpPost("cart/{orderId:guid}/submit")]
     public async Task<IActionResult> Submit(Guid orderId)
-        => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/submit", new { }));
+    => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/submit", new { }));
 
     // Close session (draft order cleanup)
     [HttpPost("cart/{orderId:guid}/close-session")]
     public async Task<IActionResult> CloseSession(Guid orderId)
-        => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/close-session", new { }));
+    => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/close-session", new { }));
+
+    // ===== Voucher / Payment endpoints proxy =====
+    [HttpPost("orders/{orderId:guid}/voucher/preview")]
+    public async Task<IActionResult> PreviewVoucher(Guid orderId, [FromBody] VoucherReq req)
+    => await Pipe(await B().PostAsJsonAsync($"/api/public/orders/{orderId}/voucher/preview", req));
+
+    [HttpPost("orders/{orderId:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid orderId)
+    => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/cancel", new StringContent("{}", Encoding.UTF8, "application/json")));
+
+    [HttpPost("orders/{orderId:guid}/request-cash")]
+    public async Task<IActionResult> RequestCash(Guid orderId)
+    => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/request-cash", new StringContent("{}", Encoding.UTF8, "application/json")));
+
+    [HttpPost("orders/{orderId:guid}/mock-transfer")]
+    public async Task<IActionResult> MockTransfer(Guid orderId)
+    => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/mock-transfer", new StringContent("{}", Encoding.UTF8, "application/json")));
 }
 

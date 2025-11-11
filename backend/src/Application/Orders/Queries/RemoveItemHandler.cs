@@ -1,7 +1,7 @@
 ﻿// Application/Orders/Commands/RemoveItemHandler.cs
 using Application.Abstractions;
 using Application.Dtos;
-using Application.Mappings;        // IApplicationDbContext
+using Application.Mappings;
 using Microsoft.EntityFrameworkCore;
 using Application.Orders.Commands;
 
@@ -18,11 +18,7 @@ public sealed class RemoveItemHandler : ICommandHandler<RemoveItemCommand, Order
                                     .FirstOrDefaultAsync(o => o.Id == cmd.OrderId, ct)
                     ?? throw new KeyNotFoundException("Không tìm thấy đơn");
 
-        // Find the OrderItem's int Id by MenuItemId
-        var orderItem = order.Items.FirstOrDefault(i => i.MenuItemId == cmd.MenuItemId)
-            ?? throw new KeyNotFoundException("Không tìm thấy món trong đơn");
-
-        order.RemoveItem(orderItem.Id); // Pass int OrderItem.Id instead of Guid MenuItemId
+        order.RemoveItem(cmd.OrderItemId);
         await _db.SaveChangesAsync(ct);
         return OrderMapper.ToDto(order);
     }

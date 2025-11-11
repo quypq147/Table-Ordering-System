@@ -216,14 +216,6 @@
         setTimeout(()=> window.location.href='/client/qr-help',800);
         }catch(e){ toast(e.message); }
         }
-        window.addEventListener('beforeunload', () => {
-        try {
-        if(orderId){
-        const data = new Blob([], { type: 'application/json' });
-        navigator.sendBeacon(`/proxy/public/cart/${orderId}/close-session`, data);
-        }
-        } catch { }
-        });
         document.getElementById('btnLeave').addEventListener('click', leaveTable);
         document.getElementById("btnAdd").addEventListener("click", async ()=>{ try{ await addToCart(); } catch(e){ toast(e.message); }});
         (async()=>{ try{ await startCart(); await loadCategories(); } catch(e){ toast(e.message); }})();

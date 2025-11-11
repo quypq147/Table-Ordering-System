@@ -18,7 +18,8 @@ namespace Application.Tables.Commands
         {
             var t = await _db.Tables.FirstOrDefaultAsync(x => x.Id == c.Id, ct)
                     ?? throw new KeyNotFoundException("Table not found");
-            t.MarkReserved(); // :contentReference[oaicite:17]{index=17}
+            // Reserved trạng thái đã bỏ; dùng InUse nếu cần giữ bàn
+            t.MarkInUse();
             await _db.SaveChangesAsync(ct);
             return new TableDto(t.Id, t.Code, t.Seats, t.Status);
         }

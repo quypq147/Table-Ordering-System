@@ -41,8 +41,10 @@ namespace AdminWeb.Services
 
         // TABLES
         Task<List<DiningTableDto>> GetTablesAsync(CancellationToken cancellationToken = default);
+        Task<DiningTableDto?> GetTableAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> CreateTableAsync(CreateTableRequest req, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> UpdateTableAsync(Guid id, UpdateTableRequest req, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> DeleteTableAsync(Guid id, CancellationToken cancellationToken = default);
 
         // ===== Categories =====
         Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page =1, int pageSize =50, CancellationToken cancellationToken = default);
