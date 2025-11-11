@@ -8,5 +8,6 @@ public enum OrderStatus
     Ready = 3,
     Served = 4,
     Paid = 5,
-    Cancelled = 6
+    Cancelled = 6,
+    WaitingForPayment = 7 // cash payment requested, awaiting settlement
 }

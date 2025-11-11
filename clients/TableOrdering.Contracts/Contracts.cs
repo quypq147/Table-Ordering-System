@@ -23,9 +23,9 @@ public record OrderDetailDto(Guid Id, string Code, string Status, decimal Subtot
 public record KitchenTicketDto(Guid Id, Guid OrderId, Guid StationId, string Status, string ItemName, int Qty, DateTime CreatedAt);
 
 // Tables
-public record DiningTableDto(Guid Id, string Code, int Seats, int Status);
-public record CreateTableRequest(string Code, int Seats, int Status);
-public record UpdateTableRequest(string Code, int Seats, int Status);
+public record DiningTableDto(Guid Id, string Code, int Seats, TableStatus Status);
+public record CreateTableRequest(string Code, int Seats);
+public record UpdateTableRequest(string Code, int Seats, TableStatus Status);
 
 // Public Cart (Customer)
 public record CartItemDto(int Id, Guid MenuItemId, string Name, decimal UnitPrice, int Quantity, string? Note, decimal LineTotal);

@@ -34,13 +34,17 @@ namespace AdminWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Cancel(Guid id)
+        public async Task<IActionResult> Cancel(Guid id, string? redirect)
         {
             var res = await api.CancelOrderAsync(id);
             if (!res.IsSuccessStatusCode)
                 TempData["Error"] = "Huỷ đơn thất bại";
             else
                 TempData["Success"] = "Đã huỷ đơn";
+
+            if (string.Equals(redirect, "tables", StringComparison.OrdinalIgnoreCase))
+                return RedirectToAction("Index", "Tables");
+
             return RedirectToAction(nameof(Detail), new { id });
         }
 

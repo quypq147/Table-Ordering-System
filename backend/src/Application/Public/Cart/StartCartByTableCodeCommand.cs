@@ -37,7 +37,7 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
             .FirstOrDefaultAsync(ct);
         if (open is not null)
         {
-            table.MarkOccupied();
+            table.MarkInUse();
             await _db.SaveChangesAsync(ct);
             return open.Id;
         }
@@ -49,7 +49,7 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
         var order = Domain.Entities.Order.Start(id, table.Id, orderCode);
 
         _db.Orders.Add(order);
-        table.MarkOccupied();
+        table.MarkInUse();
 
         await _db.SaveChangesAsync(ct);
         return id;

@@ -36,13 +36,17 @@
             <div class="topbar-title">Table Ordering · Admin</div>
             <div class="topbar-right">
                 <div class="avatar">AD</div>
-                <form method="post" action="/logout" class="d-inline ms-2">
+                <form method="post" action="/logout" class="d-inline ms-2" data-loading>
                     <button type="submit" class="btn btn-link text-decoration-none">Đăng xuất</button>
                 </form>
             </div>
         </header>
         <main class="content">@RenderBody()</main>
     </div>
+    <!-- Toast stack -->
+    <div id="toastStack" class="toast-stack"></div>
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none"><div class="spinner"></div></div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="~/js/ui.js" asp-append-version="true" defer></script>
     <script src="~/js/dashboard.js" asp-append-version="true" defer></script>

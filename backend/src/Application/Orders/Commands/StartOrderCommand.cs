@@ -3,6 +3,8 @@ using Application.Dtos;
 using Application.Mappings;
 using Domain.Entities;
 using Domain.Repositories;
+using Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Orders.Commands;
 
@@ -25,6 +27,8 @@ public class StartOrderHandler : ICommandHandler<StartOrderCommand, OrderDto>
     {
         var table = await _tables.GetByIdAsync(command.TableId);
         if (table is null) throw new InvalidOperationException("Không tìm thấy bàn.");
+        // Nếu có đơn đang hoạt động thì trạng thái bàn chuyển InUse
+        table.MarkInUse(); // đánh dấu đã có người ngồi
         var order = Order.Start(command.OrderId, command.TableId);
         await _orders.AddAsync(order);
         await _uow.SaveChangesAsync(ct);

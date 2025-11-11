@@ -19,8 +19,16 @@ public class Table : Entity<Guid>
         Seats = seats > 0 ? seats : throw new ArgumentOutOfRangeException(nameof(seats));
     }
 
-    public void MarkReserved() => Status = TableStatus.Reserved;
-    public void MarkOccupied() => Status = TableStatus.Occupied;
+    public void MarkInUse() => Status = TableStatus.InUse;
     public void MarkAvailable() => Status = TableStatus.Available;
+
+    // Cập nhật thông tin bàn (code + seats)
+    public void Update(string code, int seats)
+    {
+        if (string.IsNullOrWhiteSpace(code)) throw new ArgumentNullException(nameof(code));
+        if (seats <=0) throw new ArgumentOutOfRangeException(nameof(seats));
+        Code = code.Trim();
+        Seats = seats;
+    }
 }
 

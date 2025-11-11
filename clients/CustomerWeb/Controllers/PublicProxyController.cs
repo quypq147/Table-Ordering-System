@@ -31,6 +31,9 @@ public class PublicProxyController : ControllerBase
     public sealed record ChangeNoteDto(string? Note);
     public sealed record RemoveItemDto(int OrderItemId);
 
+    // Voucher preview request
+    public sealed record VoucherReq(string Code);
+
     // Public cart (CartDto-like) used by CustomerWeb
     public sealed record CartItemOut(
     Guid Id,
@@ -93,7 +96,7 @@ public class PublicProxyController : ControllerBase
                     var sRaw = stEl.GetString() ?? string.Empty;
                     if (int.TryParse(sRaw, out var sInt))
                     {
-                        status = sInt switch { 0 => "Draft", 1 => "Submitted", 2 => "InProgress", 3 => "Ready", 4 => "Served", 5 => "Cancelled", _ => sInt.ToString() };
+                        status = sInt switch {0 => "Draft",1 => "Submitted",2 => "InProgress",3 => "Ready",4 => "Served",5 => "Cancelled",6 => "WaitingForPayment",7 => "Paid", _ => sInt.ToString() };
                     }
                     else
                     {
@@ -102,7 +105,7 @@ public class PublicProxyController : ControllerBase
                 }
                 else if (stEl.ValueKind == JsonValueKind.Number && stEl.TryGetInt32(out var s))
                 {
-                    status = s switch { 0 => "Draft", 1 => "Submitted", 2 => "InProgress", 3 => "Ready", 4 => "Served", 5 => "Cancelled", _ => s.ToString() };
+                    status = s switch {0 => "Draft",1 => "Submitted",2 => "InProgress",3 => "Ready",4 => "Served",5 => "Cancelled",6 => "WaitingForPayment",7 => "Paid", _ => s.ToString() };
                 }
                 else
                 {
@@ -120,18 +123,18 @@ public class PublicProxyController : ControllerBase
                 tableCode = tcEl.GetString();
             }
 
-            decimal total = 0m;
+            decimal total =0m;
             if (root.TryGetProperty("total", out var totEl) && totEl.TryGetDecimal(out var tot)) total = tot;
 
             var itemsOut = new List<CartItemOut>();
-            decimal subtotal = 0m;
+            decimal subtotal =0m;
 
             if (root.TryGetProperty("items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Array)
             {
                 foreach (var it in itemsEl.EnumerateArray())
                 {
-                    // Fallback: backend có thể dùng "id" hoặc "orderItemId" cho item id
-                    int orderItemId = 0;
+                    // Fallback: backend có thể dùng "orderItemId" hoặc "id" cho item id
+                    int orderItemId =0;
                     if (it.TryGetProperty("orderItemId", out var oiEl) && oiEl.ValueKind == JsonValueKind.Number)
                         orderItemId = oiEl.GetInt32();
                     else if (it.TryGetProperty("id", out var oi2) && oi2.ValueKind == JsonValueKind.Number)
@@ -139,14 +142,13 @@ public class PublicProxyController : ControllerBase
 
                     Guid menuItemId = it.TryGetProperty("menuItemId", out var miEl) && miEl.ValueKind == JsonValueKind.String && Guid.TryParse(miEl.GetString(), out var mid) ? mid : Guid.Empty;
                     string name = it.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? string.Empty : string.Empty;
-                    int quantity = it.TryGetProperty("quantity", out var qEl) && qEl.ValueKind == JsonValueKind.Number ? qEl.GetInt32() : 0;
-                    decimal unitPrice = it.TryGetProperty("unitPrice", out var upEl) && upEl.TryGetDecimal(out var up) ? up : 0m;
+                    int quantity = it.TryGetProperty("quantity", out var qEl) && qEl.ValueKind == JsonValueKind.Number ? qEl.GetInt32() :0;
+                    decimal unitPrice = it.TryGetProperty("unitPrice", out var upEl) && upEl.TryGetDecimal(out var up) ? up :0m;
                     decimal lineTotal = it.TryGetProperty("lineTotal", out var ltEl) && ltEl.TryGetDecimal(out var lt) ? lt : unitPrice * quantity;
                     string? note = it.TryGetProperty("note", out var nEl) && nEl.ValueKind != JsonValueKind.Null ? nEl.GetString() : null;
 
                     subtotal += lineTotal;
 
-                    // Id in public cart = MenuItemId (Guid) for stable UI ops; include orderItemId extra
                     itemsOut.Add(new CartItemOut(menuItemId, menuItemId, name, unitPrice, quantity, note, lineTotal, orderItemId));
                 }
             }
@@ -157,9 +159,9 @@ public class PublicProxyController : ControllerBase
             Status: status,
             Items: itemsOut,
             Subtotal: subtotal,
-            ServiceCharge: 0m,
-            Tax: 0m,
-            Total: total == 0m ? subtotal : total
+            ServiceCharge:0m,
+            Tax:0m,
+            Total: total ==0m ? subtotal : total
             );
 
             var json = JsonSerializer.Serialize(cart, new JsonSerializerOptions
@@ -167,12 +169,12 @@ public class PublicProxyController : ControllerBase
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
-            return new ContentResult { StatusCode = 200, ContentType = "application/json; charset=utf-8", Content = json };
+            return new ContentResult { StatusCode =200, ContentType = "application/json; charset=utf-8", Content = json };
         }
         catch
         {
             // Fallback to piping raw if mapping failed
-            return new ContentResult { StatusCode = 200, ContentType = "application/json; charset=utf-8", Content = raw };
+            return new ContentResult { StatusCode =200, ContentType = "application/json; charset=utf-8", Content = raw };
         }
     }
 
@@ -217,5 +219,22 @@ public class PublicProxyController : ControllerBase
     [HttpPost("cart/{orderId:guid}/close-session")]
     public async Task<IActionResult> CloseSession(Guid orderId)
     => await Pipe(await B().PostAsJsonAsync($"/api/public/cart/{orderId}/close-session", new { }));
+
+    // ===== Voucher / Payment endpoints proxy =====
+    [HttpPost("orders/{orderId:guid}/voucher/preview")]
+    public async Task<IActionResult> PreviewVoucher(Guid orderId, [FromBody] VoucherReq req)
+    => await Pipe(await B().PostAsJsonAsync($"/api/public/orders/{orderId}/voucher/preview", req));
+
+    [HttpPost("orders/{orderId:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid orderId)
+    => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/cancel", new StringContent("{}", Encoding.UTF8, "application/json")));
+
+    [HttpPost("orders/{orderId:guid}/request-cash")]
+    public async Task<IActionResult> RequestCash(Guid orderId)
+    => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/request-cash", new StringContent("{}", Encoding.UTF8, "application/json")));
+
+    [HttpPost("orders/{orderId:guid}/mock-transfer")]
+    public async Task<IActionResult> MockTransfer(Guid orderId)
+    => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/mock-transfer", new StringContent("{}", Encoding.UTF8, "application/json")));
 }
 

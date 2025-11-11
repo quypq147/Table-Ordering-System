@@ -13,6 +13,13 @@ builder.Services.AddHttpClient<BackendApiClient>((sp, http) =>
         http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 });
 
+// Https redirection options (avoid warning in Dev when https port is unknown)
+var httpsPortValue = builder.Configuration["ASPNETCORE_HTTPS_PORT"];
+if (int.TryParse(httpsPortValue, out var httpsPort))
+{
+    builder.Services.AddHttpsRedirection(o => o.HttpsPort = httpsPort);
+}
+
 // SignalR client sẽ dùng JS, không cần DI
 var app = builder.Build();
 
@@ -22,7 +29,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Chỉ bật redirect khi chạy Production hoặc khi đã biết rõ https port
+if (!app.Environment.IsDevelopment() || int.TryParse(app.Configuration["ASPNETCORE_HTTPS_PORT"], out _))
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 
