@@ -1,12 +1,37 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "E:\\Project\\repo\\TableOrdering\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|e:\\project\\repo\\tableordering\\backend\\src\\api\\controllers\\tablescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C03B876-AA36-4E43-82D1-4F88C04ADFA8}|backend\\src\\Api\\Api.csproj|solutionrelative:backend\\src\\api\\controllers\\tablescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": []
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "TablesController.cs",
+              "DocumentMoniker": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\TablesController.cs",
+              "RelativeDocumentMoniker": "backend\\src\\Api\\Controllers\\TablesController.cs",
+              "ToolTip": "E:\\Project\\repo\\TableOrdering\\backend\\src\\Api\\Controllers\\TablesController.cs",
+              "RelativeToolTip": "backend\\src\\Api\\Controllers\\TablesController.cs",
+              "ViewState": "AgIAACsAAAAAAAAAAAAUwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-11T07:07:48.406Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }

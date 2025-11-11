@@ -1,77 +1,122 @@
 (() => {
-  const btn = document.getElementById('btnToggle');
-  const sidebar = document.getElementById('sidebar');
-  btn?.addEventListener('click', () => sidebar?.classList.toggle('open'));
-
-  // Bind metrics from JSON injected by controller
+  // Đọc JSON từ script#dashboard-data
   let payload = {};
   try {
-    const raw = document.getElementById('dashboard-data')?.textContent?.trim();
-    if (raw && raw.startsWith('{')) payload = JSON.parse(raw);
-  } catch {}
-
-  // Ensure required structure
-  const toMoney = (v, currency) => {
-    if (typeof v === 'number') return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: currency || 'VND' }).format(v);
-    return v ?? '';
-  };
-
-  const setText = (key, def='0') => {
-    const val = payload[key] ?? def;
-    document.querySelectorAll(`[data-metric="${key}"]`).forEach(e => e.textContent = val);
-  };
-
-  // Map DashboardVm properties
-  setText('TotalTables', '0');
-  setText('ActiveTables', '0');
-  setText('OrdersToday', '0');
-  setText('OrdersInProgress', '0');
-  setText('OrdersReady', '0');
-
-  // RevenueToday is currency
-  const revElems = document.querySelectorAll('[data-metric="RevenueToday"]');
-  const currency = payload.Currency || 'VND';
-  const formattedRev = toMoney(payload.RevenueToday ??0, currency);
-  revElems.forEach(e => e.textContent = formattedRev);
-
-  // Render charts from RevenueByHour and OrdersToday breakdown if available
-  try {
-    const rev = document.getElementById('revChart');
-    if (rev && Array.isArray(payload.RevenueByHourLabels) && Array.isArray(payload.RevenueByHourValues)) {
-      new Chart(rev, {
-        type: 'line',
-        data: {
-          labels: payload.RevenueByHourLabels,
-          datasets: [{ label: 'Doanh thu', data: payload.RevenueByHourValues, tension:0.35 }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-      });
+    const raw = document.getElementById("dashboard-data")?.textContent?.trim();
+    if (raw) {
+      payload = JSON.parse(raw);
     }
-
-    const st = document.getElementById('stationChart');
-    if (st && typeof payload.OrdersToday === 'number') {
-      // If you later have a status breakdown, replace with real series. For now, show InProgress vs Ready using existing fields
-      const labels = ['Đang chế biến', 'Sẵn sàng'];
-      const values = [payload.OrdersInProgress ||0, payload.OrdersReady ||0];
-      new Chart(st, {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Đơn', data: values }] },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-      });
-    }
-  } catch (e) { console.warn(e); }
-
-  // Fill recent orders if provided
-  const tbody = document.getElementById('recentOrders');
-  if (tbody && Array.isArray(payload.RecentOrders)) {
-    tbody.innerHTML = payload.RecentOrders.map(o => `
-      <tr>
-        <td>${o.code}</td>
-        <td>${o.status}</td>
-        <td>${toMoney(o.total, currency)}</td>
-        <td>${o.created}</td>
-        <td><a class="ghost" href="/Orders/Detail/${o.id}">Chi tiết</a></td>
-      </tr>
-    `).join('');
+  } catch (e) {
+    console.error("Cannot parse dashboard payload", e);
+    payload = {};
   }
+
+  const currency = payload.Currency || "VND";
+
+  const formatNumber = (v) =>
+    typeof v === "number" ? v.toLocaleString("vi-VN") : (v ?? "0");
+
+  const formatMoney = (v) => {
+    if (typeof v !== "number") return v ?? "";
+    try {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: currency,
+        maximumFractionDigits: 0,
+      }).format(v);
+    } catch {
+      return v.toLocaleString("vi-VN");
+    }
+  };
+
+  //1) Đổ các metric vào card
+  const metrics = {
+    TotalTables: payload.TotalTables ?? 0,
+    ActiveTables: payload.ActiveTables ?? 0,
+    OrdersToday: payload.OrdersToday ?? 0,
+    OrdersInProgress: payload.OrdersInProgress ?? 0,
+    RevenueToday: payload.RevenueToday ?? 0,
+  };
+
+  document.querySelectorAll(".metric[data-metric]").forEach((el) => {
+    const key = el.getAttribute("data-metric");
+    let val = metrics[key];
+
+    if (key === "RevenueToday") {
+      el.textContent = formatMoney(val);
+    } else {
+      el.textContent = formatNumber(val);
+    }
+
+    // bỏ class loading nếu có (skeleton)
+    el.closest(".stat, .card")?.classList.remove("loading");
+  });
+
+  //2) Vẽ chart doanh thu theo giờ
+  const revLabels = payload.RevenueByHourLabels || [];
+  const revValues = payload.RevenueByHourValues || [];
+  if (revLabels.length && revValues.length && window.Chart) {
+    const ctx = document.getElementById("revChart");
+    if (ctx) {
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: revLabels,
+          datasets: [
+            {
+              label: "Doanh thu",
+              data: revValues,
+              tension: 0.3,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              ticks: {
+                callback: (v) => v.toLocaleString("vi-VN"),
+              },
+            },
+          },
+        },
+      });
+    }
+  }
+
+  //3) Bảng đơn hàng gần đây
+  const tbody = document.getElementById("recentOrders");
+  if (!tbody) return;
+
+  const orders = Array.isArray(payload.RecentOrders)
+    ? payload.RecentOrders
+    : [];
+
+  if (!orders.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="5" class="text-center text-muted py-3">Chưa có đơn gần đây.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = orders
+    .map((o) => {
+      const id = o.Id;
+      const code = o.Code ?? "";
+      const status = o.Status ?? "";
+      const total = formatMoney(o.Total ?? 0);
+      const created = o.Created ?? "";
+
+      return `
+      <tr>
+        <td>${code}</td>
+        <td>${status}</td>
+        <td class="text-end">${total}</td>
+        <td>${created}</td>
+        <td><a class="ghost" href="/Orders/Detail/${id}">Chi tiết</a></td>
+      </tr>
+    `;
+    })
+    .join("");
 })();
