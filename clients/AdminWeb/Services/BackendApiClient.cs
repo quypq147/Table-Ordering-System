@@ -515,8 +515,38 @@ namespace AdminWeb.Services
         public Task<HttpResponseMessage> UpdateTableAsync(Guid id, UpdateTableRequest req, CancellationToken cancellationToken = default)
             => _http.PutAsJsonAsync($"/api/tables/{id}", req, JsonOptions, cancellationToken);
 
-        public Task<HttpResponseMessage> DeleteTableAsync(Guid id, CancellationToken cancellationToken = default)
-            => _http.DeleteAsync($"/api/tables/{id}", cancellationToken);
+        public async Task<HttpResponseMessage> DeleteTableAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            // Attach bearer in case delete requires auth
+            AttachBearer();
+            var candidates = new (string url, HttpMethod method)[]
+ {
+ ($"/api/tables/{id}", HttpMethod.Delete),
+ ($"/api/tables/{id}/delete", HttpMethod.Post),
+ ($"/api/admin/tables/{id}", HttpMethod.Delete),
+ ($"/api/admin/tables/{id}/delete", HttpMethod.Post)
+ };
+
+            foreach (var (url, method) in candidates)
+            {
+                using var req = new HttpRequestMessage(method, url);
+                using var resp = await _http.SendAsync(req, cancellationToken).ConfigureAwait(false);
+
+                // If method not allowed -> thử biến thể tiếp theo
+                if (resp.StatusCode == HttpStatusCode.MethodNotAllowed)
+                    continue;
+                // Nếu DELETE trả404 có thể endpoint khác tồn tại -> tiếp tục
+                if (resp.StatusCode == HttpStatusCode.NotFound && method == HttpMethod.Delete)
+                    continue;
+                return resp; // trả về response đầu tiên không bị405/404-delete
+            }
+
+            // Fallback khi tất cả đều thất bại
+            return new HttpResponseMessage(HttpStatusCode.MethodNotAllowed)
+            {
+                ReasonPhrase = "Không tìm thấy endpoint xoá bàn phù hợp (đã thử nhiều biến thể)."
+            };
+        }
 
         // ===== CATEGORIES =====
         public async Task<List<CategoryDto>> GetCategoriesAsync(string? search = null, bool? onlyActive = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default)

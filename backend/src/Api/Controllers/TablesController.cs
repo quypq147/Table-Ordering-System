@@ -50,4 +50,12 @@ public class TablesController : ControllerBase
     public Task<TableDto> Available(Guid id, CancellationToken ct)
         => _sender.Send(new MarkTableAvailableCommand(id), ct);
 
+    // Delete table
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await _sender.Send(new DeleteTableCommand(id), ct);
+        return NoContent();
+    }
+
 }
