@@ -65,7 +65,8 @@
                     <option value="">-- Tất cả danh mục --</option>
                     @foreach (var c in categories)
                     {
-                        <option value="@c.Id" selected="@(categoryId == c.Id ? "selected" : null)">@c.Name</option>
+                        <option value="@c.Id"
+                                selected="@(categoryId == c.Id ? "selected" : null)">@c.Name</option>
                     }
                 </select>
             </div>

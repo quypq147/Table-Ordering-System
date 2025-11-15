@@ -1,2 +1,22 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+﻿<script>
+(function() {
+  function append(src, onload) {
+    var s = document.createElement('script');
+    s.src = src;
+    if (onload) s.onload = onload;
+    document.head.appendChild(s);
+  }
+  var root = '@Url.Content("~/")';
+  if (!window.jQuery) {
+    append(root + 'lib/jquery/dist/jquery.min.js', function() {
+      append(root + 'lib/jquery-validation/dist/jquery.validate.min.js', function() {
+        append(root + 'lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js');
+      });
+    });
+  } else {
+    append(root + 'lib/jquery-validation/dist/jquery.validate.min.js', function() {
+      append(root + 'lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js');
+    });
+  }
+})();
+</script>

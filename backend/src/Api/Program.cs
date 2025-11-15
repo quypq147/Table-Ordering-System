@@ -18,15 +18,15 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors(opt =>
 {
- opt.AddPolicy("adminweb", p =>
- p.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new []{"http://localhost:5039"})
- .AllowAnyHeader()
- .AllowAnyMethod()
- .AllowCredentials());
+    opt.AddPolicy("adminweb", p =>
+    p.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:5039" })
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials());
 });
 builder.Services.AddSwaggerGen(c =>
 {
- c.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
+    c.CustomSchemaIds(t => t.FullName!.Replace('+', '.'));
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -46,14 +46,14 @@ var webRoot = app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirecto
 Directory.CreateDirectory(Path.Combine(webRoot, "uploads"));
 app.UseStaticFiles(new StaticFileOptions
 {
- FileProvider = new PhysicalFileProvider(Path.Combine(webRoot, "uploads")),
- RequestPath = "/uploads"
+    FileProvider = new PhysicalFileProvider(Path.Combine(webRoot, "uploads")),
+    RequestPath = "/uploads"
 });
 
 if (app.Environment.IsDevelopment())
 {
- app.UseSwagger();
- app.UseSwaggerUI();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthentication();

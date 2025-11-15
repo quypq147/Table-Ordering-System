@@ -150,9 +150,27 @@
         }
         async function loadItems(categoryId){
         const host = document.getElementById("items");
-        host.innerHTML = `<div class="col-12 text-muted">Đang tải...</div>`;
+
+        // skeleton while loading
+        host.innerHTML = Array.from({ length: 6 }).map(() => `
+        <div class="col-12 col-md-6 col-lg-4" aria-hidden="true">
+            <div class="card h-100 shadow-sm">
+                <div class="ratio ratio-4x3 mb-2 skeleton-block"></div>
+                <div class="card-body">
+                    <div class="skeleton-block skeleton-line-md mb-2"></div>
+                    <div class="skeleton-block skeleton-line-sm" style="width:60%"></div>
+                </div>
+            </div>
+        </div>
+        `).join("");
+
+
         const items = await api(`/proxy/public/menu/by-category/${categoryId}`);
-        if(!items.length){ host.innerHTML=`<div class="col-12 text-muted">Danh mục chưa có món.</div>`; return; }
+        if(!items.length){
+        host.innerHTML = `<div class="col-12 text-muted">Danh mục chưa có món.</div>`;
+        return;
+        }
+
         host.innerHTML = items.map(i => {
         const rawImg = i.avatarImageUrl || i.backgroundImageUrl || null;
         const img = fullImg(rawImg);
@@ -161,7 +179,7 @@
         return `
         <div class="col-12 col-md-6 col-lg-4">
         <div class="card h-100 shadow-sm">
-        ${img ? `<img src="${img}" class="card-img-top" alt="${i.name}" style="object-fit:cover; height:180px;">` : ''}
+        ${img ? '<img src="'+img+'" class="card-img-top" alt="'+i.name+'" style="object-fit:cover; height:180px;">' : ''}
         <div class="card-body">
         <h5 class="card-title">${i.name}</h5>
         <div class="small text-muted">SKU: ${i.sku}</div>
@@ -171,6 +189,7 @@
         </div>
         </div>`;
         }).join("");
+
         host.querySelectorAll("button[data-id]").forEach(b => b.onclick = () => openAddModal(b.dataset.id, b.dataset.name, b.dataset.sku, b.dataset.price, b.dataset.avatar, b.dataset.bg));
         // ensure state reflects status
         setAddEnabled(cartStatus === 'Draft');
@@ -218,7 +237,7 @@
         }
         document.getElementById('btnLeave').addEventListener('click', leaveTable);
         document.getElementById("btnAdd").addEventListener("click", async ()=>{ try{ await addToCart(); } catch(e){ toast(e.message); }});
-        (async()=>{ try{ await startCart(); await loadCategories(); } catch(e){ toast(e.message); }})();
+        (async()=>{ try{ await startCart(); await loadCategories(); } catch(e){ toast(e.message); }}();
     </script>
 }
 

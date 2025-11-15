@@ -560,8 +560,95 @@ namespace AdminWeb.Services
             if (!resp.IsSuccessStatusCode)
                 throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
 
-            var list = JsonSerializer.Deserialize<List<CategoryDto>>(text, JsonOptions) ?? new List<CategoryDto>();
-            return list;
+            // 1) Try direct list deserialize (case-insensitive)
+            try
+            {
+                var listDirect = JsonSerializer.Deserialize<List<CategoryDto>>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (listDirect is not null && listDirect.Count > 0)
+                    return listDirect;
+            }
+            catch { }
+
+            // 2) Try unwrapping { items: [...] } or { data: [...] }
+            try
+            {
+                using var doc = JsonDocument.Parse(text);
+                var root = doc.RootElement;
+
+                // Helper: flexible int parsing
+                static int GetIntFlexible(JsonElement obj, params string[] names)
+                {
+                    foreach (var n in names)
+                    {
+                        if (TryGetPropertyCaseInsensitive(obj, n, out var v))
+                        {
+                            if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i)) return i;
+                            if (v.ValueKind == JsonValueKind.String && int.TryParse(v.GetString(), out var si)) return si;
+                        }
+                    }
+                    return 0;
+                }
+                static bool GetBoolFlexible(JsonElement obj, params string[] names)
+                {
+                    foreach (var n in names)
+                    {
+                        if (TryGetPropertyCaseInsensitive(obj, n, out var v))
+                        {
+                            if (v.ValueKind == JsonValueKind.True) return true;
+                            if (v.ValueKind == JsonValueKind.False) return false;
+                            if (v.ValueKind == JsonValueKind.String)
+                            {
+                                var s = v.GetString();
+                                if (string.Equals(s, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "active", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "enabled", StringComparison.OrdinalIgnoreCase)) return true;
+                                if (string.Equals(s, "false", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "inactive", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "disabled", StringComparison.OrdinalIgnoreCase)) return false;
+                            }
+                            if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i)) return i != 0;
+                        }
+                    }
+                    return false;
+                }
+                static string GetStringFlexible(JsonElement obj, params string[] names)
+                {
+                    foreach (var n in names)
+                    {
+                        var s = TryGetString(obj, n);
+                        if (!string.IsNullOrWhiteSpace(s)) return s!;
+                    }
+                    return string.Empty;
+                }
+
+                JsonElement arrayEl = default;
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    arrayEl = root;
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (TryGetPropertyCaseInsensitive(root, "items", out var items) && items.ValueKind == JsonValueKind.Array)
+                        arrayEl = items;
+                    else if (TryGetPropertyCaseInsensitive(root, "data", out var data) && data.ValueKind == JsonValueKind.Array)
+                        arrayEl = data;
+                }
+
+                if (arrayEl.ValueKind == JsonValueKind.Array)
+                {
+                    var result = new List<CategoryDto>();
+                    foreach (var el in arrayEl.EnumerateArray())
+                    {
+                        var id = TryGetGuid(el, "id") ?? TryGetGuid(el, "categoryId") ?? Guid.Empty;
+                        if (id == Guid.Empty) continue;
+                        var name = GetStringFlexible(el, "name", "categoryName", "title");
+                        var order = GetIntFlexible(el, "displayOrder", "display_order", "order", "sortOrder", "sort_order", "sort", "index", "priority");
+                        var active = GetBoolFlexible(el, "isActive", "active", "status", "enabled");
+                        result.Add(new CategoryDto(id, name, order, active));
+                    }
+                    return result;
+                }
+            }
+            catch { }
+
+            // 3) Fallback to empty list if nothing matched
+            return new List<CategoryDto>();
         }
 
         public async Task<CategoryDto?> GetCategoryAsync(Guid id, CancellationToken cancellationToken = default)
@@ -574,7 +661,70 @@ namespace AdminWeb.Services
             if (!resp.IsSuccessStatusCode)
                 throw new HttpRequestException($"GET {url} failed: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{text}");
 
-            return JsonSerializer.Deserialize<CategoryDto>(text, JsonOptions);
+            // Try direct
+            try
+            {
+                return JsonSerializer.Deserialize<CategoryDto>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch { }
+
+            // Tolerant mapping
+            try
+            {
+                using var doc = JsonDocument.Parse(text);
+                var root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Object) return null;
+
+                static int GetIntFlexible(JsonElement obj, params string[] names)
+                {
+                    foreach (var n in names)
+                    {
+                        if (TryGetPropertyCaseInsensitive(obj, n, out var v))
+                        {
+                            if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i)) return i;
+                            if (v.ValueKind == JsonValueKind.String && int.TryParse(v.GetString(), out var si)) return si;
+                        }
+                    }
+                    return 0;
+                }
+                static bool GetBoolFlexible(JsonElement obj, params string[] names)
+                {
+                    foreach (var n in names)
+                    {
+                        if (TryGetPropertyCaseInsensitive(obj, n, out var v))
+                        {
+                            if (v.ValueKind == JsonValueKind.True) return true;
+                            if (v.ValueKind == JsonValueKind.False) return false;
+                            if (v.ValueKind == JsonValueKind.String)
+                            {
+                                var s = v.GetString();
+                                if (string.Equals(s, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "active", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "enabled", StringComparison.OrdinalIgnoreCase)) return true;
+                                if (string.Equals(s, "false", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "inactive", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "disabled", StringComparison.OrdinalIgnoreCase)) return false;
+                            }
+                            if (v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i)) return i != 0;
+                        }
+                    }
+                    return false;
+                }
+                static string GetStringFlexible(JsonElement obj, params string[] names)
+                {
+                    foreach (var n in names)
+                    {
+                        var s = TryGetString(obj, n);
+                        if (!string.IsNullOrWhiteSpace(s)) return s!;
+                    }
+                    return string.Empty;
+                }
+
+                var cid = TryGetGuid(root, "id") ?? TryGetGuid(root, "categoryId") ?? id;
+                var name = GetStringFlexible(root, "name", "categoryName", "title");
+                var order = GetIntFlexible(root, "displayOrder", "display_order", "order", "sortOrder", "sort_order", "sort", "index", "priority");
+                var active = GetBoolFlexible(root, "isActive", "active", "status", "enabled");
+                return new CategoryDto(cid, name, order, active);
+            }
+            catch { }
+
+            return null;
         }
 
         public Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default)
