@@ -17,4 +17,11 @@ public class ClientOrderController : Controller
  ViewBag.OrderId = id;
  return View("~/Views/Client/PaymentSuccess.cshtml");
  }
+
+ [HttpGet("/client/order/{id:guid}/payment-failed")]
+ public IActionResult PaymentFailed(Guid id)
+ {
+ ViewBag.OrderId = id;
+ return View("~/Views/Client/PaymentFailed.cshtml");
+ }
 }

@@ -5,7 +5,13 @@
 }
 <div class="container mt-3">
     <h4>Chi tiết đơn</h4>
-    <div id="orderBox" class="card mt-3">
+
+    <div id="orderLoading" class="alert alert-light d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Đang tải thông tin đơn, vui lòng chờ...</span>
+    </div>
+
+    <div id="orderBox" class="card mt-3 d-none">
         <div class="card-body">
             <div class="d-flex justify-content-between">
                 <div>Mã đơn: <span id="orderCode">--</span></div>
@@ -47,10 +53,26 @@
     </div>
 </div>
 
-<!-- Simple toast placeholder -->
+<!-- Overlay chờ thanh toán -->
+<div id="paymentOverlay"
+     class="position-fixed top-0 start-0 w-100 h-100 d-none"
+     style="background:rgba(15,23,42,.55);z-index:1200;">
+    <div class="d-flex flex-column justify-content-center align-items-center h-100 text-white">
+        <div class="spinner-border mb-3" role="status"></div>
+        <div class="fw-semibold">Đang xử lý thanh toán...</div>
+        <div class="small text-muted mt-1">
+            Vui lòng không thoát hoặc quay lại cho đến khi hoàn tất.
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
 <div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
-    <div id="toast" class="toast" role="alert" data-bs-delay="2500" data-bs-autohide="true">
-        <div class="toast-body" id="toastMsg">...</div>
+    <div id="toast" class="toast text-bg-secondary" role="alert" data-bs-delay="2500" data-bs-autohide="true">
+        <div class="toast-body d-flex align-items-center">
+            <span id="toastMsg" class="me-2">...</span>
+            <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
     </div>
 </div>
 
@@ -59,6 +81,7 @@
         const orderId = "@orderId";
         let order = null;
         let currency = "VND";
+        let isPaying = false;
 
         const statusMap = {
             Draft: 'Đang chọn món',
@@ -73,9 +96,72 @@
         function canCancel(status){ return status === 'Draft' || status === 'Submitted'; }
 
         function money(n){ try{ return new Intl.NumberFormat('vi-VN').format(n) + ' ' + currency; }catch{ return n + ' ' + currency; } }
-        function toast(msg){
+
+        function setPaying(paying){
+        isPaying = paying;
+
+        const overlay = document.getElementById('paymentOverlay');
+        if(overlay){
+        overlay.classList.toggle('d-none', !paying);
+        }
+
+        const btnTransfer = document.getElementById('btnTransfer');
+        const btnCash = document.getElementById('btnCash');
+        const btnCancel = document.getElementById('btnCancel');
+        const status = order && order.status ? order.status : '';
+
+        if(btnTransfer) btnTransfer.disabled = paying;
+        if(btnCash) btnCash.disabled = paying;
+        if(btnCancel) btnCancel.disabled = paying || !canCancel(status);
+
+        const back = document.getElementById('backToMenu');
+        if(back){
+        if(paying){
+        if(!back.dataset.href){
+        back.dataset.href = back.getAttribute('href') || '';
+        }
+        back.setAttribute('href', '#');
+        back.classList.add('disabled');
+        back.setAttribute('aria-disabled', 'true');
+        back.style.pointerEvents = 'none';
+        } else {
+        if(back.dataset.href){
+        back.setAttribute('href', back.dataset.href);
+        }
+        back.classList.remove('disabled');
+        back.removeAttribute('aria-disabled');
+        back.style.pointerEvents = '';
+        }
+        }
+        }
+
+        function toast(msg, type){
         const el = document.getElementById('toast');
-        document.getElementById('toastMsg').textContent = msg;
+        if(!el) return;
+
+        el.classList.remove('text-bg-success','text-bg-danger','text-bg-warning','text-bg-secondary');
+
+        switch(type){
+        case 'success':
+        el.classList.add('text-bg-success');
+        break;
+        case 'error':
+        case 'danger':
+        el.classList.add('text-bg-danger');
+        break;
+        case 'warn':
+        case 'warning':
+        el.classList.add('text-bg-warning');
+        break;
+        default:
+        el.classList.add('text-bg-secondary');
+        break;
+        }
+
+        const body = document.getElementById('toastMsg');
+        if(body){
+        body.textContent = msg || '';
+        }
         bootstrap.Toast.getOrCreateInstance(el).show();
         }
         async function api(url, opt){
@@ -86,30 +172,48 @@
         return await resp.text();
         }
         async function loadOrder(){
+        const loading = document.getElementById('orderLoading');
+        const box = document.getElementById('orderBox');
+        if(loading) loading.classList.remove('d-none');
+        if(box) box.classList.add('d-none');
+
         const data = await api(`/proxy/public/cart/${orderId}`);
         order = data;
         currency = (data.currency||'VND');
+
         document.getElementById('orderCode').innerText = data.code || '—';
         document.getElementById('tableCode').innerText = data.tableCode || '—';
+
         // status render
         const rawStatus = data.status || '';
         const statusText = statusMap[rawStatus] || rawStatus || 'Đang chọn món';
         document.getElementById('orderStatus').innerText = statusText;
+
         const btnCancel = document.getElementById('btnCancel');
         if(btnCancel){ btnCancel.disabled = !canCancel(rawStatus); }
-        const tb = document.getElementById('items'); tb.innerHTML='';
-        let sub=0;
-        (data.items||[]).forEach(it=>{
-        const tr=document.createElement('tr');
-        const line=(it.unitPrice||0)*(it.quantity||0); sub+=line;
-        tr.innerHTML=`<td><div class="fw-semibold">${it.name||''}</div>${it.note?`<div class='text-muted small'>${it.note}</div>`:''}</td><td class="text-end">${it.quantity||0}</td><td class="text-end">${money(it.unitPrice||0)}</td><td class="text-end">${money(line)}</td>`;
+
+        const tb = document.getElementById('items');
+        tb.innerHTML = '';
+        let sub = 0;
+        (data.items || []).forEach(it => {
+        const tr = document.createElement('tr');
+        const line = (it.unitPrice || 0) * (it.quantity || 0);
+        sub += line;
+        tr.innerHTML = `<td><div class="fw-semibold">${it.name || ''}</div><div class="small text-muted">${it.note || ''}</div></td><td class="text-end">${money(it.unitPrice || 0)}</td><td class="text-end">${money(line)}</td>`;
         tb.appendChild(tr);
         });
+
         document.getElementById('subTotal').innerText = money(sub);
         document.getElementById('discount').innerText = money(0);
         document.getElementById('grandTotal').innerText = money(sub);
+
         const back = document.getElementById('backToMenu');
-        back.href = `/client/menu?tableCode=${encodeURIComponent(data.tableCode||'')}`;
+        if(back){
+        back.href = `/client/menu?tableCode=${encodeURIComponent(data.tableCode || '')}`;
+        }
+
+        if(loading) loading.classList.add('d-none');
+        if(box) box.classList.remove('d-none');
         }
         async function applyVoucher(){
         const code = (document.getElementById('voucher').value||'').trim();
@@ -122,11 +226,21 @@
         }
         async function requestCash(){
         await api(`/proxy/public/orders/${orderId}/request-cash`, { method:'POST', body:'{}' });
-        toast('Đã yêu cầu thanh toán tiền mặt');
+        toast('Đã yêu cầu thanh toán tiền mặt', 'success');
         }
+
         async function mockTransfer(){
+        try{
+        setPaying(true);
+        toast('Đang xử lý thanh toán, vui lòng chờ...', 'info');
+
         await api(`/proxy/public/orders/${orderId}/mock-transfer`, { method:'POST', body:'{}' });
         window.location.href = `/client/order/${orderId}/payment-success`;
+        }catch(e){
+        setPaying(false);
+        const msg = (e && e.message) || 'Thanh toán thất bại. Vui lòng thử lại.';
+        toast(msg, 'error');
+        }
         }
         async function cancelOrder(){
         if(!order){ toast('Không tìm thấy dữ liệu đơn.', 'danger'); return; }

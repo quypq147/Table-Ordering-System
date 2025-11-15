@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11205.157 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminWeb", "AdminWeb\AdminWeb.csproj", "{5CB5C9B7-EACE-4C2E-84D4-640BDC97B14E}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomerWeb", "CustomerWeb\CustomerWeb.csproj", "{E3401671-EC4F-4DF4-8F2E-78B8455C5A42}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TableOrdering.Contracts", "TableOrdering.Contracts\TableOrdering.Contracts.csproj", "{71B72645-FC30-429F-8EF6-B9138FF83D9E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaiterApp", "WaiterApp\WaiterApp.csproj", "{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +71,18 @@ Global
 		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x64.Build.0 = Release|Any CPU
 		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x86.ActiveCfg = Release|Any CPU
 		{71B72645-FC30-429F-8EF6-B9138FF83D9E}.Release|x86.Build.0 = Release|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Debug|x64.Build.0 = Debug|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Debug|x86.Build.0 = Debug|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Release|x64.ActiveCfg = Release|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Release|x64.Build.0 = Release|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Release|x86.ActiveCfg = Release|Any CPU
+		{7BF0DE7B-1107-4235-8A51-B2A18E4488D6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

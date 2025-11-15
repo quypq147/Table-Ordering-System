@@ -46,3 +46,28 @@ button.accept-policy {
   white-space: nowrap;
   line-height: 60px;
 }
+
+/* Skeleton loading for customer app */
+.skeleton-block {
+  position: relative;
+  overflow: hidden;
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+
+.skeleton-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-line-sm { height: 10px; }
+.skeleton-line-md { height: 14px; }
+.skeleton-line-lg { height: 20px; }
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}

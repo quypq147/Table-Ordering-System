@@ -12,7 +12,7 @@ namespace Api.Controllers;
 [Route("api/[controller]")]
 public class TablesController : ControllerBase
 {
-   private readonly ISender _sender;
+    private readonly ISender _sender;
     public TablesController(ISender sender) => _sender = sender;
 
     // ===== Queries =====
@@ -49,6 +49,7 @@ public class TablesController : ControllerBase
     [HttpPost("{id}/available")]
     public Task<TableDto> Available(Guid id, CancellationToken ct)
         => _sender.Send(new MarkTableAvailableCommand(id), ct);
+
 
     // Delete table
     [HttpDelete("{id}")]
