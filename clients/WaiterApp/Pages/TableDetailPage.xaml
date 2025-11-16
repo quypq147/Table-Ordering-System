@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WaiterApp.Pages.TableDetailPage"
+             Title="Table Details">
+    <ContentPage.Content>
+        <Grid RowDefinitions="Auto,*,Auto" Padding="16">
+            <StackLayout Orientation="Horizontal"
+                         Spacing="8">
+                <Label Text="Table:"
+                       FontAttributes="Bold" />
+                <Label x:Name="TableCodeLabel" />
+            </StackLayout>
+
+            <CollectionView Grid.Row="1"
+                            x:Name="OrderItemsCollection">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="4" Padding="8" CornerRadius="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackLayout>
+                                    <Label Text="{Binding ItemName}"
+                                           FontAttributes="Bold" />
+                                    <Label Text="{Binding Note}"
+                                           FontSize="12"
+                                           TextColor="Gray" />
+                                </StackLayout>
+                                <StackLayout Grid.Column="1"
+                                             HorizontalOptions="End"
+                                             VerticalOptions="Center">
+                                    <Label Text="{Binding Quantity}" />
+                                    <Label Text="{Binding Status}"
+                                           FontSize="12" />
+                                </StackLayout>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Button Grid.Row="2"
+                    Text="View tickets"
+                    Clicked="OnViewTicketsClicked" />
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>
