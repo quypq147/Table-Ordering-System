@@ -1,15 +1,20 @@
-﻿namespace WaiterApp
+﻿using WaiterApp.Services;
+
+namespace WaiterApp
 {
     public partial class App : Application
     {
+        public static ApiClient ApiClient { get; } =
+            new ApiClient("https://your-backend-base-url"); // TODO: change base url
+
+        public static AuthService AuthService { get; } = new(AuthServiceClient: ApiClient);
+        public static KdsRealtimeService KdsRealtimeService { get; } = new(AuthService, ApiClient);
+
         public App()
         {
             InitializeComponent();
-        }
 
-        protected override Window CreateWindow(IActivationState? activationState)
-        {
-            return new Window(new MainPage()) { Title = "WaiterApp" };
+            MainPage = new NavigationPage(new Pages.LoginPage());
         }
     }
 }
