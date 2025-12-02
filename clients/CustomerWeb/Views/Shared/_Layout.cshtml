@@ -35,19 +35,7 @@
         var tableCode = ViewBag.TableCode as string ?? string.Empty;
     }
 
-    @if (!string.IsNullOrEmpty(tableCode))
-    {
-        <!-- Nút nổi mở/đóng chat -->
-        <button id="chatToggleButton"
-                type="button"
-                class="btn btn-primary rounded-circle shadow chat-toggle-btn"
-                aria-label="Mở/đóng chat"
-                aria-expanded="false">
-            💬
-        </button>
-
-        
-    }
+    
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
