@@ -1,0 +1,206 @@
+﻿@using TableOrdering.Contracts
+@model List<MenuItemDto>
+@{
+    ViewData["Title"] = "Quản lý món";
+    var search = (string?)ViewBag.Search ?? "";
+    var onlyActive = (ViewBag.OnlyActive as bool?) ?? false;
+    var categoryId = (Guid?)ViewBag.CategoryId ?? Guid.Empty;
+    var categories = (List<CategoryDto>)ViewBag.Categories ?? new();
+    var total = Model?.Count ?? 0;
+}
+
+@inject IConfiguration Configuration
+@{
+    var apiBase = Configuration["Backend:BaseUrl"]?.TrimEnd('/');
+    string Img(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "";
+        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+        return $"{apiBase}{url}";
+    }
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Quản lý món</h2>
+        <small class="text-muted">Tổng số: <span class="fw-semibold">@total</span></small>
+    </div>
+    <div>
+        <a class="btn btn-success" asp-action="Create">+ Thêm món</a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @ok
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @err
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form id="filterForm" method="get" class="row g-2 g-lg-3 align-items-end">
+            <div class="col-12 col-lg-5">
+                <label for="searchBox" class="form-label small text-muted">Tìm theo tên hoặc SKU</label>
+                <div class="input-group">
+                    <span class="input-group-text">🔎</span>
+                    <input id="searchBox" name="search" value="@search" class="form-control" placeholder="Nhập từ khóa..." />
+                    <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary" title="Xóa tìm kiếm" data-bs-toggle="tooltip" data-bs-title="Xóa tìm kiếm">
+                        Xóa
+                    </button>
+                    <button class="btn btn-primary" type="submit">Lọc</button>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label small text-muted" for="categorySelect">Danh mục</label>
+                <select id="categorySelect" name="categoryId" class="form-select">
+                    <option value="">-- Tất cả danh mục --</option>
+                    @foreach (var c in categories)
+                    {
+                        <option value="@c.Id"
+                                selected="@(categoryId == c.Id ? "selected" : null)">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-6 col-lg-2">
+                <label class="form-label small text-muted d-block">Trạng thái</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="onlyActive" value="true" @(onlyActive ? "checked" : "") id="onlyActiveChk" />
+                    <label class="form-check-label" for="onlyActiveChk">Chỉ hiển thị đang bán</label>
+                </div>
+            </div>
+            <div class="col-12 col-lg-2 d-flex gap-2">
+                <button class="btn btn-outline-primary flex-fill" type="submit">Áp dụng</button>
+                <a class="btn btn-outline-secondary flex-fill" href="@Url.Action("Index")">Bỏ lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-3 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:65vh;">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light" style="position: sticky; top:0; z-index:1;">
+                    <tr>
+                        <th style="width:48px"></th>
+                        <th>Tên món</th>
+                        <th>SKU</th>
+                        <th class="text-end" style="width:160px">Giá</th>
+                        <th style="width:140px">Trạng thái</th>
+                        <th class="text-end" style="width:220px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model)
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(m.AvatarImageUrl))
+                                {
+                                    <img src="@Img(m.AvatarImageUrl)" alt="@m.Name" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />
+                                }
+                                else
+                                {
+                                    <span>🍽️</span>
+                                }
+                            </td>
+                            <td class="fw-semibold">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div>@m.Name</div>
+                                    @if (!string.IsNullOrWhiteSpace(m.BackgroundImageUrl))
+                                    {
+                                        <span class="badge text-bg-light" title="Có ảnh nền">🖼️</span>
+                                    }
+                                </div>
+                            </td>
+                            <td><code>@m.Sku</code></td>
+                            <td class="text-end">@m.Price.ToString("N0") <span class="text-muted small">@m.Currency</span></td>
+                            <td>
+                                @if (m.IsActive)
+                                {
+                                    <span class="badge rounded-pill bg-success">Đang bán</span>
+                                }
+                                else
+                                {
+                                    <span class="badge rounded-pill bg-secondary">Ngưng</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    @if (m.IsActive)
+                                    {
+                                        <form method="post" asp-action="Deactivate" asp-route-id="@m.Id" onsubmit="return confirm('Ngưng bán món này?');" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button class="btn btn-outline-warning btn-sm" type="submit" data-bs-toggle="tooltip" data-bs-title="Ngưng bán">
+                                                Ngưng bán
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-action="Activate" asp-route-id="@m.Id" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button class="btn btn-outline-success btn-sm" type="submit" data-bs-toggle="tooltip" data-bs-title="Bật bán">
+                                                Bật bán
+                                            </button>
+                                        </form>
+                                    }
+                                    <!-- Nơi thêm các nút Sửa giá / Sửa thông tin sau -->
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="p-4">
+                <div class="alert alert-info mb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <div>ℹ️</div>
+                        <div>
+                            <div class="fw-semibold">Không có món nào khớp bộ lọc.</div>
+                            <div class="small text-muted">Thử xóa từ khóa, chọn danh mục khác, hoặc tắt bộ lọc &quot;Chỉ hiển thị đang bán&quot;.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+        (function () {
+        const form = document.getElementById('filterForm');
+        const searchBox = document.getElementById('searchBox');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const cat = document.getElementById('categorySelect');
+        const active = document.getElementById('onlyActiveChk');
+
+        if (cat) cat.addEventListener('change', () => form.submit());
+        if (active) active.addEventListener('change', () => form.submit());
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+        if (searchBox) searchBox.value = '';
+        form.requestSubmit();
+        });
+
+        // Enable Bootstrap tooltips (requires Bootstrap JS on page)
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+        })();
+    </script>
+}
+

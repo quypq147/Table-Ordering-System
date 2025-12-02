@@ -1,0 +1,24 @@
+@model AdminWeb.Dtos.UserDetailVm
+@{
+ ViewData["Title"] = "Phân quy?n";
+ var allRoles = new[]{"Admin","Staff"};
+}
+<div class="container py-4" style="max-width:720px">
+ <h4 class="mb-3">Phân quy?n cho @Model.FullName (@Model.UserName)</h4>
+ <form method="post">
+ @Html.AntiForgeryToken()
+ <div class="form-check">
+ @foreach (var r in allRoles)
+ {
+ <div class="form-check">
+ <input class="form-check-input" type="checkbox" name="roles" value="@r" id="r_@r" @(Model.Roles?.Contains(r) == true?"checked":"") />
+ <label class="form-check-label" for="r_@r">@r</label>
+ </div>
+ }
+ </div>
+ <div class="mt-3">
+ <button class="btn btn-primary">L?u</button>
+ <a asp-action="Index" class="btn btn-secondary ms-2">H?y</a>
+ </div>
+ </form>
+</div>

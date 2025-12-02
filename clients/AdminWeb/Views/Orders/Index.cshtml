@@ -1,0 +1,113 @@
+﻿@using TableOrdering.Contracts
+@using AdminWeb
+@model Paginated<OrderSummaryDto>
+@{
+    ViewData["Title"] = "Đơn hàng";
+    var totalPages = (int)Math.Ceiling(Model.Total / (double)Model.PageSize);
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Đơn hàng</h2>
+        <small class="text-muted">Tổng số: <span class="fw-semibold">@Model.Total</span></small>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @ok
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @err
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-head">
+        <h3>Danh sách</h3>
+    </div>
+    <div class="table-wrap">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Mã</th>
+                    <th>Trạng thái</th>
+                    <th>Tổng</th>
+                    <th>Thời gian</th>
+                    <th style="width:220px" class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items?.Count >0)
+                {
+                    foreach (var o in Model.Items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@o.Code</td>
+                            <td>
+                                <span class="badge rounded-pill @UiText.OrderStatusBadgeClass(o.Status)">@UiText.OrderStatusLabel(o.Status)</span>
+                            </td>
+                            <td>@o.Total.ToString("N0")</td>
+                            <td>@o.CreatedAt.ToLocalTime()</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a class="btn btn-outline-primary" asp-action="Detail" asp-route-id="@o.Id">Chi tiết</a>
+                                    @if (o.Status is "Placed" or "InKitchen")
+                                    {
+                                        <form method="post" asp-action="Cancel" asp-route-id="@o.Id" onsubmit="return confirm('Huỷ đơn này?');" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger">Huỷ</button>
+                                        </form>
+                                    }
+                                    @if (o.Status is "Ready" or "Served")
+                                    {
+                                        <form method="post" asp-action="CloseSession" asp-route-id="@o.Id" onsubmit="return confirm('Đóng phiên / kết thúc đơn này?');" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-success">Đóng phiên</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Chưa có đơn hàng nào.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPages >1)
+    {
+        <div class="d-flex align-items-center justify-content-between p-3">
+            <div class="small text-muted">Trang <strong>@Model.Page</strong>/<strong>@totalPages</strong></div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(Model.Page <=1 ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page -1)">Trước</a>
+                    </li>
+                    @for (var i =1; i <= totalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@i">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.Page >= totalPages ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page +1)">Sau</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+

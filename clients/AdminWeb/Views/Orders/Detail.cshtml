@@ -1,0 +1,119 @@
+﻿@using TableOrdering.Contracts
+@model OrderDetailDto
+@{
+    ViewData["Title"] = $"Đơn hàng {Model.Code}";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Đơn hàng @Model.Code</h2>
+        <div class="small text-muted">Tạo lúc: @Model.CreatedAt.ToLocalTime()</div>
+    </div>
+    <div>
+        @switch (Model.Status)
+        {
+            case "Placed":
+                <span class="badge rounded-pill bg-secondary">Mới tạo</span>
+                ;
+                break;
+            case "InKitchen":
+                <span class="badge rounded-pill bg-info text-dark">Đang chế biến</span>
+                ;
+                break;
+            case "Ready":
+                <span class="badge rounded-pill bg-primary">Sẵn sàng</span>
+                ;
+                break;
+            case "Served":
+                <span class="badge rounded-pill bg-success">Đã phục vụ</span>
+                ;
+                break;
+            case "Cancelled":
+                <span class="badge rounded-pill bg-danger">Đã hủy</span>
+                ;
+                break;
+            case "Paid":
+                <span class="badge rounded-pill bg-success">Đã thanh toán</span>
+                ;
+                break;
+            default:
+                <span class="badge rounded-pill bg-secondary">@Model.Status</span>
+                ;
+                break;
+        }
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @ok
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @err
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-head"><h3>Chi tiết</h3></div>
+    <div class="card-body p-0">
+        <div class="row g-3 p-3">
+            <div class="col-12 col-md-4">
+                <div class="border rounded p-3">
+                    <div class="d-flex justify-content-between"><span class="text-muted">Tạm tính</span><span class="fw-semibold">@Model.Subtotal.ToString("N0")</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-muted">Giảm giá</span><span class="fw-semibold">@Model.Discount.ToString("N0")</span></div>
+                    <div class="d-flex justify-content-between border-top pt-2 mt-2"><span class="fw-semibold">Tổng cộng</span><span class="fw-bold">@Model.Total.ToString("N0")</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Tên</th><th class="text-center" style="width:80px">SL</th><th>Đơn giá</th><th>Thành tiền</th><th>Ghi chú</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in Model.Items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@i.Name</td>
+                            <td class="text-center">@i.Qty</td>
+                            <td>@i.UnitPrice.ToString("N0")</td>
+                            <td>@i.LineTotal.ToString("N0")</td>
+                            <td class="text-muted">@i.Note</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-head"><h3>Cập nhật trạng thái</h3></div>
+    <div class="card-body">
+        <form asp-action="UpdateStatus" method="post" class="row gy-2 gx-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <div class="col-auto">
+                <select name="status" class="form-select">
+                    <option value="Placed" selected="@(Model.Status == "Placed")">Mới tạo</option>
+                    <option value="InKitchen" selected="@(Model.Status == "InKitchen")">Đang chế biến</option>
+                    <option value="Ready" selected="@(Model.Status == "Ready")">Sẵn sàng phục vụ</option>
+                    <option value="Served" selected="@(Model.Status == "Served")">Đã phục vụ</option>
+                    <option value="Cancelled" selected="@(Model.Status == "Cancelled")">Đã huỷ</option>
+                    <option value="Paid" selected="@(Model.Status == "Paid")">Đã thanh toán</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Cập nhật</button>
+            </div>
+        </form>
+    </div>
+</div>
+

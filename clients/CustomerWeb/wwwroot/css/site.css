@@ -1,0 +1,61 @@
+/* Design tokens */
+:root{
+ --bg:#f7f8fb;
+ --panel:#ffffff;
+ --ink:#0f172a;
+ --muted:#6b7280;
+ --ring:#e5e7eb;
+ --brand:#0ea5e9;
+ --radius:14px;
+ --shadow:010px30px rgba(2,6,23,.06);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+
+/* Top bar */
+.topbar{background:var(--panel)}
+.brand{font-weight:800;text-decoration:none;color:inherit}
+.nav .nav-link{color:var(--muted);text-decoration:none}
+.nav .nav-link:hover{color:var(--ink)}
+
+/* Content */
+.content{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--panel);border:1px solid var(--ring);border-radius:var(--radius);box-shadow: var(--shadow)}
+.card-body{padding:16px}
+.badge{display:inline-block;border-radius:999px;padding:4px10px;font-weight:600}
+.badge.brand{background:var(--brand);color:#fff}
+
+/* Utilities */
+.text-muted{color:var(--muted)!important}
+.shadow-soft{box-shadow: var(--shadow)!important}
+
+/* Forms focus */
+.btn:focus,.form-control:focus,.form-select:focus{box-shadow:000 .2rem rgba(14,165,233,.25)}
+
+/* Footer stick on short pages */
+html{position:relative;min-height:100%}
+body{padding-bottom:60px}
+.footer{position:absolute;bottom:0;width:100%}
+
+/* Cart sidebar adjustments */
+#cartSidebar{position:sticky;top:80px;}
+@media (max-width: 992px){
+  #cartSidebar{position:static;}
+}
+
+/* Floating chat overrides (ensure above sidebar) */
+#chatWidget{z-index:2000}
+.chat-toggle-btn {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    z-index: 1999;
+}

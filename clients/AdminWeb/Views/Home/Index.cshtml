@@ -1,0 +1,59 @@
+@{
+    ViewData["Title"] = "Tổng quan";
+}
+
+<div class="stats mb-4">
+    <div class="stat kpi">
+        <div class="stat-head">
+            <span>Tổng bàn</span>
+        </div>
+        <div class="stat-value metric" data-metric="TotalTables">0</div>
+        <p class="muted">Tổng số bàn trong hệ thống</p>
+    </div>
+
+    <div class="stat kpi">
+        <div class="stat-head">
+            <span>Bàn đang phục vụ</span>
+        </div>
+        <div class="stat-value metric" data-metric="ActiveTables">0</div>
+        <p class="muted">Số bàn có khách hiện tại</p>
+    </div>
+
+    <div class="stat kpi">
+        <div class="stat-head">
+            <span>Đơn hôm nay</span>
+        </div>
+        <div class="stat-value metric" data-metric="OrdersToday">0</div>
+        <p class="muted">Tổng số đơn đã tạo trong ngày</p>
+    </div>
+
+    <div class="stat kpi">
+        <div class="stat-head">
+            <span>Doanh thu hôm nay</span>
+        </div>
+        <div class="stat-value metric" data-metric="RevenueToday">₫0</div>
+        <p class="muted">Tạm tính theo đơn đã ghi nhận</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+    <div class="panel"><h4>Doanh thu theo giờ</h4><canvas id="revChart" height="140"></canvas></div>
+    <div class="panel"><h4>Trạng thái đơn hôm nay</h4><canvas id="stationChart" height="140"></canvas></div>
+</div>
+
+<table class="table">
+    <thead><tr><th>Mã</th><th>Trạng thái</th><th class="text-end">Tổng</th><th>Lúc</th><th></th></tr></thead>
+    <tbody id="recentOrders">
+        <tr class="skeleton-row">
+            <td colspan="5">
+                <div class="skeleton-block skeleton-line-md"></div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<script id="dashboard-data" type="application/json">
+    @Html.Raw(ViewBag.DashboardJson ?? "{}")
+</script>
+
+<!-- dashboard.js should read #dashboard-data and render charts/metrics -->

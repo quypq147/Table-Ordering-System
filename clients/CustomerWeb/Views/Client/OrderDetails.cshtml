@@ -1,0 +1,346 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    // Safe OrderId handling from ViewBag (accept Guid or string)
+    Guid orderId = Guid.Empty;
+    if (ViewBag.OrderId is Guid g) { orderId = g; }
+    else if (ViewBag.OrderId is string s && Guid.TryParse(s, out var gp)) { orderId = gp; }
+    ViewData["Title"] = "Chi tiết đơn";
+
+    // Server-side initial values to avoid showing placeholders while JS loads
+    string initialOrderCode = "—";
+    if (Model is not null)
+    {
+        if (!string.IsNullOrEmpty(Model.OrderPrefix))
+            initialOrderCode = $"{Model.OrderPrefix}{Model.OrderCode ?? "—"}";
+        else
+            initialOrderCode = Model.OrderCode ?? "—";
+    }
+    else if (orderId != Guid.Empty)
+    {
+        initialOrderCode = orderId.ToString();
+    }
+    string initialTableCode = (Model?.TableCode) ?? (ViewBag.TableCode as string) ?? "—";
+}
+<div class="container mt-3">
+    <div class="order-header">
+        <h2>Chi tiết đơn</h2>
+
+        <div class="order-meta">
+            <div class="order-code">Mã đơn: @initialOrderCode</div>
+            <div class="order-table">Bàn: @initialTableCode</div>
+        </div>
+    </div>
+
+    <div id="orderLoading" class="alert alert-light d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Đang tải thông tin đơn, vui lòng chờ...</span>
+    </div>
+
+    <div id="orderBox" class="card mt-3 d-none">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <div>Mã đơn: <span id="orderCode">@initialOrderCode</span></div>
+                <div>Bàn: <span id="tableCode">@initialTableCode</span></div>
+            </div>
+            <div class="mt-2">
+                Trạng thái: <span id="orderStatus" class="fw-semibold text-primary">--</span>
+            </div>
+            <hr />
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Món</th><th class="text-end">SL</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead>
+                    <tbody id="items"></tbody>
+                </table>
+            </div>
+            <div class="row g-2">
+                <div class="col-8 col-md-6">
+                    <input id="voucher" class="form-control" placeholder="Nhập mã voucher (VD: GIAM10, GIAM20K)" />
+                </div>
+                <div class="col-4 col-md-3">
+                    <button id="btnApplyVoucher" class="btn btn-outline-primary w-100">Áp dụng</button>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between"><span>Tạm tính</span><b id="subTotal">0</b></div>
+                <div class="d-flex justify-content-between"><span>Giảm giá</span><b id="discount">0</b></div>
+                <div class="d-flex justify-content-between fs-5"><span>Tổng cộng</span><b id="grandTotal">0</b></div>
+            </div>
+            <hr />
+            <div class="d-grid gap-2 d-md-flex">
+                <button id="btnCancel" class="btn btn-outline-danger flex-fill">❌ Hủy đơn</button>
+                <button id="btnCash" class="btn btn-warning flex-fill">💵 Thanh toán tiền mặt</button>
+                <button id="btnTransfer" class="btn btn-success flex-fill">🏦 Thanh toán chuyển khoản</button>
+            </div>
+            <div class="mt-2">
+                <a class="btn btn-link p-0" href="/client/menu?tableCode=" id="backToMenu">← Quay lại menu</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay chờ thanh toán -->
+<div id="paymentOverlay"
+     class="position-fixed top-0 start-0 w-100 h-100 d-none"
+     style="background:rgba(15,23,42,.55);z-index:1200;">
+    <div class="d-flex flex-column justify-content-center align-items-center h-100 text-white">
+        <div class="spinner-border mb-3" role="status"></div>
+        <div class="fw-semibold">Đang xử lý thanh toán...</div>
+        <div class="small text-muted mt-1">
+            Vui lòng không thoát hoặc quay lại cho đến khi hoàn tất.
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index:1080">
+    <div id="toast" class="toast text-bg-secondary" role="alert" data-bs-delay="2500" data-bs-autohide="true">
+        <div class="toast-body d-flex align-items-center">
+            <span id="toastMsg" class="me-2">...</span>
+            <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const orderId = "@orderId";
+        let order = null;
+        let currency = "VND";
+        let isPaying = false;
+        let pollTimer = null;
+
+        const statusMap = {
+            Draft: 'Đang chọn món',
+            Submitted: 'Đã gửi bếp',
+            InProgress: 'Đang chế biến',
+            Ready: 'Món đã sẵn sàng',
+            Served: 'Đã phục vụ',
+            Cancelled: 'Đã hủy',
+            WaitingForPayment: 'Đang chờ thanh toán',
+            Paid: 'Đã thanh toán'
+        };
+        function canCancel(status){ return status === 'Draft' || status === 'Submitted'; }
+
+        function money(n){ try{ return new Intl.NumberFormat('vi-VN').format(n) + ' ' + currency; }catch{ return n + ' ' + currency; } }
+
+        function setPaying(paying){
+        isPaying = paying;
+
+        const overlay = document.getElementById('paymentOverlay');
+        if(overlay){
+        overlay.classList.toggle('d-none', !paying);
+        }
+
+        const btnTransfer = document.getElementById('btnTransfer');
+        const btnCash = document.getElementById('btnCash');
+        const btnCancel = document.getElementById('btnCancel');
+        const status = order && order.status ? order.status : '';
+
+        if(btnTransfer) btnTransfer.disabled = paying;
+        if(btnCash) btnCash.disabled = paying;
+        if(btnCancel) btnCancel.disabled = paying || !canCancel(status);
+
+        const back = document.getElementById('backToMenu');
+        if(back){
+        if(paying){
+        if(!back.dataset.href){
+        back.dataset.href = back.getAttribute('href') || '';
+        }
+        back.setAttribute('href', '#');
+        back.classList.add('disabled');
+        back.setAttribute('aria-disabled', 'true');
+        back.style.pointerEvents = 'none';
+        } else {
+        if(back.dataset.href){
+        back.setAttribute('href', back.dataset.href);
+        }
+        back.classList.remove('disabled');
+        back.removeAttribute('aria-disabled');
+        back.style.pointerEvents = '';
+        }
+        }
+        }
+
+        function toast(msg, type){
+        const el = document.getElementById('toast');
+        if(!el) return;
+
+        el.classList.remove('text-bg-success','text-bg-danger','text-bg-warning','text-bg-secondary');
+
+        switch(type){
+        case 'success':
+        el.classList.add('text-bg-success');
+        break;
+        case 'error':
+        case 'danger':
+        el.classList.add('text-bg-danger');
+        break;
+        case 'warn':
+        case 'warning':
+        el.classList.add('text-bg-warning');
+        break;
+        default:
+        el.classList.add('text-bg-secondary');
+        break;
+        }
+
+        const body = document.getElementById('toastMsg');
+        if(body){
+        body.textContent = msg || '';
+        }
+        bootstrap.Toast.getOrCreateInstance(el).show();
+        }
+        async function api(url, opt){
+        const resp = await fetch(url, { headers:{'Content-Type':'application/json'}, credentials:'same-origin', ...opt });
+        if(!resp.ok){ const t = await resp.text(); throw new Error(t || ('HTTP '+resp.status)); }
+        const ct = resp.headers.get('content-type')||'';
+        if(ct.includes('application/json')) return await resp.json();
+        return await resp.text();
+        }
+        async function loadOrder(){
+        const loading = document.getElementById('orderLoading');
+        const box = document.getElementById('orderBox');
+        if(loading) loading.classList.remove('d-none');
+        if(box) box.classList.add('d-none');
+
+        const data = await api(`/proxy/public/cart/${orderId}`);
+        order = data;
+        currency = (data.currency||'VND');
+
+        document.getElementById('orderCode').innerText = data.code || document.getElementById('orderCode').innerText || '—';
+        document.getElementById('tableCode').innerText = data.tableCode || document.getElementById('tableCode').innerText || '—';
+
+        // status render
+        const rawStatus = data.status || '';
+        const statusText = statusMap[rawStatus] || rawStatus || 'Đang chọn món';
+        document.getElementById('orderStatus').innerText = statusText;
+
+        const btnCancel = document.getElementById('btnCancel');
+        if(btnCancel){ btnCancel.disabled = !canCancel(rawStatus); }
+
+        const tb = document.getElementById('items');
+        tb.innerHTML = '';
+        let sub = 0;
+        (data.items || []).forEach(it => {
+        const tr = document.createElement('tr');
+        const line = (it.unitPrice || 0) * (it.quantity || 0);
+        sub += line;
+        tr.innerHTML = `<td><div class="fw-semibold">${it.name || ''}</div><div class="small text-muted">${it.note || ''}</div></td><td class="text-end">${money(it.unitPrice || 0)}</td><td class="text-end">${money(line)}</td>`;
+        tb.appendChild(tr);
+        });
+
+        document.getElementById('subTotal').innerText = money(sub);
+        document.getElementById('discount').innerText = money(0);
+        document.getElementById('grandTotal').innerText = money(sub);
+
+        const back = document.getElementById('backToMenu');
+        if(back){
+        back.href = `/client/menu?tableCode=${encodeURIComponent(data.tableCode || '')}`;
+        }
+
+        if(loading) loading.classList.add('d-none');
+        if(box) box.classList.remove('d-none');
+
+        if(order && order.status === 'WaitingForPayment'){
+            lockNavigation(true);
+            startPolling();
+        }
+        }
+        function startPolling(){
+            stopPolling();
+            pollTimer = setInterval(async ()=>{
+                try {
+                    const data = await api(`/proxy/public/cart/${orderId}`);
+                    if(!data) return;
+                    order = data;
+                    const st = data.status;
+                    if(st === 'Paid') {
+                        stopPolling();
+                        toast('Thanh toán thành công', 'success');
+                        window.location.href = `/client/order/${orderId}/payment-success`;
+                        return;
+                    }
+                    if(st === 'Cancelled') {
+                        stopPolling();
+                        toast('Đơn đã hủy', 'warning');
+                        return;
+                    }
+                    if(st === 'WaitingForPayment') {
+                        // ensure lock stays
+                        lockNavigation(true);
+                    }
+                } catch { /* ignore transient errors */ }
+            }, 3000);
+        }
+        function stopPolling(){ if(pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+        function lockNavigation(lock){
+            setPaying(lock);
+            if(lock){
+                window.addEventListener('beforeunload', beforeUnloadHandler);
+            } else {
+                window.removeEventListener('beforeunload', beforeUnloadHandler);
+            }
+        }
+        function beforeUnloadHandler(e){
+            e.preventDefault();
+            e.returnValue = 'Trang đang trong quá trình thanh toán, bạn có chắc muốn rời đi?';
+        }
+        async function applyVoucher(){
+        const code = (document.getElementById('voucher').value||'').trim();
+        if(!code){ toast('Vui lòng nhập mã'); return; }
+        const res = await api(`/proxy/public/orders/${orderId}/voucher/preview`, { method:'POST', body: JSON.stringify({ code }) });
+        document.getElementById('subTotal').innerText = money(res.subTotal ||0);
+        document.getElementById('discount').innerText = '- ' + money(res.discount ||0);
+        document.getElementById('grandTotal').innerText = money(res.total ||0);
+        currency = res.currency || currency;
+        }
+        async function requestCash(){
+        await api(`/proxy/public/orders/${orderId}/request-cash`, { method:'POST', body:'{}' });
+        toast('Đã yêu cầu thanh toán tiền mặt', 'success');
+        lockNavigation(true);
+        startPolling();
+        }
+
+        function canPayByTransfer(status){
+            const s = (status||'').toString();
+            return ['Ready','Served','WaitingForPayment','Submitted','InProgress'].includes(s); // business có thể điều chỉnh
+        }
+        async function mockTransfer(){
+        if(!order){ toast('Không tìm thấy dữ liệu đơn.', 'error'); return; }
+        if(!canPayByTransfer(order.status)){
+            toast('Chỉ thanh toán chuyển khoản khi đơn đã gửi bếp hoặc đang chờ thanh toán.', 'warning');
+            return;
+        }
+        try{
+        lockNavigation(true);
+        setPaying(true);
+        toast('Đang xử lý thanh toán, vui lòng chờ...', 'info');
+
+        await api(`/proxy/public/orders/${orderId}/mock-transfer`, { method:'POST', body:'{}' });
+        window.location.href = `/client/order/${orderId}/payment-success`;
+        }catch(e){
+        setPaying(false);
+        lockNavigation(false);
+        const msg = (e && e.message) || 'Thanh toán thất bại. Vui lòng thử lại.';
+        toast(msg, 'error');
+        }
+        }
+        async function cancelOrder(){
+        if(!order){ toast('Không tìm thấy dữ liệu đơn.', 'danger'); return; }
+        const status = order.status || '';
+        if(!canCancel(status)){ toast('Đơn đã vào bếp hoặc thanh toán, không thể hủy.', 'warning'); return; }
+        if(!confirm('Bạn chắc chắn muốn hủy đơn này?')) return;
+        try{
+        await api(`/proxy/public/orders/${orderId}/cancel`, { method:'POST', body:'{}' });
+        toast('Đã hủy đơn');
+        await loadOrder();
+        }catch(e){ toast(e.message || 'Không thể hủy đơn'); }
+        }
+        const btnCancel = document.getElementById('btnCancel');
+        if(btnCancel){ btnCancel.addEventListener('click', ()=> cancelOrder().catch(e=>toast(e.message))); }
+        document.getElementById('btnApplyVoucher').addEventListener('click', ()=> applyVoucher().catch(e=>toast(e.message)));
+        document.getElementById('btnCash').addEventListener('click', ()=> requestCash().catch(e=>toast(e.message)));
+        document.getElementById('btnTransfer').addEventListener('click', ()=> mockTransfer().catch(e=>toast(e.message)));
+        loadOrder().catch(e=> toast(e.message));
+    </script>
+}

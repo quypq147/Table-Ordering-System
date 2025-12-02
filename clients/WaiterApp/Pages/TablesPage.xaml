@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WaiterApp.Pages.TablesPage"
+             Title="BÀN">
+    <ContentPage.Content>
+        <Grid RowDefinitions="Auto,*"
+              Padding="16"
+              BackgroundColor="#F5F6F8">
+
+            <!-- Header đơn giản -->
+            <Label Grid.Row="0"
+                   Text="Danh sách bàn"
+                   FontAttributes="Bold"
+                   FontSize="18"
+                   TextColor="#111827"
+                   Margin="0,0,0,8" />
+
+            <!-- Danh sách bàn -->
+            <RefreshView Grid.Row="1"
+                         Refreshing="OnRefreshRequested">
+                <CollectionView x:Name="TablesCollectionView"
+                                SelectionMode="Single"
+                                SelectionChanged="OnTableSelected">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                         Span="3" />
+                    </CollectionView.ItemsLayout>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Frame Margin="8"
+                                   Padding="12"
+                                   CornerRadius="12"
+                                   HasShadow="True"
+                                   BackgroundColor="White">
+                                <VerticalStackLayout Spacing="4">
+                                    <!-- Mã bàn -->
+                                    <Label Text="{Binding Code}"
+                                           FontAttributes="Bold"
+                                           FontSize="18"
+                                           TextColor="#111827" />
+
+                                    <!-- Trạng thái bàn -->
+                                    <Label Text="{Binding Status}"
+                                           FontSize="12"
+                                           TextColor="#6b7280" />
+                                </VerticalStackLayout>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </RefreshView>
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>

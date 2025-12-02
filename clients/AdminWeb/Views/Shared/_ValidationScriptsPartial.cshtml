@@ -1,0 +1,45 @@
+﻿<script>
+(function() {
+  function append(src, onload) {
+    var s = document.createElement('script');
+    s.src = src;
+    if (onload) s.onload = onload;
+    document.head.appendChild(s);
+  }
+  var root = '@Url.Content("~/")';
+  function addMessages(){
+    if(window.jQuery && window.jQuery.validator){
+      window.jQuery.extend(window.jQuery.validator.messages, {
+        required: 'Trường này là bắt buộc.',
+        remote: 'Vui lòng sửa trường này.',
+        email: 'Định dạng email không hợp lệ.',
+        url: 'Định dạng URL không hợp lệ.',
+        date: 'Ngày không hợp lệ.',
+        dateISO: 'Ngày không hợp lệ (ISO).',
+        number: 'Vui lòng nhập số hợp lệ.',
+        digits: 'Chỉ nhập chữ số.',
+        creditcard: 'Số thẻ không hợp lệ.',
+        equalTo: 'Giá trị không khớp.',
+        maxlength: window.jQuery.validator.format('Tối đa {0} ký tự.'),
+        minlength: window.jQuery.validator.format('Tối thiểu {0} ký tự.'),
+        rangelength: window.jQuery.validator.format('Độ dài {0} đến {1} ký tự.'),
+        range: window.jQuery.validator.format('Giá trị {0} đến {1}.'),
+        max: window.jQuery.validator.format('Nhỏ hơn hoặc bằng {0}.'),
+        min: window.jQuery.validator.format('Lớn hơn hoặc bằng {0}.'),
+        step: window.jQuery.validator.format('Sai bội số bước.')
+      });
+    }
+  }
+  if (!window.jQuery) {
+    append(root + 'lib/jquery/dist/jquery.min.js', function() {
+      append(root + 'lib/jquery-validation/dist/jquery.validate.min.js', function() {
+        append(root + 'lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js', addMessages);
+      });
+    });
+  } else {
+    append(root + 'lib/jquery-validation/dist/jquery.validate.min.js', function() {
+      append(root + 'lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js', addMessages);
+    });
+  }
+})();
+</script>

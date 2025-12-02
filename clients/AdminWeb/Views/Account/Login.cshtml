@@ -1,0 +1,19 @@
+﻿@model string
+@{
+    Layout = "~/Views/Shared/_LoginLayout.cshtml";
+}
+<section class="container py-5" style="max-width:420px">
+    <h3 class="mb-3">Đăng Nhập</h3>
+    <form method="post" action="/login">
+        <input type="hidden" name="ReturnUrl" value="@Model" />
+        <div class="mb-3">
+            <label class="form-label">Email hoặc Username</label>
+            <input class="form-control" name="UserNameOrEmail" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Mật khẩu</label>
+            <input class="form-control" name="Password" type="password" required />
+        </div>
+        <button class="btn btn-primary w-100">Đăng nhập</button>
+    </form>
+</section>

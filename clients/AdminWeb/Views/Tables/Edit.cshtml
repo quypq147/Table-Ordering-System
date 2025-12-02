@@ -1,0 +1,44 @@
+﻿@using TableOrdering.Contracts
+@model UpdateTableRequest
+@{
+    ViewData["Title"] = "Sửa bàn";
+    var id = (Guid)(ViewData["TableId"] ?? Guid.Empty);
+}
+
+<div class="card shadow-sm">
+    <div class="card-body" style="max-width:720px">
+        <h2 class="h4 mb-3">Sửa bàn</h2>
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@id" />
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Mã bàn</label>
+                    <input class="form-control" asp-for="Code" placeholder="Ví dụ: T01" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Số ghế</label>
+                    <input class="form-control" asp-for="Seats" type="number" min="1" />
+                    <span asp-validation-for="Seats" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trạng thái</label>
+                    <select class="form-select" asp-for="Status">
+                        <option value="0">Trống</option>
+                        <option value="1">Đang có khách</option>
+                        <option value="2">Đã đặt trước</option>
+                        <option value="3">Đang sử dụng</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary" type="submit">Lưu</button>
+                <a class="btn btn-secondary ms-2" asp-action="Index">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

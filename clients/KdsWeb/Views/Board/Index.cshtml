@@ -1,0 +1,112 @@
+﻿@using TableOrdering.Contracts
+@model IEnumerable<dynamic>
+
+@{
+    ViewData["Title"] = "Bảng bếp (KDS)";
+    Layout = "_Layout";
+}
+<h1>Trạm bếp</h1>
+
+<div class="kds-board">
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info">Không có phiếu bếp</div>
+    }
+    else
+    {
+        foreach (var ticket in Model)
+        {
+            var status = ticket.Status; // "New", "InProgress", "Ready", "Served", "Cancelled"
+
+            <div class="kds-ticket" data-ticket-id="@ticket.Id">
+                <div class="kds-ticket__header d-flex justify-content-between align-items-center mb-2">
+                    <div class="kds-ticket__table">
+                        <strong>@ticket.TableCode</strong> - @ticket.OrderNumber
+                    </div>
+                    <div class="kds-ticket__status">
+                        <span class="badge badge-status badge-status-@status.ToLowerInvariant()">
+                            @status
+                        </span>
+                    </div>
+                </div>
+
+                <div class="kds-ticket__body mb-2">
+                    <div class="kds-ticket__item">
+                        <div class="fw-semibold">@ticket.ItemName</div>
+                        <div>Số lượng: @ticket.Quantity</div>
+                    </div>
+                </div>
+
+                <div class="kds-ticket__footer">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary me-1"
+                            onclick="changeTicketStatus('@ticket.Id', 'start')"
+                            @(status != "New" ? "disabled" : null)>
+                        Bắt đầu
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-success me-1"
+                            onclick="changeTicketStatus('@ticket.Id', 'done')"
+                            @(status != "New" && status != "InProgress" ? "disabled" : null)>
+                        Hoàn thành
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary me-1"
+                            onclick="changeTicketStatus('@ticket.Id', 'served')"
+                            @(status != "Ready" ? "disabled" : null)>
+                        Đã phục vụ
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            onclick="changeTicketStatus('@ticket.Id', 'cancel')"
+                            @(status == "Served" || status == "Cancelled" ? "disabled" : null)>
+                        Hủy
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script>
+        async function changeTicketStatus(id, action) {
+            if (!id || !action) return;
+
+            if (action === 'cancel') {
+                const ok = confirm('Bạn có chắc muốn HỦY phiếu bếp này không?');
+                if (!ok) return;
+            }
+
+            try {
+                // Try to get antiforgery token if present in the DOM
+                const tokenEl = document.getElementById('__RequestVerificationToken');
+                const headers = {};
+                if (tokenEl && tokenEl.value) {
+                    headers['RequestVerificationToken'] = tokenEl.value;
+                }
+
+                const response = await fetch(`/api/kds/tickets/${id}/${action}`, {
+                    method: 'POST',
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    alert('Lỗi cập nhật trạng thái: ' + text);
+                    return;
+                }
+
+                // Simple refresh to reflect changes
+                location.reload();
+            } catch (err) {
+                console.error(err);
+                alert('Không gọi được API KDS. Vui lòng thử lại.');
+            }
+        }
+    </script>
+}
+

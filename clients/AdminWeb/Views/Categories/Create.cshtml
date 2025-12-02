@@ -1,0 +1,32 @@
+﻿@using TableOrdering.Contracts
+@model CreateCategoryRequest
+@{
+    ViewData["Title"] = "Tạo danh mục";
+}
+
+<div class="card shadow-sm">
+    <div class="card-body" style="max-width:720px">
+        <h2 class="h4 mb-3">Tạo danh mục</h2>
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Tên danh mục</label>
+                    <input asp-for="Name" class="form-control" placeholder="Ví dụ: Món chính" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Thứ tự hiển thị</label>
+                    <input asp-for="DisplayOrder" class="form-control" type="number" min="0" />
+                    <div class="form-text">Số nhỏ sẽ hiển thị trước.</div>
+                    <span asp-validation-for="DisplayOrder" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary" type="submit">Lưu</button>
+                <a class="btn btn-secondary ms-2" asp-action="Index">Huỷ</a>
+            </div>
+        </form>
+    </div>
+</div>
+

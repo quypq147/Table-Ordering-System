@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WaiterApp.Pages.LoginPage"
+             Title="Login">
+    <ContentPage.Content>
+        <StackLayout Padding="24" Spacing="16"
+                     VerticalOptions="Center">
+            <Label Text="Waiter App"
+                   FontSize="28"
+                   HorizontalOptions="Center" />
+
+            <Entry x:Name="UsernameEntry"
+                   Placeholder="Username" />
+
+            <Entry x:Name="PasswordEntry"
+                   Placeholder="Password"
+                   IsPassword="True" />
+
+            <Button Text="Đăng Nhập"
+                    Clicked="OnLoginClicked" />
+
+            <Label x:Name="ErrorLabel"
+                   TextColor="Red"
+                   IsVisible="False" />
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>

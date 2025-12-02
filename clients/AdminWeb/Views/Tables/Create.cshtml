@@ -1,0 +1,36 @@
+﻿@using TableOrdering.Contracts
+@model CreateTableRequest
+@{
+    ViewData["Title"] = "Tạo bàn";
+}
+
+<div class="card shadow-sm">
+    <div class="card-body" style="max-width:720px">
+        <h2 class="h4 mb-3">Bàn mới</h2>
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Mã bàn</label>
+                    <input class="form-control" asp-for="Code" placeholder="Ví dụ: T01" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Số ghế</label>
+                    <input class="form-control" asp-for="Seats" type="number" min="1" />
+                    <span asp-validation-for="Seats" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary" type="submit">Lưu</button>
+                <a class="btn btn-secondary ms-2" asp-action="Index">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+
+

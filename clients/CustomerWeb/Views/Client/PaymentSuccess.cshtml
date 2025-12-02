@@ -1,0 +1,12 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var orderId = (Guid)ViewBag.OrderId;
+    ViewData["Title"] = "Thanh toán thành công";
+}
+<div class="container mt-5 text-center">
+    <div class="display-6 mb-3">✅ Thanh toán thành công</div>
+    <p>Cảmơn bạn! Đơn hàng <b>@orderId</b> đã được ghi nhận thanh toán chuyển khoản (demo).</p>
+    <div class="mt-4">
+        <a class="btn btn-primary" href="/client/menu">Quay lại menu</a>
+    </div>
+</div>

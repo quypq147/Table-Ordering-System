@@ -1,0 +1,107 @@
+﻿@using TableOrdering.Contracts
+@model AdminWeb.Models.TablesIndexVm
+@{
+    ViewData["Title"] = "Bàn ăn";
+    var total = Model?.Tables?.Count ?? 0;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Quản lý bàn</h2>
+        <small class="text-muted">Tổng số: <span class="fw-semibold">@total</span></small>
+    </div>
+    <div>
+        <a class="btn btn-success" asp-action="Create">+ Thêm bàn ăn</a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @ok
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @err
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:65vh;">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light" style="position: sticky; top:0; z-index:1;">
+                    <tr>
+                        <th>Mã bàn</th>
+                        <th class="text-center" style="width:140px">Số ghế</th>
+                        <th style="width:260px">Trạng thái</th>
+                        <th style="width:280px" class="text-end">Tác vụ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Tables)
+                    {
+                        var active = Model.GetActiveOrder(t.Code);
+                        <tr>
+                            <td class="fw-semibold">@t.Code</td>
+                            <td class="text-center">@t.Seats</td>
+                            <td>
+                                @{
+                                    var info = AdminWeb.UiText.TableStatusInfo((int)t.Status);
+                                }
+                                <span class="badge rounded-pill @info.BadgeClass me-1">@info.Label</span>
+                                @if (active != null)
+                                {
+                                    <span class="badge rounded-pill bg-warning text-dark">Có đơn đang mở</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@t.Id">Sửa</a>
+
+                                @if (active != null)
+                                {
+                                    <form asp-controller="Orders" asp-action="Cancel" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@active.Id" />
+                                        <input type="hidden" name="redirect" value="tables" />
+                                        <button type="submit" class="btn btn-sm btn-danger ms-1" onclick="return confirm('Bạn có chắc muốn huỷ bàn @t.Code? Hành động này sẽ huỷ đơn đang mở.');">Hủy Bàn</button>
+                                    </form>
+                                    <a class="btn btn-sm btn-outline-primary ms-1" asp-controller="Orders" asp-action="Detail" asp-route-id="@active.Id">Xem đơn</a>
+                                }
+                                else
+                                {
+                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Xoá bàn @t.Code?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@t.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1">Xoá</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Tables.Any())
+        {
+            <div class="p-4">
+                <div class="alert alert-info mb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <div>ℹ️</div>
+                        <div>
+                            <div class="fw-semibold">Chưa có bàn nào.</div>
+                            <div class="small text-muted">Hãy nhấn "+ Thêm bàn ăn" để tạo mới.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+

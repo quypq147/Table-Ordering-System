@@ -1,0 +1,144 @@
+﻿@using TableOrdering.Contracts
+@model List<CategoryDto>
+@{
+    ViewData["Title"] = "Danh mục";
+    var search = (string?)ViewBag.Search ?? "";
+    bool onlyActive = (bool?)ViewBag.OnlyActive == true;
+    var total = Model?.Count ?? 0;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Quản lý danh mục</h2>
+        <small class="text-muted">Tổng số: <span class="fw-semibold">@total</span></small>
+    </div>
+    <div>
+        <a class="btn btn-success" asp-action="Create">+ Thêm danh mục</a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @ok
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @err
+        <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form id="filterForm" method="get" class="row g-2 g-lg-3 align-items-end">
+            <div class="col-12 col-lg-6">
+                <label for="searchBox" class="form-label small text-muted">Tìm theo tên</label>
+                <div class="input-group">
+                    <span class="input-group-text">🔎</span>
+                    <input id="searchBox" name="search" value="@search" class="form-control" placeholder="Nhập từ khóa..." />
+                    <button type="button" id="clearSearchBtn" class="btn btn-outline-secondary" title="Xóa tìm kiếm" data-bs-toggle="tooltip" data-bs-title="Xóa tìm kiếm">Xóa</button>
+                    <button class="btn btn-primary" type="submit">Lọc</button>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label small text-muted d-block">Trạng thái</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="onlyActive" value="true" @(onlyActive ? "checked" : "") id="onlyActiveChk" />
+                    <label class="form-check-label" for="onlyActiveChk">Chỉ hiển thị đang hoạt động</label>
+                </div>
+            </div>
+            <div class="col-12 col-lg-3 d-flex gap-2">
+                <button class="btn btn-outline-primary flex-fill" type="submit">Áp dụng</button>
+                <a class="btn btn-outline-secondary flex-fill" href="@Url.Action("Index")">Bỏ lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-3 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:65vh;">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light" style="position: sticky; top:0; z-index:1;">
+                    <tr>
+                        <th>Tên</th>
+                        <th class="text-center" style="width:120px">Thứ tự</th>
+                        <th style="width:140px">Trạng thái</th>
+                        <th class="text-end" style="width:220px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@c.Name</td>
+                            <td class="text-center">@c.DisplayOrder</td>
+                            <td>
+                                @if (c.IsActive)
+                                {
+                                    <span class="badge rounded-pill bg-success">Đang hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge rounded-pill bg-secondary">Ngưng</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@c.Id">Sửa</a>
+                                    <form method="post" asp-action="@(c.IsActive ? "Deactivate" : "Activate")" asp-route-id="@c.Id" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-sm @(c.IsActive ? "btn-outline-warning" : "btn-outline-success")" type="submit">
+                                            @(c.IsActive ? "Vô hiệu hóa" : "Kích hoạt")
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="p-4">
+                <div class="alert alert-info mb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <div>ℹ️</div>
+                        <div>
+                            <div class="fw-semibold">Không có danh mục nào khớp bộ lọc.</div>
+                            <div class="small text-muted">Thử xóa từ khóa hoặc tắt bộ lọc "Chỉ hiển thị đang hoạt động".</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+        (function () {
+        const form = document.getElementById('filterForm');
+        const searchBox = document.getElementById('searchBox');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const active = document.getElementById('onlyActiveChk');
+
+        if (active) active.addEventListener('change', () => form.submit());
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+        if (searchBox) searchBox.value = '';
+        form.requestSubmit();
+        });
+
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+        })();
+    </script>
+}
+
