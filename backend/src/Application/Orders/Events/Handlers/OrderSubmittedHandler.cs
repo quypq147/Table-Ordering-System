@@ -45,7 +45,8 @@ public sealed class OrderSubmittedHandler(
                 ticket.Status.ToString(),
                 ticket.ItemName,
                 ticket.Quantity,
-                ticket.CreatedAtUtc
+                ticket.CreatedAtUtc,
+                string.Empty // TableCode
             ));
         }
         await db.SaveChangesAsync(ct);
