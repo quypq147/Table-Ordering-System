@@ -57,13 +57,6 @@ dotnet run --project clients/AdminWeb/AdminWeb.csproj
 dotnet test backend/UnitTests/UnitTests.csproj
 ```
 
-## Nâng cấp .NET 10 (nếu từ 9)
-
-- Sửa TargetFramework trong *.csproj: net10.0
-- dotnet restore
-- Kiểm tra breaking changes ASP.NET Core/EF Core (nếu có)
-- Regenerate EF migrations nếu cần mapping mới
-
 ## Kiến trúc lớp
 
 Api → Application → Domain  
