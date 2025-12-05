@@ -7,6 +7,12 @@
 }
 <h1>Trạm bếp</h1>
 
+<style>
+    .kds-ticket { border-bottom: 1px solid #e9ecef; padding: 10px 0; }
+    .kds-ticket__table .table-badge { font-size: 1rem; padding: .35rem .6rem; }
+    .kds-ticket__table .order-code { font-size: 1.15rem; font-weight: 700; color: #0d6efd; }
+    .kds-ticket__table .order-label { font-size: .75rem; color: #6c757d; }
+</style>
 <div class="kds-board">
     @if (Model == null || !Model.Any())
     {
@@ -16,12 +22,16 @@
     {
         foreach (var ticket in Model)
         {
-            var status = ticket.Status; // "New", "InProgress", "Ready", "Served", "Cancelled"
+            var status = ticket.Status; 
 
             <div class="kds-ticket" data-ticket-id="@ticket.Id">
                 <div class="kds-ticket__header d-flex justify-content-between align-items-center mb-2">
-                    <div class="kds-ticket__table">
-                        <strong>@ticket.TableCode</strong> - @ticket.OrderNumber
+                    <div class="kds-ticket__table d-flex align-items-baseline gap-2">
+                        <span class="badge bg-primary table-badge">@ticket.TableCode</span>
+                        <div>
+                            <div class="order-label">Mã đơn</div>
+                            <div class="order-code">@ticket.OrderCode</div>
+                        </div>
                     </div>
                     <div class="kds-ticket__status">
                         <span class="badge badge-status badge-status-@status.ToLowerInvariant()">
@@ -33,7 +43,7 @@
                 <div class="kds-ticket__body mb-2">
                     <div class="kds-ticket__item">
                         <div class="fw-semibold">@ticket.ItemName</div>
-                        <div>Số lượng: @ticket.Quantity</div>
+                        <div>Số lượng: @ticket.Qty</div>
                     </div>
                 </div>
 
@@ -94,10 +104,25 @@
                     headers: headers
                 });
 
+                // Read diagnostic proxy headers if present
+                const proxyTo = response.headers.get('x-proxy-to');
+                const proxyStatus = response.headers.get('x-proxy-status');
+
                 if (!response.ok) {
                     const text = await response.text();
-                    alert('Lỗi cập nhật trạng thái: ' + text);
+                    let msg = 'Lỗi cập nhật trạng thái: ' + text;
+                    if (proxyTo || proxyStatus) {
+                        msg += '\n\nProxy info:';
+                        if (proxyTo) msg += '\n  Proxied-To: ' + proxyTo;
+                        if (proxyStatus) msg += '\n  Proxy-Status: ' + proxyStatus;
+                    }
+                    alert(msg);
                     return;
+                }
+
+                // Optionally show proxy diagnostics on success (uncomment if needed)
+                if (proxyTo || proxyStatus) {
+                    console.info('Proxy info', { proxyTo, proxyStatus });
                 }
 
                 // Simple refresh to reflect changes

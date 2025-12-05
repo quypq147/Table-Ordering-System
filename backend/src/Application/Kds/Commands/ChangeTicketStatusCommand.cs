@@ -31,15 +31,21 @@ public sealed class ChangeTicketStatusHandler(IApplicationDbContext db, IKitchen
 
         string orderCode = orderInfo?.Code ?? string.Empty;
         string tableName = string.Empty;
+        string tableCode = string.Empty;
         if (orderInfo?.TableId != null && orderInfo.TableId != Guid.Empty)
         {
-            tableName = await db.Tables.AsNoTracking()
+            var table = await db.Tables.AsNoTracking()
                 .Where(t => t.Id == orderInfo.TableId)
-                .Select(t => t.Code)
-                .FirstOrDefaultAsync(ct) ?? string.Empty;
+                .Select(t => new { t.Code })
+                .FirstOrDefaultAsync(ct);
+            if (table is not null)
+            {
+                tableName = table.Code ?? string.Empty; // no separate Name property on Table
+                tableCode = table.Code ?? string.Empty;
+            }
         }
 
-        var dto = ticket.ToDto(orderCode, tableName);
+        var dto = ticket.ToDto(orderCode, tableName, tableCode);
         await notifier.TicketChangedAsync(dto, ct);
         return dto;
     }

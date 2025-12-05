@@ -7,12 +7,13 @@ namespace Application.Kds.Queries;
 
 public sealed record ListKitchenTicketsQuery(string? Status) : IQuery<IReadOnlyList<KitchenTicketDto>>;
 
-// Align shape with public contract: include OrderCode and TableName and StationId
-public sealed record KitchenTicketDto(Guid Id, Guid OrderId, string OrderCode, string TableName, Guid StationId, string Status, string ItemName, int Qty, DateTime CreatedAt);
+// Align shape with public contract: include OrderCode and TableName and StationId and TableCode
+public sealed record KitchenTicketDto(Guid Id, Guid OrderId, string OrderCode, string TableName, Guid StationId, string Status, string ItemName, int Qty, DateTime CreatedAt, string? TableCode);
 
 public static class KitchenTicketMappings
 {
-    public static KitchenTicketDto ToDto(this KitchenTicket t, string? orderCode, string? tableName, Guid stationId = default) => new(t.Id, t.OrderId, orderCode ?? string.Empty, tableName ?? string.Empty, stationId, t.Status.ToString(), t.ItemName, t.Quantity, t.CreatedAtUtc);
+    public static KitchenTicketDto ToDto(this KitchenTicket t, string? orderCode, string? tableName, string? tableCode, Guid stationId = default) =>
+        new(t.Id, t.OrderId, orderCode ?? string.Empty, tableName ?? string.Empty, stationId, t.Status.ToString(), t.ItemName, t.Quantity, t.CreatedAtUtc, tableCode);
 }
 
 public sealed class ListKitchenTicketsHandler(IApplicationDbContext db) : IQueryHandler<ListKitchenTicketsQuery, IReadOnlyList<KitchenTicketDto>>
@@ -28,7 +29,7 @@ public sealed class ListKitchenTicketsHandler(IApplicationDbContext db) : IQuery
                 from o in gj.DefaultIfEmpty()
                 join tab in tables on o != null ? o.TableId : Guid.Empty equals tab.Id into tj
                 from tab in tj.DefaultIfEmpty()
-                select new { Ticket = t, OrderCode = o != null ? o.Code : string.Empty, TableName = tab != null ? tab.Code : string.Empty };
+                select new { Ticket = t, OrderCode = o != null ? o.Code : string.Empty, TableCode = tab != null ? tab.Code : string.Empty };
 
         if (!string.IsNullOrWhiteSpace(query.Status) && Enum.TryParse<KitchenTicketStatus>(query.Status, true, out var status))
         {
@@ -36,7 +37,7 @@ public sealed class ListKitchenTicketsHandler(IApplicationDbContext db) : IQuery
         }
 
         var list = await q.OrderBy(x => x.Ticket.CreatedAtUtc)
-            .Select(x => x.Ticket.ToDto(x.OrderCode, x.TableName))
+            .Select(x => x.Ticket.ToDto(x.OrderCode, x.TableCode, x.TableCode))
             .ToListAsync(ct);
 
         return list;

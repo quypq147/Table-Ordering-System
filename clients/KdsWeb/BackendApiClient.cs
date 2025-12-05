@@ -24,5 +24,14 @@ public class BackendApiClient
     // KDS
     public async Task<List<KitchenTicketDto>> GetTicketsAsync()
         => await _http.GetFromJsonAsync<List<KitchenTicketDto>>($"/api/kds/tickets") ?? [];
+
+    // Generic POST helper for discrete endpoints (e.g., /api/kds/tickets/{id}/{action})
+    public async Task<HttpResponseMessage> PostAsync(string url, object? body = null, CancellationToken ct = default)
+    {
+        if (body is null)
+            return await _http.PostAsync(url, null, ct);
+
+        return await _http.PostAsJsonAsync(url, body, ct);
+    }
 }
 
