@@ -2,11 +2,14 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Giỏ hàng";
 
-    // Safe orderId handling: accept Guid or string; fall back to Guid.Empty
-    Guid? orderIdVal = null;
+    // Safe orderId handling: accept Guid or string; fall back to Guid.Empty
+    Guid? orderIdVal = null;
     if (ViewBag.OrderId is Guid g) { orderIdVal = g; }
     else if (ViewBag.OrderId is string s && Guid.TryParse(s, out var gp)) { orderIdVal = gp; }
-    var orderId = orderIdVal ?? Guid.Empty;
+
+    // KHẮC PHỤC LỖI CS0103: Định nghĩa orderId trong ViewBag để JavaScript có thể truy cập
+    var orderId = orderIdVal ?? Guid.Empty;
+    ViewBag.JsOrderId = orderId;
 }
 
 <div class="container py-3">
@@ -21,7 +24,6 @@
     <div class="mb-2 small text-muted" id="cartMeta"></div>
 
     <div class="table-responsive position-relative">
-        <!-- Inline loading overlay -->
         <div id="pageLoading" class="loading-overlay d-none">
             <div class="loading-box">
                 <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
@@ -74,7 +76,6 @@
     </div>
 </div>
 
-<!-- Toast -->
 <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
     <div id="toast" class="toast align-items-center text-bg-danger border-0" data-bs-delay="2800" data-bs-autohide="true">
         <div class="d-flex">
@@ -89,27 +90,33 @@
 
 @section Scripts {
     <style>
-        .loading-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+                        .loading-overlay {
+                                    position: absolute;
+                                    inset: 0;
+                                    background: rgba(255,255,255,0.7);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+
         }
 
-            .loading-overlay .loading-box {
-                display: flex;
-                align-items: center;
-                padding: .75rem 1rem; /* fixed missing space */
-                background: #fff;
-                border: 1px solid rgba(0,0,0,.1);
-                border-radius: .5rem;
-                box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
-            }
+                            .loading-overlay .loading-box {
+                                        display: flex;
+                                        align-items: center;
+                                        padding: .75rem 1rem; /* fixed missing space */
+                                        background: #fff;
+                                        border: 1px solid rgba(0,0,0,.1);
+                                        border-radius: .5rem;
+                                        box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
+
+        }
+
+
+
     </style>
     <script>
-        const orderId = "@orderId";
+        // Khắc phục lỗi CS0103: Sử dụng ViewBag.JsOrderId để lấy giá trị đã được gán toàn cục
+        const orderId = "@ViewBag.JsOrderId";
         let cart = null;
         let statusTimer = null;
         let firstLoadDone = false;
@@ -133,15 +140,8 @@
             // Default: if status missing, allow editing (assume draft)
             return !s;
         }
-        async function loadCart(){
-            const data = await api(`/proxy/public/cart/${orderId}`);
 
-            // Render bảng lớn
-            renderCartTable(data.items);
 
-            // Render sidebar
-            renderSidebar(data);
-        }
         function fmt(x){ return (x||0).toLocaleString() + ' ₫'; }
         function setLoading(show){
             const el = document.getElementById('pageLoading');
@@ -264,6 +264,8 @@
                     const btnDec = tr.querySelector('.btn-dec');
                     const btnDel = tr.querySelector('.btn-del');
 
+                    // Thêm biến id (là id nội bộ của item)
+                    const id = tr.getAttribute('data-id');
                     const orderItemId = parseInt(tr.getAttribute('data-order-item-id') || '0',10);
                     // Only allow inline editing for items that already have an orderItemId (persisted)
                     const rowEditable = orderItemId !== 0;
@@ -299,12 +301,21 @@
                     // Only disable and handle this row's delete button instead of all delete buttons
                     if(btnDel){
                         btnDel.addEventListener('click', async (e)=>{
-                            const id = parseInt(tr.getAttribute('data-order-item-id') || '0',10);
-                            if(!id) { toast('Thiếu OrderItemId', 'danger'); return; }
+
                             if(!confirm('Xóa món này khỏi giỏ?')) return;
                             try{
                                 btnDel.disabled = true;
-                                await removeItem(id, tr);
+                                // TH1: Món đã tồn tại trên Server (có OrderItemId)
+                                if (orderItemId !== 0) {
+                                    await removeItem(orderItemId, tr); // Gọi API DELETE
+                                } else {
+                                    // TH2: Món chưa tồn tại trên Server (ItemId = 0): Xóa cục bộ
+                                    // Tìm item trong cart.items bằng data-id (là id nội bộ của item)
+                                    cart.items = (cart.items || []).filter(x => x.id !== id);
+                                    if(tr && tr.parentNode) tr.parentNode.removeChild(tr); // Xóa khỏi DOM
+                                    setTimeout(()=> load(false), 200); // Tải lại để cập nhật tổng tiền
+                                    toast('Đã xóa món local', 'success');
+                                }
                             } catch(err){ toast(err.message || err, 'danger'); }
                             finally{ btnDel.disabled = false; }
                         });
@@ -316,19 +327,25 @@
             try{
                 qty = Math.max(1, parseInt(qty||'1',10));
                 const orderItemId = parseInt(rowEl.getAttribute('data-order-item-id')||'0',10);
-                if(!orderItemId){ throw new Error('Thiếu Id dòng món (orderItemId)'); }
-                // Patch quantity then note to match backend (proxy translates to backend payloads)
+                if(!orderItemId){ throw new Error('Thiếu Id dòng món (orderItemId) - Không thể lưu món chưa được gửi'); }
+
+                // PATCH QUANTITY - VÀO /items/{orderItemId} VỚI BODY
                 await api(`/proxy/public/cart/${orderId}/items/${orderItemId}`, { method:'PATCH', body: JSON.stringify({ quantity: qty })}, showOverlay);
+
+                // PATCH NOTE - VÀO /items/{orderItemId}/note VỚI BODY
                 await api(`/proxy/public/cart/${orderId}/items/${orderItemId}/note`, { method:'PATCH', body: JSON.stringify({ note: note || null })}, false);
+
                 await load(false);
                 toast('Đã cập nhật', 'success');
             }catch(e){ toast(e.message, 'danger'); }
         }
         // Accepts an optional row element to remove from DOM immediately on success
         async function removeItem(orderItemId, rowEl){
-            if(!orderItemId) { throw new Error('Thiếu OrderItemId'); }
+            if(!orderItemId) { throw new Error('Lỗi: Thiếu OrderItemId để gọi API xóa'); }
             try{
-                await api(`/proxy/public/cart/${orderId}/items`, { method:'DELETE', body: JSON.stringify({ orderItemId }) }, true);
+                // DELETE ITEM - GỌI DELETE /items/{orderItemId} (Không Body)
+                await api(`/proxy/public/cart/${orderId}/items/${orderItemId}`, { method:'DELETE' }, true);
+
                 // Update local model and UI
                 cart.items = (cart.items || []).filter(x => x.id !== orderItemId);
                 // If a row element was provided remove it immediately
@@ -347,7 +364,10 @@
                 btn.disabled = true;
                 const old = btn.innerHTML;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xóa';
-                await api(`/proxy/public/cart/${orderId}/clear`, { method:'POST' }, true);
+
+                // CLEAR CART - GỌI DELETE /items (Không Body)
+                await api(`/proxy/public/cart/${orderId}/items`, { method:'DELETE' }, true);
+
                 if(statusTimer) { clearInterval(statusTimer); statusTimer = null; }
                 // Xóa local thay vì chờ load trả về
                 cart.items = [];
@@ -383,7 +403,7 @@
         }
         async function leaveTable(){
             if(!orderId) return;
-            if(!confirm('Kết thúc phiên và xoà giỏ hàng (nếu chưa gửi)?')) return;
+            if(!confirm('Kết thúc phiên và xoá giỏ hàng (nếu chưa gửi)?')) return;
             const btn = document.getElementById('btnLeave');
             try{
                 btn.disabled = true;

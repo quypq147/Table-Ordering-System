@@ -1,10 +1,10 @@
-@model AdminWeb.Dtos.UserDetailVm
+﻿@model AdminWeb.Dtos.UserDetailVm
 @{
- ViewData["Title"] = "Ph�n quy?n";
+ ViewData["Title"] = "Phân quyền";
  var allRoles = new[]{"Admin","Staff"};
 }
 <div class="container py-4" style="max-width:720px">
- <h4 class="mb-3">Ph�n quy?n cho @Model.FullName (@Model.UserName)</h4>
+ <h4 class="mb-3">Phân quyền cho @Model.FullName (@Model.UserName)</h4>
  <form method="post">
  @Html.AntiForgeryToken()
  <div class="form-check">
@@ -17,8 +17,8 @@
  }
  </div>
  <div class="mt-3">
- <button class="btn btn-primary">L?u</button>
- <a asp-action="Index" class="btn btn-secondary ms-2">H?y</a>
+ <button class="btn btn-primary">Lưu</button>
+ <a asp-action="Index" class="btn btn-secondary ms-2">Hủy</a>
  </div>
  </form>
 </div>
