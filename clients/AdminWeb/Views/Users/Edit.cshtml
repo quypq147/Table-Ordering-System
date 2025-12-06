@@ -1,15 +1,15 @@
-@model AdminWeb.Dtos.UserDetailVm
+﻿@model AdminWeb.Dtos.UserDetailVm
 @{
- ViewData["Title"] = "Ch?nh s?a t�i kho?n";
+ ViewData["Title"] = "Chỉnh sửa tài khoản";
 }
 <div class="container py-4" style="max-width:720px">
- <h4 class="mb-3">Ch?nh s?a t�i kho?n</h4>
+ <h4 class="mb-3">Chỉnh sửa tài khoản</h4>
  <form method="post">
  @Html.AntiForgeryToken()
  <input type="hidden" name="Id" value="@Model.Id" />
  <div class="row g-3">
  <div class="col-md-6">
- <label class="form-label">T�n ??ng nh?p</label>
+ <label class="form-label">Tên đăng nhập</label>
  <input name="UserName" class="form-control" value="@Model.UserName" />
  </div>
  <div class="col-md-6">
@@ -17,17 +17,17 @@
  <input name="Email" class="form-control" value="@Model.Email" />
  </div>
  <div class="col-md-8">
- <label class="form-label">H? v� t�n</label>
+ <label class="form-label">Họ và tên</label>
  <input name="FullName" class="form-control" value="@Model.FullName" />
  </div>
  <div class="col-md-4 d-flex align-items-center gap-2">
  <input type="checkbox" name="IsActive" value="true" @(Model.IsActive?"checked":"") id="active" />
- <label class="form-label mb-0" for="active">Ho?t ??ng</label>
+ <label class="form-label mb-0" for="active">Hoạt động</label>
  </div>
  </div>
  <div class="mt-3">
- <button class="btn btn-primary">L?u</button>
- <a asp-action="Index" class="btn btn-secondary ms-2">H?y</a>
+ <button class="btn btn-primary">Lưu</button>
+ <a asp-action="Index" class="btn btn-secondary ms-2">Hủy</a>
  </div>
  </form>
 </div>
