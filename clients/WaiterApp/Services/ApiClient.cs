@@ -26,6 +26,13 @@ public class ApiClient
         Http.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
     }
 
+    public void SetBaseAddress(string baseAddress)
+    {
+        if (string.IsNullOrWhiteSpace(baseAddress)) return;
+        if (!Uri.TryCreate(baseAddress, UriKind.Absolute, out var uri)) return;
+        Http.BaseAddress = uri;
+    }
+
     public void SetBearerToken(string? token)
     {
         if (string.IsNullOrWhiteSpace(token))

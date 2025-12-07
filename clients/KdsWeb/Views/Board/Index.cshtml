@@ -99,7 +99,7 @@
                     headers['RequestVerificationToken'] = tokenEl.value;
                 }
 
-                const response = await fetch(`/api/kds/tickets/${id}/${action}`, {
+                const response = await fetch(`/Board/ChangeStatus?id=${id}&action=${action}`, {
                     method: 'POST',
                     headers: headers
                 });

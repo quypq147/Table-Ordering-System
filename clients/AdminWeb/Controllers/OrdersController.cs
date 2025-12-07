@@ -35,7 +35,8 @@ namespace AdminWeb.Controllers
                     "Ready" => await api.PostAsync($"/api/orders/{id}/ready"),
                     "Served" => await api.PostAsync($"/api/orders/{id}/served"),
                     "Cancelled" => await api.PostAsync($"/api/orders/{id}/cancel"),
-                    "Paid" => await api.PostAsync($"/api/orders/{id}/pay", new { amount = 0, currency = "VND" }), // placeholder (should pass correct total)
+                    // For Paid, fetch the latest order to get accurate total amount and send proper body
+                    "Paid" => await PostPayAsync(id),
                     _ => throw new InvalidOperationException("Trạng thái không hỗ trợ trực tiếp.")
                 };
             }
@@ -50,6 +51,20 @@ namespace AdminWeb.Controllers
             else
                 TempData["Success"] = "Đã cập nhật trạng thái";
             return RedirectToAction(nameof(Detail), new { id });
+        }
+
+        private async Task<HttpResponseMessage> PostPayAsync(Guid id)
+        {
+            var order = await api.GetOrderAsync(id);
+            if (order is null)
+                throw new InvalidOperationException("Không tìm thấy đơn hàng để thanh toán.");
+
+            // Expect order.Total to be available from backend DTO; fallback to Subtotal if needed
+            var amount = order.Total > 0 ? order.Total : order.Subtotal;
+            if (amount <= 0)
+                throw new InvalidOperationException("Số tiền thanh toán không hợp lệ.");
+
+            return await api.PostAsync($"/api/orders/{id}/pay", new { amount, currency = "VND" });
         }
 
         [HttpPost]

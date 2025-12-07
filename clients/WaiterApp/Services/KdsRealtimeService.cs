@@ -11,6 +11,7 @@ public class KdsRealtimeService
 
     public event Action<KitchenTicketDto[]>? TicketsCreated;
     public event Action<KitchenTicketDto>? TicketChanged;
+    public event Action<string>? ConfigurationError;
 
     public KdsRealtimeService(AuthService authService, ApiClient apiClient)
     {
@@ -32,7 +33,10 @@ public class KdsRealtimeService
 
         // Xây URL hub d?a trên BaseAddress c?a ApiClient
         if (_apiClient.Http.BaseAddress is null)
-            throw new InvalidOperationException("ApiClient.BaseAddress ch?a ???c c?u hình.");
+        {
+            ConfigurationError?.Invoke("Api base URL ch?a ???c c?u hình. Vui lòng ki?m tra c?u hình và th? l?i.");
+            return;
+        }
 
         var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/kds").ToString();
 

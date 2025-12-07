@@ -18,6 +18,12 @@ public sealed class ChangeTicketStatusHandlerTests
         public Task TicketChangedAsync(KitchenTicketDto ticket, CancellationToken ct = default) => Task.CompletedTask;
     }
 
+    private sealed class NoOpCustomerNotifier : ICustomerNotifier
+    {
+        public Task OrderStatusChangedAsync(Guid orderId, string status, CancellationToken ct = default) => Task.CompletedTask;
+        public Task OrderPaidAsync(Guid orderId, decimal amount, string currency, string method, DateTime paidAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
     [Fact]
     public async Task ChangeStatus_TransitionsCorrectly()
     {
@@ -28,7 +34,7 @@ public sealed class ChangeTicketStatusHandlerTests
         var ticket = new KitchenTicket(Guid.NewGuid(), Guid.NewGuid(), 1, "Pho", 1);
         db.KitchenTickets.Add(ticket);
         await db.SaveChangesAsync();
-        var handler = new ChangeTicketStatusHandler(db, new NoOpNotifier());
+        var handler = new ChangeTicketStatusHandler(db, new NoOpNotifier(), new NoOpCustomerNotifier());
 
         var startDto = await handler.Handle(new ChangeTicketStatusCommand(ticket.Id, "start"), CancellationToken.None);
         startDto.Status.Should().Be(KitchenTicketStatus.InProgress.ToString());

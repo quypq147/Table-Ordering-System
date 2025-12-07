@@ -14,7 +14,6 @@ namespace KdsWeb.Controllers
         }
 
         [HttpPost]
-        [Route("api/kds/tickets/{id:guid}/{action}")]
         public async Task<IActionResult> ChangeStatus(Guid id, string action)
         {
             _logger.LogInformation("Proxying KDS action '{Action}' for ticket {TicketId}", action, id);

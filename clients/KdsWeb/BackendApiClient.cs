@@ -1,8 +1,18 @@
 ﻿using TableOrdering.Contracts;
+using System.Net.Http.Headers;
+using Microsoft.Extensions.Configuration;
 public class BackendApiClient
 {
     private readonly HttpClient _http;
-    public BackendApiClient(HttpClient http) => _http = http;
+    public BackendApiClient(HttpClient http, IConfiguration cfg)
+    {
+        _http = http;
+        var token = cfg["Backend:StaticBearer"];
+        if (!string.IsNullOrWhiteSpace(token) && _http.DefaultRequestHeaders.Authorization is null)
+        {
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+    }
 
     // MENU
     public async Task<List<MenuItemDto>> GetMenuAsync(Guid restaurantId)
