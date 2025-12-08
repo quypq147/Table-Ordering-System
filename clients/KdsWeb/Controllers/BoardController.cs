@@ -28,12 +28,12 @@ namespace KdsWeb.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ChangeStatus(Guid id, string action)
+        public async Task<IActionResult> ChangeStatus(Guid id, string op)
         {
-            _logger.LogInformation("Proxying KDS action '{Action}' for ticket {TicketId}", action, id);
+            _logger.LogInformation("Proxying KDS action '{Action}' for ticket {TicketId}", op, id);
 
-            // Proxy the request to backend API (note: backend route now uses {op} instead of {action})
-            var res = await api.PostAsync($"/api/kds/tickets/{id}/{action}");
+            // Proxy the request to backend API (backend route uses {op} instead of reserved 'action')
+            var res = await api.PostAsync($"/api/kds/tickets/{id}/{op}");
             var content = await res.Content.ReadAsStringAsync();
 
             Response.Headers["X-Proxy-To"] = api is not null ? (api.GetType().Name + ":" + (Request.Scheme + ":" + Request.Host.Value)) : "BackendApiClient";
@@ -45,7 +45,7 @@ namespace KdsWeb.Controllers
                 return StatusCode((int)res.StatusCode, content);
             }
 
-            _logger.LogInformation("Proxy call succeeded for ticket {TicketId} action {Action}", id, action);
+            _logger.LogInformation("Proxy call succeeded for ticket {TicketId} action {Action}", id, op);
             return Content(content, "application/json");
         }
     }

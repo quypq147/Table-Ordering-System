@@ -15,20 +15,12 @@
         else
             initialOrderCode = Model.OrderCode ?? "—";
     }
-    else if (orderId != Guid.Empty)
-    {
-        initialOrderCode = orderId.ToString();
-    }
+    // Khi không có Model, không fallback sang OrderId (GUID). Giữ placeholder và để JS điền `code` từ API.
     string initialTableCode = (Model?.TableCode) ?? (ViewBag.TableCode as string) ?? "—";
 }
 <div class="container mt-3">
     <div class="order-header">
         <h2>Chi tiết đơn</h2>
-
-        <div class="order-meta">
-            <div class="order-code">Mã đơn: @initialOrderCode</div>
-            <div class="order-table">Bàn: @initialTableCode</div>
-        </div>
     </div>
 
     <div id="orderLoading" class="alert alert-light d-flex align-items-center gap-2">
@@ -207,7 +199,9 @@
         order = data;
         currency = (data.currency||'VND');
 
-        document.getElementById('orderCode').innerText = data.code || document.getElementById('orderCode').innerText || '—';
+        // Compose order code: prefer prefix + orderCode; fallback to data.code
+        const composedCode = (data.orderPrefix ? (data.orderPrefix + (data.orderCode || '')) : (data.orderCode || '')) || data.code || '—';
+        document.getElementById('orderCode').innerText = composedCode;
         document.getElementById('tableCode').innerText = data.tableCode || document.getElementById('tableCode').innerText || '—';
 
         // status render
@@ -225,7 +219,7 @@
         const tr = document.createElement('tr');
         const line = (it.unitPrice || 0) * (it.quantity || 0);
         sub += line;
-        tr.innerHTML = `<td><div class="fw-semibold">${it.name || ''}</div><div class="small text-muted">${it.note || ''}</div></td><td class="text-end">${money(it.unitPrice || 0)}</td><td class="text-end">${money(line)}</td>`;
+        tr.innerHTML = `<td><div class="fw-semibold">${it.name || ''}</div><div class="small text-muted">${it.note || ''}</div></td><td class="text-end">${money(it.quantity || 0)}</td><td class="text-end">${money(it.unitPrice || 0)}</td><td class="text-end">${money(line)}</td>`;
         tb.appendChild(tr);
         });
 
@@ -244,6 +238,8 @@
         if(order && order.status === 'WaitingForPayment'){
             lockNavigation(true);
             startPolling();
+            // chuyển ngay sang trang thanh toán nếu đang chờ thanh toán
+            window.location.href = `/client/order/${orderId}/payment`;
         }
         }
         function startPolling(){
@@ -268,6 +264,9 @@
                     if(st === 'WaitingForPayment') {
                         // ensure lock stays
                         lockNavigation(true);
+                        // chuyển sang trang thanh toán khi trạng thái chuyển sang chờ thanh toán
+                        window.location.href = `/client/order/${orderId}/payment`;
+                        return;
                     }
                 } catch { /* ignore transient errors */ }
             }, 3000);
@@ -299,6 +298,8 @@
         toast('Đã yêu cầu thanh toán tiền mặt', 'success');
         lockNavigation(true);
         startPolling();
+        // chuyển ngay sang trang thanh toán sau khi yêu cầu tiền mặt
+        window.location.href = `/client/order/${orderId}/payment`;
         }
 
         function canPayByTransfer(status){
@@ -342,5 +343,8 @@
         document.getElementById('btnCash').addEventListener('click', ()=> requestCash().catch(e=>toast(e.message)));
         document.getElementById('btnTransfer').addEventListener('click', ()=> mockTransfer().catch(e=>toast(e.message)));
         loadOrder().catch(e=> toast(e.message));
+        console.log('Order Details page initialized for orderId:', orderId);
+        const ocEl = document.getElementById('orderCode');
+        console.log('Order Details page initialized, current orderCode text:', ocEl ? ocEl.textContent : '(none)');
     </script>
 }

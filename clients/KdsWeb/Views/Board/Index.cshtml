@@ -91,7 +91,8 @@
                     headers['RequestVerificationToken'] = tokenEl.value;
                 }
 
-                const response = await fetch(`/Board/ChangeStatus?id=${id}&action=${action}`, {
+                // Use 'op' param name to avoid MVC reserved 'action' collision
+                const response = await fetch(`/Board/ChangeStatus?id=${id}&op=${action}`, {
                     method: 'POST',
                     headers: headers
                 });

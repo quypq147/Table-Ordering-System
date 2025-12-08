@@ -20,20 +20,25 @@ public sealed class ChangeTicketStatusHandler(IApplicationDbContext db, IKitchen
             case "begin":
             case "in-progress":
             case "inprogress":
+            case "started":
                 ticket.Start();
                 break;
             case "done":
             case "ready":
             case "finish":
+            case "completed":
+            case "complete":
                 ticket.MarkReady();
                 break;
             case "served":
             case "serve":
+            case "delivered":
                 ticket.MarkServed();
                 break;
             case "cancel":
             case "cancelled":
             case "cancelled-by-kds":
+            case "void":
                 ticket.Cancel("Cancelled from KDS");
                 break;
             default:
