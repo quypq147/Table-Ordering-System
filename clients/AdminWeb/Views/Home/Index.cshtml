@@ -40,17 +40,17 @@
 <div class="container my-4">
     <div class="row g-3">
         <div class="col-12 col-md-6">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Revenue (Last 7 Days)</h5>
+                    <h5 class="card-title">Doanh Thu (7 ngày)</h5>
                     <canvas id="rev7DaysChart" height="180"></canvas>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-6">
-            <div class="card h-100">
+            <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Top 5 Selling Items</h5>
+                    <h5 class="card-title">5 món có số lượng cao nhất</h5>
                     <canvas id="topItemsChart" height="180"></canvas>
                 </div>
             </div>
@@ -78,16 +78,8 @@
     @Html.Raw(ViewBag.DashboardJson ?? "{}")
 </script>
 
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
 <script>
     // Renders Revenue (Last 7 Days) bar chart and Top 5 Items pie chart using Chart.js
-    // Expected model shape:
-    // {
-    //   revenueLast7Days: [{ date: "2025-12-01", total: 100000 }, ...],
-    //   topItems: [{ name: "Pho", totalQty: 25 }, ...]
-    // }
     function renderCharts(model){
         try {
             const revEl = document.getElementById('rev7DaysChart');
@@ -98,12 +90,12 @@
             const revLabels = rev.map(r => (r.date || r.Date || '').toString().slice(5)); // MM-DD
             const revData = rev.map(r => Number(r.total ?? r.Total ?? 0));
 
-            const revChart = new Chart(revEl, {
+            new Chart(revEl, {
                 type: 'bar',
                 data: {
                     labels: revLabels,
                     datasets: [{
-                        label: 'Revenue (VND)',
+                        label: 'Doanh Thu (VND)',
                         data: revData,
                         backgroundColor: 'rgba(54, 162, 235, 0.5)',
                         borderColor: 'rgba(54, 162, 235, 1)',
@@ -112,7 +104,7 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
                     scales: {
                         y: { beginAtZero: true }
                     }
@@ -124,7 +116,7 @@
             const itemData = items.map(i => Number(i.totalQty ?? i.TotalQty ?? i.qty ?? i.Quantity ?? 0));
             const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF'];
 
-            const topChart = new Chart(topEl, {
+            new Chart(topEl, {
                 type: 'pie',
                 data: {
                     labels: itemLabels,
@@ -136,7 +128,7 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: true
                 }
             });
         } catch (e) {
@@ -144,13 +136,14 @@
         }
     }
 
-    // Auto-init from embedded dashboard data
+    // Auto-init from embedded dashboard data, defer until Chart.js is ready
     (function(){
         const el = document.getElementById('dashboard-data');
         if (!el) return;
         let model = {};
         try { model = JSON.parse(el.textContent || '{}'); } catch {}
-        renderCharts(model);
+        const init = () => renderCharts(model);
+        if (window.Chart) init(); else window.addEventListener('load', init);
     })();
 </script>
 
