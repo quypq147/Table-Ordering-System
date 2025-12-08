@@ -340,8 +340,9 @@
             try{
                 showPageLoading(true);
                 await api(`/client/cart/${orderId}/submit`, { method: 'POST', body: new URLSearchParams() });
-                await loadCart();
+                // Điều hướng sang trang chi tiết đơn ngay sau khi gửi thành công
                 toast('Đã gửi đơn hàng.', true);
+                window.location.href = `/client/order/${orderId}`;
             }catch(e){
                 toast(e.message, false);
             }finally{

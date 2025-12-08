@@ -7,14 +7,17 @@ namespace Api.Hubs;
 public sealed class CustomerHub : Hub
 {
     private readonly IApplicationDbContext _db;
-    public CustomerHub(IApplicationDbContext db) => _db = db;
+    public CustomerHub(IApplicationDbContext db)
+    {
+        _db = db;
+    }
 
     public Task JoinOrderGroup(string orderId) => Groups.AddToGroupAsync(Context.ConnectionId, $"order-{orderId}");
     public Task LeaveOrderGroup(string orderId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, $"order-{orderId}");
     public Task JoinTableGroup(string tableId) => Groups.AddToGroupAsync(Context.ConnectionId, $"table-{tableId}");
     public Task LeaveTableGroup(string tableId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, $"table-{tableId}");
 
-    // Nhóm nhân viên (ph?c v? / b?p)
+    // Nhóm nhân viên (phuc v\u / bep)
     public Task JoinStaffGroup() => Groups.AddToGroupAsync(Context.ConnectionId, "staff");
     public Task LeaveStaffGroup() => Groups.RemoveFromGroupAsync(Context.ConnectionId, "staff");
 

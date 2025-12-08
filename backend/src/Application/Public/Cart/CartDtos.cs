@@ -18,5 +18,6 @@ public sealed record CartDto(
  decimal Subtotal,
  decimal ServiceCharge,
  decimal Tax,
- decimal Total
+ decimal Total,
+ string Code // short human-friendly order code
 );

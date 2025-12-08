@@ -1,0 +1,217 @@
+﻿@model TableOrdering.Contracts.CartDto
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Theo dõi đơn hàng";
+    var orderId = ViewBag.OrderId is Guid g ? g : Model?.OrderId ?? Guid.Empty;
+    var currency = "VND"; // currency not in DTO, default VND
+    var initialStatus = Model?.Status ?? "Draft";
+    Func<string,int> stepIndex = status => status switch {
+        "Submitted" => 1,
+        "InProgress" => 2,
+        "Ready" => 3,
+        "Served" => 4,
+        "Paid" => 5,
+        _ => 0
+    };
+    var initialStep = stepIndex(initialStatus);
+}
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-1">Theo dõi đơn hàng</h5>
+            <div class="small text-muted">Mã đơn: <span class="fw-semibold" id="orderCode">@Model?.OrderId.ToString().Substring(0,8)</span> · Bàn: <span class="fw-semibold" id="tableCode">@Model?.TableCode</span></div>
+        </div>
+        <a href="/client/menu?tableCode=@Model?.TableCode" class="btn btn-link">← Menu</a>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between stepper" id="statusStepper">
+                <div class="step @(initialStep >= 1 ? "done" : "") @(initialStep == 1 ? "active" : "")" data-step="1">
+                    <div class="dot">1</div>
+                    <div class="label">Đã đặt</div>
+                </div>
+                <div class="bar"></div>
+                <div class="step @(initialStep >= 2 ? "done" : "") @(initialStep == 2 ? "active" : "")" data-step="2">
+                    <div class="dot dot-yellow">2</div>
+                    <div class="label">Trong bếp</div>
+                </div>
+                <div class="bar"></div>
+                <div class="step @(initialStep >= 3 ? "done" : "") @(initialStep == 3 ? "active" : "")" data-step="3">
+                    <div class="dot dot-green">3</div>
+                    <div class="label">Đang mang ra</div>
+                </div>
+                <div class="bar"></div>
+                <div class="step @(initialStep >= 4 ? "done" : "") @(initialStep == 4 ? "active" : "")" data-step="4">
+                    <div class="dot">4</div>
+                    <div class="label">Đã phục vụ</div>
+                </div>
+                <div class="bar"></div>
+                <div class="step @(initialStep >= 5 ? "done" : "") @(initialStep == 5 ? "active" : "")" data-step="5">
+                    <div class="dot">5</div>
+                    <div class="label">Đã thanh toán</div>
+                </div>
+            </div>
+
+            <div class="mt-2">
+                Trạng thái hiện tại:
+                <span id="currentStatus" class="badge bg-secondary">@Model?.Status</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Món trong đơn</span>
+            <span class="badge bg-light text-dark">Tổng: <b id="totalAmount">@Model?.Total.ToString("N0")</b> @currency</span>
+        </div>
+        <div class="list-group list-group-flush" id="orderItems">
+            @if (Model?.Items is { Count: > 0 })
+            {
+                foreach (var it in Model.Items)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">@it.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(it.Note))
+                            {
+                                <div class="small text-muted">@it.Note</div>
+                            }
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted">SL: @it.Quantity</div>
+                            <div class="fw-semibold">@it.LineTotal.ToString("N0") @currency</div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="list-group-item text-muted">Chưa có món.</div>
+            }
+        </div>
+    </div>
+
+    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
+        <div id="toast" class="toast align-items-center text-bg-secondary border-0" data-bs-delay="2800" data-bs-autohide="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center">
+                    <span id="toastMsg">—</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stepper { gap: .5rem; }
+    .step { display:flex; flex-direction:column; align-items:center; min-width:64px; }
+    .step .dot {
+        width:32px; height:32px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        background:#e5e7eb; color:#111827; font-weight:600;
+        border:2px solid #9ca3af;
+    }
+    .step.active .dot { border-color:#2563EB; box-shadow:0 0 0 3px rgba(37,99,235,.2); }
+    .step.done .dot { background:#111827; color:#fff; border-color:#111827; }
+    .step .label { margin-top:.25rem; font-size:.85rem; color:#6b7280; white-space:nowrap; }
+    .step.active .label { color:#111827; font-weight:600; }
+    .bar { flex:1; height:2px; background:#e5e7eb; }
+    .dot-yellow { background:#f59e0b !important; color:#111827 !important; border-color:#f59e0b !important; }
+    .dot-green { background:#10b981 !important; color:#06251b !important; border-color:#10b981 !important; }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" crossorigin="anonymous"></script>
+    <script>
+        (function(){
+            const orderId = "@orderId";
+            const currency = "@currency";
+
+            const statusMap = {
+                Draft: { step: 0, badge: "secondary", text: "Đang chọn món" },
+                Submitted: { step: 1, badge: "primary", text: "Đã đặt" },
+                InProgress: { step: 2, badge: "warning", text: "Trong bếp" },
+                Ready: { step: 3, badge: "success", text: "Đang mang ra" },
+                Served: { step: 4, badge: "dark", text: "Đã phục vụ" },
+                Paid: { step: 5, badge: "success", text: "Đã thanh toán" },
+                Cancelled: { step: -1, badge: "danger", text: "Đã hủy" },
+                WaitingForPayment: { step: 2, badge: "info", text: "Chờ thanh toán" }
+            };
+
+            function toast(msg, cls){
+                const el = document.getElementById('toast');
+                if(!el) return;
+                el.classList.remove('text-bg-secondary','text-bg-success','text-bg-danger','text-bg-info','text-bg-warning','text-bg-primary','text-bg-dark');
+                el.classList.add(cls || 'text-bg-secondary');
+                const body = document.getElementById('toastMsg');
+                if(body) body.textContent = msg || '';
+                bootstrap.Toast.getOrCreateInstance(el).show();
+            }
+
+            function updateBadge(status){
+                const s = statusMap[status] || statusMap.Draft;
+                const el = document.getElementById('currentStatus');
+                if(!el) return;
+                el.className = 'badge';
+                el.classList.add('bg-' + s.badge);
+                el.textContent = s.text;
+            }
+
+            function setStepper(step){
+                const container = document.getElementById('statusStepper');
+                if(!container) return;
+                const steps = container.querySelectorAll('.step');
+                steps.forEach(s => {
+                    const idx = parseInt(s.dataset.step, 10);
+                    s.classList.toggle('active', idx === step);
+                    s.classList.toggle('done', idx < step);
+                });
+            }
+
+            async function startSignalR(){
+                const hubUrl = "/hubs/customer";
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(hubUrl)
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("OrderStatusChanged", payload => {
+                    const status = (payload && payload.status) || 'Draft';
+                    const m = statusMap[status] || statusMap.Draft;
+                    updateBadge(status);
+                    setStepper(m.step);
+                    toast(`Trạng thái đơn đã cập nhật: ${m.text}`, 'text-bg-info');
+                });
+
+                connection.on("OrderPaid", payload => {
+                    updateBadge("Paid");
+                    setStepper(5);
+                    toast("Thanh toán thành công. Cảm ơn!", 'text-bg-success');
+                });
+
+                try {
+                    await connection.start();
+                    if (connection.state === signalR.HubConnectionState.Connected) {
+                        try {
+                            await connection.invoke("JoinOrderGroup", orderId);
+                        } catch (e) {
+                            console.warn("JoinOrderGroup failed:", e);
+                        }
+                    }
+                } catch (e) {
+                    console.error("SignalR connection failed:", e);
+                    toast("Không thể kết nối realtime.", 'text-bg-warning');
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', async () => {
+                const initial = "@initialStatus";
+                updateBadge(initial);
+                setStepper((statusMap[initial]||statusMap.Draft).step);
+                await startSignalR();
+            });
+        })();
+    </script>
+}

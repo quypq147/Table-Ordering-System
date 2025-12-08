@@ -48,7 +48,8 @@ public sealed class GetCartByIdHandler : IQueryHandler<GetCartByIdQuery, CartDto
         Subtotal: subtotal,
         ServiceCharge: service,
         Tax: tax,
-        Total: total
+        Total: total,
+        Code: order.Code
         );
     }
 }
