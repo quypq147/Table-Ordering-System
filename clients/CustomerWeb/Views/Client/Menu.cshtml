@@ -1,540 +1,134 @@
-﻿@{
-    Layout = "~/Views/Shared/_Layout.cshtml";
-    var tableCode = (string)ViewBag.TableCode;
-    ViewData["Title"] = "Menu";
+﻿@model CustomerWeb.Models.MenuIndexVm
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Thực đơn";
 }
-<div class="container py-3">
-    <h3 class="mb-3">Menu · Bàn @tableCode</h3>
 
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-md-4">
-            <label class="form-label">Danh mục</label>
-            <select id="category" class="form-select" disabled>
-                <option>Đang tải...</option>
-            </select>
+<script>
+    const TABLE_CODE = '@Model.TableCode';
+    const ORDER_ID = '@Model.CurrentCart?.OrderId';
+</script>
+
+<div class="flex flex-1 w-full h-full overflow-hidden">
+    
+    <aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col h-full z-10">
+        <div class="h-20 flex items-center justify-center border-b border-gray-50">
+            <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                <i class="fas fa-utensils"></i>
+            </div>
+            <span class="ml-3 font-bold text-xl hidden lg:block text-gray-800">Lezato</span>
         </div>
-        <div class="col-12 col-md-4">
-            <label class="form-label">Tìm kiếm</label>
-            <input id="search" type="text" class="form-control" placeholder="Nhập tên món..." disabled />
-        </div>
-        <div class="col-12 col-md-4 d-flex align-items-end">
-            <div class="ms-auto d-flex gap-2 align-items-center">
-                <a id="btnCart" class="btn btn-primary d-none" href="#">Mở giỏ</a>
-                <button id="btnLeave" class="btn btn-outline-danger d-none">Rời bàn</button>
+
+        <nav class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
+            @foreach (var cat in Model.Categories)
+            {
+                bool isActive = cat.Id == Model.CurrentCategoryId;
+                string activeClass = isActive ? "bg-orange-500 text-white shadow-md shadow-orange-500/20" : "text-gray-500 hover:bg-orange-50 hover:text-orange-500";
+                
+                <a href="@Url.Action("Menu", new { tableCode = Model.TableCode, categoryId = cat.Id })" 
+                   class="flex items-center p-3 rounded-2xl transition-all duration-300 group @activeClass">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg">
+                        <i class="fas fa-hamburger"></i> </div>
+                    <span class="ml-3 font-medium hidden lg:block">@cat.Name</span>
+                    @if(isActive) { <i class="fas fa-chevron-right ml-auto text-xs hidden lg:block opacity-70"></i> }
+                </a>
+            }
+        </nav>
+    </aside>
+
+    <main class="flex-1 bg-gray-50 h-full overflow-hidden flex flex-col relative">
+        <header class="h-20 px-8 flex items-center justify-between bg-white/50 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Thực đơn</h1>
+                <p class="text-sm text-gray-400">Bàn: <span class="text-orange-500 font-bold">@Model.TableCode</span></p>
+            </div>
+            <div class="hidden md:flex bg-white px-4 py-2 rounded-2xl border border-gray-200 w-64 shadow-sm">
+                <i class="fas fa-search text-gray-400 mt-1 mr-3"></i>
+                <input type="text" placeholder="Tìm món ăn..." class="bg-transparent outline-none text-sm w-full text-gray-700">
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-24">
+                @foreach (var item in Model.MenuItems)
+                {
+                    var img = item.AvatarImageUrl ?? item.BackgroundImageUrl ?? "/images/default-food.png";
+                    <div class="bg-white p-4 rounded-3xl shadow-[0_2px_20px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(255,91,36,0.1)] transition-all duration-300 group">
+                        <div class="relative mb-4">
+                            <img src="@img" 
+                                 class="w-full aspect-square object-cover rounded-2xl transform group-hover:scale-[1.02] transition-transform duration-500" 
+                                 alt="@item.Name" />
+                            
+                            <button onclick="addToCart('@item.Id', 1)" 
+                                    class="absolute -bottom-4 right-4 w-12 h-12 bg-white text-gray-800 rounded-full shadow-lg flex items-center justify-center hover:bg-orange-500 hover:text-white transition-all duration-300 z-10">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <h3 class="font-bold text-gray-800 text-lg mb-1 truncate">@item.Name</h3>
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-bold text-orange-500">@item.Price.ToString("N0")đ</span>
+                                <div class="flex text-yellow-400 text-xs gap-1">
+                                    <i class="fas fa-star"></i> <span class="text-gray-300">5.0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
-    </div>
+    </main>
 
-    <div id="items" class="row g-3 mt-3"></div>
+    <aside id="cart-container" class="hidden md:block h-full relative z-20 transition-all duration-300">
+        @if(Model.CurrentCart != null)
+        {
+            <partial name="_CartPartial" model="Model.CurrentCart" />
+        }
+    </aside>
 
-    <!-- Nút giỏ hàng nổi -->
-    <div id="cartFloating" class="position-fixed bottom-0 end-0 p-3" style="z-index:1080; display:none;">
-        <a id="cartLink" class="btn btn-primary btn-lg rounded-pill shadow px-3 py-2" href="#" aria-disabled="true">
-            <span class="me-2">Giỏ hàng</span>
-            <span class="badge bg-light text-dark" id="cartCount">0</span>
-        </a>
-    </div>
-</div>
-
-<!-- Modal thêm món -->
-<div class="modal fade" id="addModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addTitle">Thêm món</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <img id="addImg" src="" alt="" class="img-fluid rounded mb-2 d-none" />
-                <div class="small text-muted mb-2" id="addSkuPrice"></div>
-                <div class="mb-2">
-                    <label class="form-label">Số lượng</label>
-                    <input id="qty" type="number" min="1" class="form-control" value="1" />
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Ghi chú</label>
-                    <textarea id="note" class="form-control" rows="2" placeholder="Không bắt buộc"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button id="btnAdd" type="button" class="btn btn-primary">Thêm vào giỏ</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Toast -->
-<div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
-    <div id="toast" class="toast align-items-center text-bg-danger border-0" data-bs-delay="2800" data-bs-autohide="true">
-        <div class="d-flex">
-            <div class="toast-body d-flex align-items-center">
-                <span id="toastIcon" class="me-2">⚠️</span>
-                <span id="toastMsg">Đã có lỗi</span>
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    </div>
+    <button onclick="toggleCart()" class="md:hidden fixed bottom-6 right-6 w-16 h-16 bg-orange-500 text-white rounded-full shadow-2xl flex items-center justify-center z-50">
+        <i class="fas fa-shopping-basket text-2xl"></i>
+        <span class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">
+            @(Model.CurrentCart?.Items.Count ?? 0)
+        </span>
+    </button>
 </div>
 
 @section Scripts {
     <script>
-        const tableCode = '@tableCode';
-
-        // Backend base URL (cho ảnh tương đối)
-        let apiBase = (function () {
-            const raw = '@(Context.RequestServices.GetService<IConfiguration>()?["Backend:BaseUrl"] ?? "")';
-            return (raw || '').replace(/\/$/, '');
-        })();
-
-        function fullImg(u) {
-            if (!u) return null;
-            if (/^https?:/i.test(u)) return u;
-            return apiBase ? (apiBase + '/' + u.replace(/^\/+/, '')) : u;
-        }
-
-        let orderId = null;
-        let selectedItemId = null;
-        let selectedItemSku = null;
-        let selectedItemPrice = 0;
-        let selectedItemImg = null;
-        let cartStatus = null;       // "Draft", "Submitted", ...
-        let loadedItems = [];        // cache items của danh mục hiện tại
-
-        // ---------- Helpers chung ----------
-
-        function toast(message, ok = false) {
-            const el = document.getElementById('toast');
-            if (!el) return;
-
-            el.classList.toggle('text-bg-success', ok);
-            el.classList.toggle('text-bg-danger', !ok);
-
-            const iconEl = document.getElementById('toastIcon');
-            const msgEl = document.getElementById('toastMsg');
-            if (iconEl) iconEl.textContent = ok ? '✅' : '⚠️';
-            if (msgEl) msgEl.textContent = message || (ok ? 'Thành công' : 'Đã có lỗi');
-
-            bootstrap.Toast.getOrCreateInstance(el).show();
-        }
-
-        async function api(url, options = {}) {
-            const resp = await fetch(url, {
-                headers: { 'Content-Type': 'application/json' },
-                ...options
-            });
-
-            const text = await resp.text();
-            let data = null;
-            try { data = text ? JSON.parse(text) : null; } catch { data = null; }
-
-            if (!resp.ok) {
-                const msg =
-                    (data && typeof data === 'object' && (data.title || data.detail || data.message || data.error)) ||
-                    text ||
-                    resp.statusText;
-                console.error('API error', url, resp.status, msg);
-                throw new Error(msg);
-            }
-
-            return data ?? null;
-        }
-
-        // ---------- Giỏ hàng nổi (tắt hoàn toàn) ----------
-
-        // Luôn ẩn nút giỏ hàng nổi theo yêu cầu
-        function setCartVisible(_) {
-            const el = document.getElementById('cartFloating');
-            if (el) el.style.display = 'none';
-        }
-
-        function setCartEnabled(enabled) {
-            const link = document.getElementById('cartLink');
-            if (!link) return;
-
-            // Dù sao cũng luôn ẩn floating cart
-            setCartVisible(false);
-
-            link.setAttribute('aria-disabled', (!enabled).toString());
-            link.tabIndex = enabled ? 0 : -1;
-        }
-
-        function updateCartLink() {
-            const link = document.getElementById('cartLink');
-            const btn = document.getElementById('btnCart');
-            if (!orderId) {
-                if (link) link.removeAttribute('href');
-                if (btn) { btn.classList.add('d-none'); btn.removeAttribute('href'); }
-                return;
-            }
-            if (link) link.href = `/client/cart/${orderId}`;
-            if (btn) { btn.href = `/client/cart/${orderId}`; btn.classList.remove('d-none'); }
-        }
-
-        function setAddEnabled(enabled) {
-            const buttons = document.querySelectorAll('button[data-id]');
-            buttons.forEach(b => {
-                if (enabled) {
-                    b.removeAttribute('disabled');
-                } else {
-                    b.setAttribute('disabled', 'disabled');
-                }
+        function addToCart(menuItemId, qty) {
+            const orderCode = ORDER_ID;
+            if(!orderCode){ alert('Chưa có giỏ hàng'); return; }
+            $.post('/Client/AddToCart', { 
+                orderCode: orderCode,
+                menuItemId: menuItemId, 
+                quantity: qty, 
+                note: '' 
+            }).done(function(html) {
+                $('#cart-container').html(html);
+            }).fail(function(xhr) {
+                alert('Lỗi: ' + xhr.responseText);
             });
         }
 
-        async function refreshCartBadge() {
-            if (!orderId) return;
-
-            try {
-                const cart = await api(`/proxy/public/cart/${orderId}`);
-
-                // status có thể là status/Status
-                cartStatus = (cart && (cart.status || cart.Status)) || null;
-
-                const rawItems = (cart && (cart.items || cart.Items)) || [];
-                const items = Array.isArray(rawItems) ? rawItems : [];
-
-                const count = items.reduce((sum, x) => {
-                    const q = (x.quantity ?? x.Quantity ?? 0);
-                    return sum + (Number.isFinite(q) ? q : 0);
-                }, 0);
-
-                const countEl = document.getElementById('cartCount');
-                if (countEl) countEl.textContent = count;
-
-                updateCartLink();
-
-                setCartEnabled(count > 0);
-                setAddEnabled(cartStatus === 'Draft');
-            } catch {
-                // ignore lỗi khi load badge, không block flow chính
-                // nếu không thể load cart (mạng/endpoint), cho phép thêm tạm thời
-                if (!cartStatus) cartStatus = 'Draft';
-                setAddEnabled(true);
-            }
+        function updateCartItem(itemId, newQty) {
+            if(newQty < 0) return;
+            alert("Đang cập nhật món " + itemId + " thành " + newQty);
         }
 
-        // ---------- Danh mục & món ----------
-
-        async function loadCategories() {
-            const sel = document.getElementById('category');
-            const searchInput = document.getElementById('search');
-            const itemsHost = document.getElementById('items');
-
-            if (!sel || !searchInput || !itemsHost) return;
-
-            sel.disabled = true;
-            searchInput.disabled = true;
-            sel.innerHTML = '<option>Đang tải...</option>';
-            itemsHost.innerHTML = '<div class="col-12 text-muted">Đang tải danh mục...</div>';
-
-            try {
-                const cats = await api('/proxy/public/menu/categories');
-                const list = Array.isArray(cats) ? cats : [];
-
-                if (list.length === 0) {
-                    sel.innerHTML = '<option value="">Không có danh mục.</option>';
-                    itemsHost.innerHTML = '<div class="col-12 text-muted">Chưa có danh mục để hiển thị món.</div>';
-                    return;
-                }
-
-                // Thêm lựa chọn xem tất cả món
-                const optionsHtml =
-                    '<option value="_all">Tất cả món</option>' +
-                    list.map(c => {
-                        const id = c.id || c.Id;
-                        const name = c.name || c.Name || 'Danh mục';
-                        return `<option value="${id}">${name}</option>`;
-                    }).join('');
-
-                sel.innerHTML = optionsHtml;
-                sel.disabled = false;
-                searchInput.disabled = false;
-
-                sel.onchange = async (e) => {
-                    const val = e.target.value;
-                    await loadItems(val);
-                };
-
-                // Auto chọn & load danh mục đầu tiên -> chọn Tất cả
-                sel.value = '_all';
-                await loadItems('_all');
-            } catch (e) {
-                sel.innerHTML = '<option value="">Lỗi tải danh mục</option>';
-                itemsHost.innerHTML = `<div class="col-12 text-danger">${e.message}</div>`;
-            }
+        function submitOrder() {
+             if(!confirm("Xác nhận gửi đơn xuống bếp?")) return;
+             alert("Đơn hàng đã được gửi!");
         }
 
-        async function loadItems(categoryId) {
-            const host = document.getElementById('items');
-            if (!host) return;
-
-            // nếu chọn _all thì gọi endpoint list tất cả món
-            if (!categoryId || categoryId === '_all') {
-                host.innerHTML = '<div class="col-12 text-muted">Đang tải món...</div>';
-                try {
-                    const items = await api(`/proxy/menuitems?onlyActive=true&pageSize=200`);
-                    loadedItems = Array.isArray(items) ? items : [];
-                    renderItems(loadedItems);
-                } catch (e) {
-                    host.innerHTML = `<div class="col-12 text-danger">${e.message}</div>`;
-                }
-                return;
-            }
-
-            if (!categoryId) {
-                loadedItems = [];
-                host.innerHTML = '<div class="col-12 text-muted">Vui lòng chọn danh mục.</div>';
-                return;
-            }
-
-            host.innerHTML = '<div class="col-12 text-muted">Đang tải món...</div>';
-
-            try {
-                const items = await api(`/proxy/public/menu/by-category/${categoryId}`);
-                loadedItems = Array.isArray(items) ? items : [];
-                renderItems(loadedItems);
-            } catch (e) {
-                host.innerHTML = `<div class="col-12 text-danger">${e.message}</div>`;
-            }
+        function toggleCart() {
+            const cart = document.getElementById('cart-container');
+            cart.classList.toggle('hidden');
+            cart.classList.toggle('fixed');
+            cart.classList.toggle('inset-0');
+            cart.classList.toggle('bg-black/50');
         }
-
-        function renderItems(items) {
-            const host = document.getElementById('items');
-            const searchInput = document.getElementById('search');
-            if (!host || !searchInput) return;
-
-            const searchVal = (searchInput.value || '').trim().toLowerCase();
-
-            const filtered = items.filter(i => {
-                const name = (i.name || i.Name || '').toLowerCase();
-                return !searchVal || name.includes(searchVal);
-            });
-
-            if (filtered.length === 0) {
-                host.innerHTML = "<div class='col-12 text-muted'>Không có món phù hợp.</div>";
-                return;
-            }
-
-            host.innerHTML = filtered.map(i => {
-                const id = i.id || i.Id;
-                const name = i.name || i.Name || 'Món';
-                const sku = i.sku || i.Sku || '';
-                const priceRaw = i.price ?? i.Price ?? 0;
-                const price = Number(priceRaw).toLocaleString('vi-VN');
-                const avatar = i.avatarImageUrl || i.AvatarImageUrl || '';
-                const bg = i.backgroundImageUrl || i.BackgroundImageUrl || '';
-
-                const disabled = cartStatus && cartStatus !== 'Draft' ? 'disabled' : '';
-
-                const rawImg = avatar || bg;
-                const img = fullImg(rawImg);
-
-                return `
-<div class="col-12 col-md-6 col-lg-4">
-    <div class="card h-100 shadow-sm">
-        ${img ? `<img src="${img}" class="card-img-top" alt="${name}"/>` : ''}
-        <div class="card-body d-flex flex-column">
-            <h5 class="card-title mb-1">${name}</h5>
-            <div class="small text-muted">SKU: ${sku}</div>
-            <div class="fw-bold mt-1">${price} ₫</div>
-            <button
-                class="btn btn-sm btn-primary mt-2 align-self-start"
-                data-id="${id}"
-                data-name="${name}"
-                data-sku="${sku}"
-                data-price="${priceRaw}"
-                data-avatar="${avatar}"
-                data-bg="${bg}"
-                ${disabled}
-            >
-                Chọn
-            </button>
-        </div>
-    </div>
-</div>`;
-            }).join('');
-
-            host.querySelectorAll('button[data-id]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const d = btn.dataset;
-                    openAddModal(
-                        d.id,
-                        d.name,
-                        d.sku,
-                        Number(d.price ?? 0),
-                        d.avatar,
-                        d.bg
-                    );
-                });
-            });
-
-            setAddEnabled(cartStatus === 'Draft');
-        }
-
-        document.getElementById('search')?.addEventListener('input', () => {
-            renderItems(loadedItems);
-        });
-
-        // ---------- Modal thêm món ----------
-
-        function openAddModal(id, name, sku, price, avatar, bg) {
-            if (cartStatus && cartStatus !== 'Draft') {
-                toast('Đơn hàng đã được gửi hoặc không thể chỉnh sửa.', false);
-                return;
-            }
-
-            console.debug('openAddModal', { id, name, sku, price });
-
-            selectedItemId = id;
-            selectedItemSku = sku;
-            selectedItemPrice = price;
-            selectedItemImg = avatar || bg || null;
-
-            const titleEl = document.getElementById('addTitle');
-            const skuPriceEl = document.getElementById('addSkuPrice');
-            const imgEl = document.getElementById('addImg');
-            const qtyEl = document.getElementById('qty');
-            const noteEl = document.getElementById('note');
-
-            if (titleEl) titleEl.textContent = name || 'Thêm món';
-            if (skuPriceEl) {
-                const priceStr = Number(price || 0).toLocaleString('vi-VN');
-                skuPriceEl.textContent = `SKU: ${sku} · ${priceStr} ₫`;
-            }
-
-            if (imgEl) {
-                const full = fullImg(selectedItemImg);
-                if (full) {
-                    imgEl.src = full;
-                    imgEl.classList.remove('d-none');
-                } else {
-                    imgEl.classList.add('d-none');
-                }
-            }
-
-            if (qtyEl) qtyEl.value = '1';
-            if (noteEl) noteEl.value = '';
-
-            const modalEl = document.getElementById('addModal');
-            if (modalEl) {
-                bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            }
-        }
-
-        async function addToCart() {
-            console.debug('addToCart start', { orderId, selectedItemId, cartStatus });
-            if (!orderId) {
-                toast('Chưa có giỏ hàng cho bàn này.', false);
-                return;
-            }
-            if (!selectedItemId) {
-                toast('Vui lòng chọn món.', false);
-                return;
-            }
-            if (cartStatus && cartStatus !== 'Draft') {
-                toast('Đơn hàng đã được gửi hoặc không thể chỉnh sửa.', false);
-                return;
-            }
-
-            const qtyEl = document.getElementById('qty');
-            const noteEl = document.getElementById('note');
-
-            const qty = qtyEl ? parseInt(qtyEl.value, 10) || 1 : 1;
-            const note = noteEl ? (noteEl.value || '').trim() : '';
-
-            if (qty <= 0) {
-                toast('Số lượng phải lớn hơn 0.', false);
-                return;
-            }
-
-            const body = {
-                menuItemId: selectedItemId,
-                quantity: qty,
-                note: note || null
-            };
-
-            console.debug('addToCart payload', body);
-
-            try {
-                await api(`/proxy/public/cart/${orderId}/items`, {
-                    method: 'POST',
-                    body: JSON.stringify(body)
-                });
-
-                const modalEl = document.getElementById('addModal');
-                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-
-                toast('Đã thêm vào giỏ!', true);
-                await refreshCartBadge();
-            } catch (e) {
-                console.error('addToCart failed', e);
-                toast(e.message, false);
-            }
-        }
-
-        async function leaveTable() {
-            if (!orderId) {
-                window.location.href = '/client/qr-help';
-                return;
-            }
-
-            if (!confirm('Bạn chắc chắn muốn rời bàn? Đơn đang chọn có thể bị hủy.')) {
-                return;
-            }
-
-            try {
-                // Gọi endpoint đóng session (hủy đơn nếu vẫn còn Draft)
-                await api(`/proxy/public/cart/${orderId}/close-session`, {
-                    method: 'POST',
-                    body: JSON.stringify({})
-                });
-
-                toast('Đã rời bàn.', true);
-                setTimeout(() => {
-                    window.location.href = '/client/qr-help';
-                }, 800);
-            } catch (e) {
-                toast(e.message, false);
-            }
-        }
-        document.getElementById('btnLeave')?.addEventListener('click', leaveTable);
-        document.getElementById('btnAdd')?.addEventListener('click', () => {
-            addToCart().catch(e => toast(e.message, false));
-        });
-
-        // ---------- Khởi tạo ----------
-
-        async function startCart() {
-            const body = { tableCode: tableCode };
-
-            const res = await api('/proxy/public/cart/start', {
-                method: 'POST',
-                body: JSON.stringify(body)
-            });
-
-            const oid = res && (res.orderId || res.OrderId);
-            if (!oid) throw new Error('Không lấy được orderId từ server.');
-
-            orderId = oid;
-            updateCartLink();
-
-            // Hiện nút rời bàn
-            const btnLeave = document.getElementById('btnLeave');
-            if (btnLeave) btnLeave.classList.remove('d-none');
-
-            await refreshCartBadge();
-        }
-
-        (async () => {
-            try {
-                await startCart();
-                await loadCategories();
-            } catch (e) {
-                console.error(e);
-                toast(e.message, false);
-            }
-        })();
     </script>
 }
 

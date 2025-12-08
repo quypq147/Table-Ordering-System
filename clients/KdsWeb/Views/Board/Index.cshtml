@@ -1,77 +1,72 @@
 ﻿@using TableOrdering.Contracts
-@model IEnumerable<dynamic>
+@model IEnumerable<KitchenTicketDto>
+@* Lưu ý: Đảm bảo Model trả về là List<KitchenTicketDto> *@
 
 @{
-    ViewData["Title"] = "Bảng bếp (KDS)";
-    Layout = "_Layout";
+    ViewData["Title"] = "Kitchen Board";
 }
-<h1>Trạm bếp</h1>
 
-<style>
-    .kds-ticket { border-bottom: 1px solid #e9ecef; padding: 10px 0; }
-    .kds-ticket__table .table-badge { font-size: 1rem; padding: .35rem .6rem; }
-    .kds-ticket__table .order-code { font-size: 1.15rem; font-weight: 700; color: #0d6efd; }
-    .kds-ticket__table .order-label { font-size: .75rem; color: #6c757d; }
-</style>
-<div class="kds-board">
-    @if (Model == null || !Model.Any())
-    {
-        <div class="alert alert-info">Không có phiếu bếp</div>
-    }
-    else
+<div id="tickets-container" class="tickets-container">
+    @if (Model != null)
     {
         foreach (var ticket in Model)
         {
-            var status = ticket.Status; 
+            // Xác định class màu dựa trên trạng thái (dùng string)
+            string statusClass = "status-new";
+            string statusLabel = "MỚI";
 
-            <div class="kds-ticket" data-ticket-id="@ticket.Id">
-                <div class="kds-ticket__header d-flex justify-content-between align-items-center mb-2">
-                    <div class="kds-ticket__table d-flex align-items-baseline gap-2">
-                        <span class="badge bg-primary table-badge">@ticket.TableCode</span>
-                        <div>
-                            <div class="order-label">Mã đơn</div>
-                            <div class="order-code">@ticket.OrderCode</div>
+            if (ticket.Status == "InProgress")
+            {
+                statusClass = "status-inprogress";
+                statusLabel = "ĐANG NẤU";
+            }
+            else if (ticket.Status == "Ready")
+            {
+                statusClass = "status-ready";
+                statusLabel = "ĐÃ XONG";
+            }
+
+            <div class="ticket-card" id="ticket-@ticket.Id" data-id="@ticket.Id" data-created="@ticket.CreatedAt.ToString("o")">
+                <div class="ticket-header @statusClass">
+                    <div>
+                        <span class="fw-bold fs-5">#@ticket.OrderCode</span>
+                        <div class="small opacity-75">Bàn: @ticket.TableCode</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="timer-badge">00:00</div>
+                        <div class="small opacity-75 mt-1">@statusLabel</div>
+                    </div>
+                </div>
+
+                <div class="ticket-body">
+                    <div class="order-item">
+                        <div class="d-flex justify-content-between">
+                            <span>@ticket.ItemName</span>
+                            <span class="badge bg-dark rounded-pill">x @ticket.Qty</span>
                         </div>
-                    </div>
-                    <div class="kds-ticket__status">
-                        <span class="badge badge-status badge-status-@status.ToLowerInvariant()">
-                            @status
-                        </span>
+                        @* DTO hiện không có Note *@
                     </div>
                 </div>
 
-                <div class="kds-ticket__body mb-2">
-                    <div class="kds-ticket__item">
-                        <div class="fw-semibold">@ticket.ItemName</div>
-                        <div>Số lượng: @ticket.Qty</div>
-                    </div>
-                </div>
-
-                <div class="kds-ticket__footer">
-                    <div class="btn-group btn-group-sm me-2">
-                        <a class="btn btn-outline-secondary" asp-controller="Board" asp-action="Details" asp-route-orderId="@ticket.OrderId">Chi tiết đơn</a>
-                    </div>
-
-                    <button type="button"
-                            class="btn btn-sm btn-outline-primary me-1"
-                            onclick="changeTicketStatus('@ticket.Id', 'start')"
-                            @(status != "New" ? "disabled" : null)>
-                        Bắt đầu
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-sm btn-outline-success me-1"
-                            onclick="changeTicketStatus('@ticket.Id', 'done')"
-                            @(status != "New" && status != "InProgress" ? "disabled" : null)>
-                        Hoàn thành
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary me-1"
-                            onclick="changeTicketStatus('@ticket.Id', 'served')"
-                            @(status != "Ready" ? "disabled" : null)>
-                        Đã phục vụ
-                    </button>
+                <div class="ticket-footer">
+                    @if (ticket.Status == "New")
+                    {
+                        <button onclick="changeStatus('@ticket.Id', 'start')" class="btn btn-outline-primary btn-action">
+                            <i class="fas fa-fire me-2"></i>Nấu ngay
+                        </button>
+                    }
+                    else if (ticket.Status == "InProgress")
+                    {
+                        <button onclick="changeStatus('@ticket.Id', 'done')" class="btn btn-outline-success btn-action">
+                            <i class="fas fa-check me-2"></i>Hoàn thành
+                        </button>
+                    }
+                    else if (ticket.Status == "Ready")
+                    {
+                        <button onclick="changeStatus('@ticket.Id', 'served')" class="btn btn-dark btn-action">
+                            <i class="fas fa-concierge-bell me-2"></i>Đã bê ra
+                        </button>
+                    }
                 </div>
             </div>
         }
@@ -80,50 +75,48 @@
 
 @section Scripts {
     <script>
-        async function changeTicketStatus(id, action) {
-            if (!id || !action) return;
+        // Hàm đếm thời gian trôi qua cho từng vé
+        function updateTimers() {
+            document.querySelectorAll('.ticket-card').forEach(card => {
+                const createdStr = card.getAttribute('data-created');
+                const created = new Date(createdStr);
+                const now = new Date();
+                const diffMs = now - created;
 
-            try {
-                // Try to get antiforgery token if present in the DOM
-                const tokenEl = document.getElementById('__RequestVerificationToken');
-                const headers = {};
-                if (tokenEl && tokenEl.value) {
-                    headers['RequestVerificationToken'] = tokenEl.value;
-                }
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffSecs = Math.floor((diffMs % 60000) / 1000);
 
-                // Use 'op' param name to avoid MVC reserved 'action' collision
-                const response = await fetch(`/Board/ChangeStatus?id=${id}&op=${action}`, {
-                    method: 'POST',
-                    headers: headers
-                });
+                const timeStr =
+                    (diffMins < 10 ? "0" + diffMins : diffMins) + ":" +
+                    (diffSecs < 10 ? "0" + diffSecs : diffSecs);
 
-                // Read diagnostic proxy headers if present
-                const proxyTo = response.headers.get('x-proxy-to');
-                const proxyStatus = response.headers.get('x-proxy-status');
-
-                if (!response.ok) {
-                    const text = await response.text();
-                    let msg = 'Lỗi cập nhật trạng thái: ' + text;
-                    if (proxyTo || proxyStatus) {
-                        msg += '\n\nProxy info:';
-                        if (proxyTo) msg += '\n  Proxied-To: ' + proxyTo;
-                        if (proxyStatus) msg += '\n  Proxy-Status: ' + proxyStatus;
+                const badge = card.querySelector('.timer-badge');
+                if(badge) {
+                    badge.innerText = timeStr;
+                    // Nếu quá 15 phút thì đổi màu header thành đỏ (Late)
+                    if (diffMins >= 15) {
+                        const header = card.querySelector('.ticket-header');
+                        if(!header.classList.contains('status-late') && !header.classList.contains('status-ready')) {
+                             header.classList.add('status-late');
+                        }
                     }
-                    alert(msg);
-                    return;
                 }
+            });
+        }
 
-                // Optionally show proxy diagnostics on success (uncomment if needed)
-                if (proxyTo || proxyStatus) {
-                    console.info('Proxy info', { proxyTo, proxyStatus });
+        setInterval(updateTimers, 1000);
+        updateTimers();
+
+        // Gọi API thay đổi trạng thái
+        async function changeStatus(id, op) {
+             try {
+                const res = await fetch(`/Board/ChangeStatus?id=${id}&op=${op}`, { method: 'POST' });
+                if(res.ok) {
+                    location.reload();
+                } else {
+                    alert("Lỗi cập nhật trạng thái");
                 }
-
-                // Simple refresh to reflect changes
-                location.reload();
-            } catch (err) {
-                console.error(err);
-                alert('Không gọi được API KDS. Vui lòng thử lại.');
-            }
+            } catch (e) { console.error(e); }
         }
     </script>
 }

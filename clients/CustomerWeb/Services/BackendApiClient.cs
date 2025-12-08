@@ -20,8 +20,11 @@ public sealed class BackendApiClient(HttpClient http, IHttpContextAccessor acces
         if (sessionId is Guid s) dict["sessionId"] = s;
         var res = await http.PostAsJsonAsync("/api/public/cart/start", dict, ct);
         res.EnsureSuccessStatusCode();
-        var json = await res.Content.ReadFromJsonAsync<Dictionary<string, string>>(cancellationToken: ct);
-        return Guid.Parse(json!["orderId"]);
+        // API returns the current cart object; take OrderId
+        var cart = await res.Content.ReadFromJsonAsync<CartDto>(cancellationToken: ct);
+        if (cart == null || cart.OrderId == Guid.Empty)
+            throw new InvalidOperationException("Invalid cart response from start endpoint.");
+        return cart.OrderId;
     }
 
     public Task<IReadOnlyList<CategoryDto>> GetPublicCategoriesAsync(CancellationToken ct = default)

@@ -1,45 +1,43 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] ?? "Gọi món tại bàn")</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/CustomerWeb.styles.css" asp-append-version="true" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        orange: { 500: '#FF5B24', 600: '#E04F1D', 100: '#FFF0ED', 50: '#FFFAF9' },
+                        gray: { 800: '#2B2B2B', 500: '#888888', 100: '#F3F4F6' }
+                    },
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body>
-    <header class="topbar border-bottom">
-        <div class="container d-flex align-items-center justify-content-between">
-            <a class="brand" asp-area="" asp-controller="Home" asp-action="Index">Gọi món tại bàn</a>
-            <nav class="nav gap-3 small">
-                <a class="nav-link px-0" asp-area="" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                <a class="nav-link px-0" asp-area="" asp-controller="Client" asp-action="ScanHelp">Cách quét QR</a>
-            </nav>
-        </div>
-    </header>
 
-    <div class="container py-3">
-        <!-- Two-column layout: main content + cart sidebar -->
-        <div class="row g-3">
-            <main role="main" class="content col-12 col-lg-9">
-                @RenderBody()
-            </main>
-        </div>
-    </div>
-    @{
-        var backendBase = Context.RequestServices.GetService<IConfiguration>()?["Backend:BaseUrl"]?.TrimEnd('/');
-        var tableCode = ViewBag.TableCode as string ?? string.Empty;
-    }
+<body class="bg-gray-100 text-gray-800 h-screen w-screen overflow-hidden flex flex-col md:flex-row">
+    @RenderBody()
 
-    
-
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
+
 </html>
 

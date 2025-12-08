@@ -1,60 +1,49 @@
-﻿
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-    
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Màn hình bếp</title>
-    <script type="importmap"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <title>@ViewData["Title"] - Lezato KDS</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/KdsWeb.styles.css" asp-append-version="true" />
-    @RenderSection("Styles", required: false)
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Màn hình bếp</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Chính sách</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    <header class="kds-header">
+        <div class="d-flex align-items-center">
+            <h4 class="m-0 me-4 fw-bold">Lezato<span class="text-warning">.</span> KDS</h4>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy;2025 - Màn hình bếp - <a asp-area="" asp-controller="Home" asp-action="Privacy">Chính sách</a>
+            <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;">
+                <option>Station: Main Kitchen</option>
+                <option>Station: Bar</option>
+            </select>
         </div>
-    </footer>
+
+        <div class="d-none d-md-block text-success fw-bold" style="font-size: 12px;">
+            <i class="fas fa-wifi me-1"></i> SYSTEM ONLINE
+        </div>
+
+        <div class="toggle-switch">
+            <a href="@Url.Action("Index", "Board")" class="toggle-btn active">Active</a>
+            <a href="#" class="toggle-btn">History</a>
+        </div>
+    </header>
+
+    @RenderBody()
+
     <script>
         window.__cfg = {
-            kdsHub: '@Context.RequestServices.GetRequiredService<IConfiguration>()["SignalR:KdsHub"]',
-            bearer: '@Context.RequestServices.GetRequiredService<IConfiguration>()["Backend:StaticBearer"]'
+            kdsHub: '@Context.RequestServices.GetService<IConfiguration>()["SignalR:KdsHub"]',
+            bearer: '@Context.RequestServices.GetService<IConfiguration>()["Backend:StaticBearer"]'
         };
     </script>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/kds.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
