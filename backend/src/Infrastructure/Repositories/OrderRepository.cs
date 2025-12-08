@@ -1,4 +1,5 @@
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Repositories;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -14,4 +15,11 @@ public sealed class OrderRepository : IOrderRepository
     public Task AddAsync(Order order) => _db.Orders.AddAsync(order).AsTask();
 
     public void Update(Order order) => _db.Orders.Update(order);
+
+    public Task<Order?> GetActiveOrderByTableIdAsync(Guid tableId, CancellationToken ct = default) =>
+        _db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.TableId == tableId && (o.OrderStatus == OrderStatus.Submitted || o.OrderStatus == OrderStatus.InProgress))
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .FirstOrDefaultAsync(ct);
 }

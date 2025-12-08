@@ -7,4 +7,5 @@ public interface IOrderRepository
     Task<Order?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task AddAsync(Order order);
     void Update(Order order);
+    Task<Order?> GetActiveOrderByTableIdAsync(Guid tableId, CancellationToken ct = default);
 }

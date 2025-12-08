@@ -23,6 +23,9 @@ builder.Services.AddHttpClient("backend", c =>
     c.BaseAddress = new Uri(backendBase);
 });
 
+// ✅ Đăng ký IHttpContextAccessor để BackendApiClient có thể truy cập cookies/session
+builder.Services.AddHttpContextAccessor();
+
 // (tuỳ chọn) bật HSTS/HTTPS cho Production, tắt ở Dev để khỏi cảnh báo
 if (builder.Environment.IsProduction())
 {

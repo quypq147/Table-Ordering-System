@@ -41,7 +41,8 @@
             <!-- Danh sách đơn -->
             <RefreshView Grid.Row="2"
                          x:Name="OrdersRefresh"
-                         Refreshing="OnRefreshRequested">
+                         IsRefreshing="{Binding IsRefreshing}"
+                         Command="{Binding RefreshCommand}">
                 <CollectionView x:Name="OrdersCollection"
                                 SelectionMode="Single"
                                 SelectionChanged="OnOrderSelected">
