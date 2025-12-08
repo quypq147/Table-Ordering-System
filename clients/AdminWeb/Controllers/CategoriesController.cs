@@ -30,6 +30,7 @@ public class CategoriesController(IBackendApiClient api) : Controller
             ModelState.AddModelError("", "Tạo danh mục thất bại");
             return View(req);
         }
+        TempData["Success"] = "Tạo danh mục thành công";
         return RedirectToAction(nameof(Index));
     }
 
@@ -63,6 +64,7 @@ public class CategoriesController(IBackendApiClient api) : Controller
             ViewBag.CategoryId = id;
             return View(req);
         }
+        TempData["Success"] = "Cập nhật danh mục thành công";
         return RedirectToAction(nameof(Index));
     }
 
@@ -70,7 +72,7 @@ public class CategoriesController(IBackendApiClient api) : Controller
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
         var res = await api.ActivateCategoryAsync(id, ct);
-        if (!res.IsSuccessStatusCode) TempData["Error"] = "Kích hoạt thất bại";
+        if (!res.IsSuccessStatusCode) TempData["Error"] = "Kích hoạt thất bại"; else TempData["Success"] = "Đã kích hoạt";
         return RedirectToAction(nameof(Index));
     }
 
@@ -78,7 +80,22 @@ public class CategoriesController(IBackendApiClient api) : Controller
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         var res = await api.DeactivateCategoryAsync(id, ct);
-        if (!res.IsSuccessStatusCode) TempData["Error"] = "Vô hiệu hoá thất bại";
+        if (!res.IsSuccessStatusCode) TempData["Error"] = "Vô hiệu hoá thất bại"; else TempData["Success"] = "Đã vô hiệu hoá";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var res = await api.DeleteCategoryAsync(id, ct);
+        if (!res.IsSuccessStatusCode)
+        {
+            TempData["Error"] = "Xóa danh mục thất bại";
+        }
+        else
+        {
+            TempData["Success"] = "Đã xóa danh mục";
+        }
         return RedirectToAction(nameof(Index));
     }
 }

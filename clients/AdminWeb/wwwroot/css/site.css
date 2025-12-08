@@ -4,8 +4,8 @@
   --ink:#0e0f15;
   --muted:#6b7280;
   --ring:#e5e7eb;
-  --brand:#0ea5e9; /* cyan brand */
-  --shadow:010px30px rgba(30,41,59,.06);
+  --brand:#FF6B00; /* brand per blueprint */
+  --shadow:0 10px 30px rgba(30,41,59,.06);
   --radius:16px;
   --success:#10b981;
   --error:#ef4444;
@@ -132,6 +132,6 @@ body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color
 
 /* Dark theme */
 body.dark{
- --bg:#0b0c10; --panel:#121318; --ink:#e5e7eb; --muted:#a1a1aa; --ring:#22242c; --shadow:010px30px rgba(0,0,0,.5);
+ --bg:#0b0c10; --panel:#121318; --ink:#e5e7eb; --muted:#a1a1aa; --ring:#22242c; --shadow:0 10px 30px rgba(0,0,0,.5);
 }
-.nav-item:hover{background:rgba(14,165,233,.08)}
+.nav-item:hover{background:rgba(255,107,0,.08)}

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using CustomerWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,13 @@ var backendBase = builder.Configuration["Backend:BaseUrl"] ?? "http://localhost:
 // MVC
 builder.Services.AddControllersWithViews();
 
-// ✅ ĐĂNG KÝ HttpClient + named client "backend"
+// ✅ ĐĂNG KÝ HttpClient + typed client for IBackendApiClient
+builder.Services.AddHttpClient<IBackendApiClient, BackendApiClient>(c =>
+{
+    c.BaseAddress = new Uri(backendBase);
+});
+
+// ✅ ĐĂNG KÝ named client "backend" for PublicProxyController
 builder.Services.AddHttpClient("backend", c =>
 {
     c.BaseAddress = new Uri(backendBase);

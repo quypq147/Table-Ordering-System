@@ -42,6 +42,9 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map attribute-routed controllers (required for [Route("api/...")] actions)
+app.MapControllers();
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Board}/{action=Index}/{id?}");

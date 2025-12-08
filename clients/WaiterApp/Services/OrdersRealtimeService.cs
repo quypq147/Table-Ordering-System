@@ -10,6 +10,7 @@ public sealed class OrdersRealtimeService
     private HubConnection? _connection;
 
     public event Action<Guid, string>? OrderStatusChanged;
+    public event Action<string>? ConfigurationError;
 
     public OrdersRealtimeService(AuthService authService, ApiClient apiClient)
     {
@@ -25,7 +26,11 @@ public sealed class OrdersRealtimeService
         try
         {
             if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting }) return;
-            if (_apiClient.Http.BaseAddress is null) throw new InvalidOperationException("ApiClient.BaseAddress not configured.");
+            if (_apiClient.Http.BaseAddress is null)
+            {
+                ConfigurationError?.Invoke("Api base URL ch?a ???c c?u hình. Vui lòng ki?m tra c?u hình và th? l?i.");
+                return;
+            }
 
             var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/customer").ToString();
 

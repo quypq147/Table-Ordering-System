@@ -728,16 +728,37 @@ namespace AdminWeb.Services
         }
 
         public Task<HttpResponseMessage> CreateCategoryAsync(CreateCategoryRequest req, CancellationToken cancellationToken = default)
-        => _http.PostAsJsonAsync("/api/categories", req, JsonOptions, cancellationToken);
+        {
+            AttachBearer();
+            return _http.PostAsJsonAsync("/api/categories", req, JsonOptions, cancellationToken);
+        }
 
         public Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default)
-        => _http.PostAsJsonAsync($"/api/categories/{id}/rename", req, JsonOptions, cancellationToken);
+        {
+            AttachBearer();
+            // Backend expects PUT with raw string body for new name
+            return _http.PutAsJsonAsync($"/api/categories/{id}/rename", req.Name, JsonOptions, cancellationToken);
+        }
 
         public Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
-        => _http.PostAsync($"/api/categories/{id}/activate", content: null, cancellationToken);
+        {
+            AttachBearer();
+            return _http.PostAsync($"/api/categories/{id}/activate", content: null, cancellationToken);
+        }
 
         public Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default)
-        => _http.PostAsync($"/api/categories/{id}/deactivate", content: null, cancellationToken);
+        {
+            AttachBearer();
+            return _http.PostAsync($"/api/categories/{id}/deactivate", content: null, cancellationToken);
+        }
+
+        public async Task<HttpResponseMessage> DeleteCategoryAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            AttachBearer();
+            // Call the official DELETE endpoint
+            using var req = new HttpRequestMessage(HttpMethod.Delete, $"/api/categories/{id}");
+            return await _http.SendAsync(req, cancellationToken).ConfigureAwait(false);
+        }
 
         // ===== DASHBOARD =====
         public async Task<DashboardVm?> GetDashboardAsync(CancellationToken ct = default)

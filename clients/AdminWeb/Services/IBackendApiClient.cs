@@ -55,6 +55,7 @@ namespace AdminWeb.Services
         Task<HttpResponseMessage> RenameCategoryAsync(Guid id, RenameCategoryRequest req, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> ActivateCategoryAsync(Guid id, CancellationToken cancellationToken = default);
         Task<HttpResponseMessage> DeactivateCategoryAsync(Guid id, CancellationToken cancellationToken = default);
+        Task<HttpResponseMessage> DeleteCategoryAsync(Guid id, CancellationToken cancellationToken = default);
 
         // Dashboard
         Task<DashboardVm?> GetDashboardAsync(CancellationToken ct = default);
