@@ -27,6 +27,9 @@ public class TableConfiguration : IEntityTypeConfiguration<Table>
         b.Property(x => x.Number)
             .HasDefaultValueSql("NEXT VALUE FOR TableNoSeq")
             .ValueGeneratedOnAdd();
+
+        // Session Id (nullable)
+        b.Property(x => x.CurrentSessionId).IsRequired(false);
     }
 }
 

@@ -3,6 +3,7 @@ using Application.Orders.Queries; // GetOrderByIdQuery
 using Application.Public.Cart;
 using Domain.Enums; // for OrderStatus
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting; // attribute
 
 namespace Api.Controllers.Public;
 
@@ -16,16 +17,54 @@ public class CartController : ControllerBase
     public CartController(Application.Common.CQRS.ISender cqrs, MediatR.ISender mediator)
     { _cqrs = cqrs; _mediator = mediator; }
 
-    public sealed record StartDto(string TableCode);
+    public sealed record StartDto(string TableCode, Guid? SessionId);
 
     // POST /api/public/cart/start
     [HttpPost("start")]
-    public async Task<ActionResult<object>> Start([FromBody] StartDto body, CancellationToken ct)
+    [EnableRateLimiting("QrScanPolicy")]
+    public async Task<ActionResult<CartDto>> Start([FromBody] StartDto body, CancellationToken ct)
     {
         try
         {
-            var orderId = await _mediator.Send(new StartCartByTableCodeCommand(body.TableCode), ct);
-            return Ok(new { OrderId = orderId });
+            var existingTableIdCookie = Request.Cookies["tableId"];
+            var existingOrderIdCookie = Request.Cookies["orderId"];
+
+            // Start or join cart
+            var cart = await _mediator.Send(new StartCartByTableCodeCommand(body.TableCode, body.SessionId), ct);
+
+            // If table changed, clear previous cart
+            if (!string.IsNullOrEmpty(existingTableIdCookie) && Guid.TryParse(existingTableIdCookie, out var existingTableId)
+                && Guid.TryParse(existingOrderIdCookie, out var oldOrderId))
+            {
+                // Lookup new order to get table id from returned cart
+                if (cart is not null && cart.OrderId != Guid.Empty)
+                {
+                    var newOrder = await _cqrs.Send(new GetOrderByIdQuery(cart.OrderId), ct);
+                    var newTableId = newOrder?.TableId;
+                    if (newTableId is Guid ntid && ntid != existingTableId)
+                    {
+                        await _cqrs.Send(new ClearCartCommand(oldOrderId), ct);
+                    }
+                }
+            }
+
+            // Update cookies
+            var cookieOptions = new Microsoft.AspNetCore.Http.CookieOptions
+            {
+                HttpOnly = false,
+                Secure = Request.IsHttps,
+                SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.AddDays(1)
+            };
+            Response.Cookies.Append("orderId", cart.OrderId.ToString(), cookieOptions);
+            // We need tableId Guid; fetch from order if not available elsewhere
+            var orderDto = await _cqrs.Send(new GetOrderByIdQuery(cart.OrderId), ct);
+            if (orderDto?.TableId is Guid tid)
+            {
+                Response.Cookies.Append("tableId", tid.ToString(), cookieOptions);
+            }
+
+            return Ok(cart);
         }
         catch (InvalidOperationException ex)
         {
@@ -75,7 +114,7 @@ public class CartController : ControllerBase
 
     public sealed record RemoveItemDto(int OrderItemId);
 
-    // DELETE /api/public/cart/{orderId}/items
+    // DELETE /api/public/cart/{orderId:guid}/items
     [HttpDelete("{orderId:guid}/items")]
     public async Task<ActionResult> RemoveItem(Guid orderId, [FromBody] RemoveItemDto body, CancellationToken ct)
     {
@@ -88,7 +127,6 @@ public class CartController : ControllerBase
     public async Task<ActionResult<CartDto>> Clear(Guid orderId, CancellationToken ct)
     {
         var dto = await _cqrs.Send(new ClearCartCommand(orderId), ct);
-        // Map OrderDto -> CartDto for return after clear
         var mapped = await _cqrs.Send(new GetCartByIdQuery(orderId), ct);
         return Ok(mapped);
     }
@@ -103,7 +141,6 @@ public class CartController : ControllerBase
     }
 
     // POST /api/public/cart/{orderId}/close-session
-    // Beacon-friendly: always return204. Only cancel Draft to avoid abusing public endpoint.
     [HttpPost("{orderId:guid}/close-session")]
     public async Task<ActionResult> CloseSession(Guid orderId, CancellationToken ct)
     {

@@ -10,6 +10,7 @@ public class Table : Entity<Guid>
     public string Code { get; private set; } = default!;
     public int Seats { get; private set; }
     public TableStatus Status { get; private set; } = TableStatus.Available;
+    public Guid? CurrentSessionId { get; private set; }
 
     private Table() : base(default!) { } // EF-friendly constructor
 
@@ -19,8 +20,16 @@ public class Table : Entity<Guid>
         Seats = seats > 0 ? seats : throw new ArgumentOutOfRangeException(nameof(seats));
     }
 
-    public void MarkInUse() => Status = TableStatus.InUse;
-    public void MarkAvailable() => Status = TableStatus.Available;
+    public void MarkInUse()
+    {
+        Status = TableStatus.InUse;
+        CurrentSessionId = Guid.NewGuid();
+    }
+    public void MarkAvailable()
+    {
+        Status = TableStatus.Available;
+        CurrentSessionId = null;
+    }
 
     // Cập nhật thông tin bàn (code + seats)
     public void Update(string code, int seats)

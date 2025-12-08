@@ -13,9 +13,9 @@ namespace Application.Tables.Commands
         {
             var t = await _db.Tables.FirstOrDefaultAsync(x => x.Id == c.Id, ct)
                     ?? throw new KeyNotFoundException("Table not found");
-            t.MarkAvailable(); // :contentReference[oaicite:19]{index=19}
+            t.MarkAvailable();
             await _db.SaveChangesAsync(ct);
-            return new TableDto(t.Id, t.Code, t.Seats, t.Status);
+            return new TableDto(t.Id, t.Code, t.Seats, t.Status) { CurrentSessionId = t.CurrentSessionId };
         }
     }
 }

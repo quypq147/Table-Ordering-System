@@ -13,8 +13,18 @@ namespace CustomerWeb.Controllers
             _logger = logger;
         }
 
-        public IActionResult Index()
+        public IActionResult Index([FromQuery] Guid? session)
         {
+            if (session is Guid sid && sid != Guid.Empty)
+            {
+                Response.Cookies.Append("sessionId", sid.ToString(), new CookieOptions
+                {
+                    HttpOnly = false,
+                    Secure = Request.IsHttps,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddHours(12)
+                });
+            }
             return View();
         }
 

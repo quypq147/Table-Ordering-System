@@ -23,6 +23,8 @@ public sealed class OrderSubmittedHandlerTests
         public Task<Order?> GetByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult(id == _order.Id ? _order : null);
         public Task AddAsync(Order order) => Task.CompletedTask;
         public void Update(Order order) { }
+        public Task<Order?> GetActiveOrderByTableIdAsync(Guid tableId, CancellationToken ct = default)
+            => Task.FromResult(_order.TableId == tableId ? _order : null);
     }
 
     private sealed class NoOpNotifier : IKitchenTicketNotifier

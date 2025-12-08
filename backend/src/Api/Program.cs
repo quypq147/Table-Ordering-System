@@ -10,12 +10,33 @@ using Microsoft.Extensions.FileProviders; // added for static files
 using Application.Abstractions; // added
 using Infrastructure.SignalR; // added
 using Microsoft.AspNetCore.ResponseCompression; // compression
+using Microsoft.AspNetCore.RateLimiting; // rate limiting
+using System.Threading.RateLimiting; // rate limiting
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
+
+// Add rate limiter with partitioned fixed window policy for QR scan endpoint
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("QrScanPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: key => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }
+        )
+    );
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 
 // Compression for JSON/SignalR (Server-Sent Events/WebSockets)
 builder.Services.AddResponseCompression(options =>
@@ -63,6 +84,9 @@ app.UseCors("adminweb");
 app.UseGlobalExceptionHandler();
 
 app.UseResponseCompression();
+
+// Enable rate limiting middleware
+app.UseRateLimiter();
 
 var webRoot = app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
 var uploadsRoot = Path.Combine(webRoot, "uploads");

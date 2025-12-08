@@ -4,6 +4,7 @@ using WaiterApp.Services;
 using WaiterApp;
 using System.Net.Http.Json;
 using System.Linq;
+using System.Windows.Input;
 
 public partial class OrdersPage : ContentPage
 {
@@ -20,7 +21,15 @@ public partial class OrdersPage : ContentPage
     private OrderFilter _activeFilter = OrderFilter.New;
     private CancellationTokenSource? _cts;
 
-    public OrdersPage() => InitializeComponent();
+    public ICommand RefreshCommand { get; }
+    public bool IsRefreshing { get; set; }
+
+    public OrdersPage()
+    {
+        InitializeComponent();
+        BindingContext = this;
+        RefreshCommand = new Command(async () => await ExecuteRefreshAsync());
+    }
 
     protected override async void OnAppearing()
     {
@@ -40,6 +49,21 @@ public partial class OrdersPage : ContentPage
         _realtime.OrderStatusChanged -= OnOrderStatusChanged;
         _cts?.Cancel();
         await _realtime.StopAsync();
+    }
+
+    private async Task ExecuteRefreshAsync()
+    {
+        IsRefreshing = true;
+        try
+        {
+            await LoadAsync();
+            ApplyFilters();
+        }
+        finally
+        {
+            IsRefreshing = false;
+            OrdersRefresh.IsRefreshing = false;
+        }
     }
 
     private void OnOrderStatusChanged(Guid orderId, string status)

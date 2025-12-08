@@ -3,11 +3,22 @@ using TableOrdering.Contracts;
 
 namespace CustomerWeb.Services;
 
-public sealed class BackendApiClient(HttpClient http) : IBackendApiClient
+public sealed class BackendApiClient(HttpClient http, IHttpContextAccessor accessor) : IBackendApiClient
 {
+    private readonly IHttpContextAccessor _accessor = accessor;
+
+    private Guid? GetSessionId()
+    {
+        var sid = _accessor.HttpContext?.Request.Cookies["sessionId"];
+        if (Guid.TryParse(sid, out var g)) return g; return null;
+    }
+
     public async Task<Guid> StartCartAsync(string tableCode, CancellationToken ct = default)
     {
-        var res = await http.PostAsJsonAsync("/api/public/cart/start", new { tableCode }, ct);
+        var dict = new Dictionary<string, object?> { ["tableCode"] = tableCode };
+        var sessionId = GetSessionId();
+        if (sessionId is Guid s) dict["sessionId"] = s;
+        var res = await http.PostAsJsonAsync("/api/public/cart/start", dict, ct);
         res.EnsureSuccessStatusCode();
         var json = await res.Content.ReadFromJsonAsync<Dictionary<string, string>>(cancellationToken: ct);
         return Guid.Parse(json!["orderId"]);
@@ -22,7 +33,7 @@ public sealed class BackendApiClient(HttpClient http) : IBackendApiClient
     public async Task AddCartItemAsync(Guid orderId, Guid menuItemId, int quantity, string? note, CancellationToken ct = default)
     {
         var res = await http.PostAsJsonAsync($"/api/public/cart/{orderId}/items",
-            new { menuItemId, quantity, note }, ct);
+            new { menuItemId, quantity, note, sessionId = GetSessionId() }, ct);
         res.EnsureSuccessStatusCode();
     }
 
@@ -31,7 +42,6 @@ public sealed class BackendApiClient(HttpClient http) : IBackendApiClient
 
     public async Task UpdateCartItemAsync(Guid orderId, int cartItemId, int quantity, string? note, CancellationToken ct = default)
     {
-        // Align with backend: PATCH quantity then optional PATCH note
         var resQty = await http.PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{cartItemId}", new { newQuantity = quantity }, ct);
         resQty.EnsureSuccessStatusCode();
 
