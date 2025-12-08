@@ -48,6 +48,10 @@
                 </div>
 
                 <div class="kds-ticket__footer">
+                    <div class="btn-group btn-group-sm me-2">
+                        <a class="btn btn-outline-secondary" asp-controller="Board" asp-action="Details" asp-route-orderId="@ticket.OrderId">Chi tiết đơn</a>
+                    </div>
+
                     <button type="button"
                             class="btn btn-sm btn-outline-primary me-1"
                             onclick="changeTicketStatus('@ticket.Id', 'start')"
@@ -68,13 +72,6 @@
                             @(status != "Ready" ? "disabled" : null)>
                         Đã phục vụ
                     </button>
-
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger"
-                            onclick="changeTicketStatus('@ticket.Id', 'cancel')"
-                            @(status == "Served" || status == "Cancelled" ? "disabled" : null)>
-                        Hủy
-                    </button>
                 </div>
             </div>
         }
@@ -85,11 +82,6 @@
     <script>
         async function changeTicketStatus(id, action) {
             if (!id || !action) return;
-
-            if (action === 'cancel') {
-                const ok = confirm('Bạn có chắc muốn HỦY phiếu bếp này không?');
-                if (!ok) return;
-            }
 
             try {
                 // Try to get antiforgery token if present in the DOM

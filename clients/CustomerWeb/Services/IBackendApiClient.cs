@@ -14,4 +14,6 @@ public interface IBackendApiClient
     Task UpdateCartItemAsync(Guid orderId, int cartItemId, int quantity, string? note, CancellationToken ct = default);
     Task RemoveCartItemAsync(Guid orderId, Guid menuItemId, CancellationToken ct = default);
     Task SubmitCartAsync(Guid orderId, CancellationToken ct = default);
+    Task ClearCartAsync(Guid orderId, CancellationToken ct = default);
+    Task CloseSessionAsync(Guid orderId, CancellationToken ct = default);
 }

@@ -2,435 +2,388 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Giỏ hàng";
 
-    // Safe orderId handling: accept Guid or string; fall back to Guid.Empty
-    Guid? orderIdVal = null;
-    if (ViewBag.OrderId is Guid g) { orderIdVal = g; }
-    else if (ViewBag.OrderId is string s && Guid.TryParse(s, out var gp)) { orderIdVal = gp; }
+    // Safe orderId handling: accept Guid or string; fall back to Guid.Empty
+    Guid? orderIdVal = null;
+    if (ViewBag.OrderId is Guid g) { orderIdVal = g; }
+    else if (ViewBag.OrderId is string s && Guid.TryParse(s, out var gp)) { orderIdVal = gp; }
 
-    // KHẮC PHỤC LỖI CS0103: Định nghĩa orderId trong ViewBag để JavaScript có thể truy cập
-    var orderId = orderIdVal ?? Guid.Empty;
-    ViewBag.JsOrderId = orderId;
+    var orderId = orderIdVal ?? Guid.Empty;
+    ViewBag.JsOrderId = orderId;
 }
 
 <div class="container py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="mb-0">Giỏ hàng</h3>
-        <div>
-            <a id="backMenu" class="btn btn-outline-secondary btn-sm" href="#">Quay lại Menu</a>
-            <button id="btnLeave" class="btn btn-outline-danger btn-sm ms-2">Rời bàn</button>
-        </div>
-    </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Giỏ hàng</h3>
+        <div>
+            <a id="backMenu" class="btn btn-outline-secondary btn-sm" href="#">Quay lại Menu</a>
+            <button id="btnLeave" class="btn btn-outline-danger btn-sm ms-2">Rời bàn</button>
+        </div>
+    </div>
 
-    <div class="mb-2 small text-muted" id="cartMeta"></div>
+    <div class="mb-2 small text-muted" id="cartMeta"></div>
 
-    <div class="table-responsive position-relative">
-        <div id="pageLoading" class="loading-overlay d-none">
-            <div class="loading-box">
-                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-                <div class="ms-2">Đang xử lý...</div>
-            </div>
-        </div>
-        <table class="table align-middle" id="cartTable">
-            <thead>
-                <tr>
-                    <th>Món</th>
-                    <th style="width:220px">Ghi chú</th>
-                    <th style="width:140px">Số lượng</th>
-                    <th style="width:140px" class="text-end">Đơn giá</th>
-                    <th style="width:160px" class="text-end">Thành tiền</th>
-                    <th style="width:120px"></th>
-                </tr>
-            </thead>
-            <tbody id="cartBody">
-                <tr><td colspan="6" class="text-muted">Đang tải...</td></tr>
-            </tbody>
-            <tfoot>
-                <tr>
-                    <td colspan="4" class="text-end text-muted">Tạm tính</td>
-                    <td class="text-end" id="subtotal">0</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td colspan="4" class="text-end text-muted">Phí phục vụ</td>
-                    <td class="text-end" id="svc">0</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td colspan="4" class="text-end text-muted">Thuế</td>
-                    <td class="text-end" id="tax">0</td>
-                    <td></td>
-                </tr>
-                <tr class="fw-bold">
-                    <td colspan="4" class="text-end">Tổng cộng</td>
-                    <td class="text-end fs-5" id="total">0</td>
-                    <td></td>
-                </tr>
-            </tfoot>
+    <div class="table-responsive position-relative">
+        <div id="pageLoading" class="loading-overlay d-none">
+            <div class="loading-box">
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <div class="ms-2">Đang xử lý...</div>
+            </div>
+        </div>
+        <table class="table align-middle" id="cartTable">
+            <thead>
+                <tr>
+                    <th>Món</th>
+                    <th style="width:220px">Ghi chú</th>
+                    <th style="width:140px">Số lượng</th>
+                    <th style="width:140px" class="text-end">Đơn giá</th>
+                    <th style="width:160px" class="text-end">Thành tiền</th>
+                    <th style="width:120px"></th>
+                </tr>
+            </thead>
+            <tbody id="cartBody">
+                <tr><td colspan="6" class="text-muted">Đang tải...</td></tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" class="text-end text-muted">Tạm tính</td>
+                    <td class="text-end" id="subtotal">0</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="4" class="text-end text-muted">Phí phục vụ</td>
+                    <td class="text-end" id="svc">0</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="4" class="text-end text-muted">Thuế</td>
+                    <td class="text-end" id="tax">0</td>
+                    <td></td>
+                </tr>
+                <tr class="fw-bold">
+                    <td colspan="4" class="text-end">Tổng cộng</td>
+                    <td class="text-end fs-5" id="total">0</td>
+                    <td></td>
+                </tr>
+            </tfoot>
 
-        </table>
-    </div>
+        </table>
+    </div>
 
-    <div class="d-flex gap-2">
-        <button id="btnClear" class="btn btn-outline-danger">Xóa hết</button>
-        <button id="btnSubmit" class="btn btn-primary">Gửi đơn hàng</button>
-    </div>
+    <div class="d-flex gap-2">
+        <button id="btnClear" class="btn btn-outline-danger">Xóa hết</button>
+        <button id="btnSubmit" class="btn btn-primary">Gửi đơn hàng</button>
+    </div>
 </div>
 
 <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
-    <div id="toast" class="toast align-items-center text-bg-danger border-0" data-bs-delay="2800" data-bs-autohide="true">
-        <div class="d-flex">
-            <div class="toast-body d-flex align-items-center">
-                <span id="toastIcon" class="me-2">⚠️</span>
-                <span id="toastMsg">Đã có lỗi</span>
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-    </div>
+    <div id="toast" class="toast align-items-center text-bg-danger border-0" data-bs-delay="2800" data-bs-autohide="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center">
+                <span id="toastIcon" class="me-2">⚠️</span>
+                <span id="toastMsg">Đã có lỗi</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
-    <style>
-                       .loading-overlay {
-                               position: absolute;
-                               inset: 0;
-                               background: rgba(255,255,255,0.7);
-                               display: flex;
-                               align-items: center;
-                               justify-content: center;
+    <style>
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-           }
+        .loading-overlay .loading-box {
+            display: flex;
+            align-items: center;
+            padding: .75rem 1rem;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,.1);
+            border-radius: .5rem;
+            box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
+        }
+    </style>
+    <script>
+        const orderId = "@ViewBag.JsOrderId";
+        let cart = null;
+        let statusTimer = null;
+        let firstLoadDone = false;
 
-                       .loading-overlay .loading-box {
-                               display: flex;
-                               align-items: center;
-                               padding: .75rem 1rem; /* fixed missing space */
-                               background: #fff;
-                               border: 1px solid rgba(0,0,0,.1);
-                               border-radius: .5rem;
-                               box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
+        const statusMap = {
+            Draft: 'Đang chọn món',
+            Submitted: 'Đã gửi bếp',
+            InProgress: 'Đang chế biến',
+            Ready: 'Món đã sẵn sàng',
+            Served: 'Đã phục vụ',
+            Cancelled: 'Đã hủy'
+        };
 
-           }
+        function toast(message, ok = false) {
+            const el = document.getElementById('toast');
+            if (!el) return;
+            el.classList.toggle('text-bg-success', ok);
+            el.classList.toggle('text-bg-danger', !ok);
+            const iconEl = document.getElementById('toastIcon');
+            const msgEl = document.getElementById('toastMsg');
+            if (iconEl) iconEl.textContent = ok ? '✅' : '⚠️';
+            if (msgEl) msgEl.textContent = message || (ok ? 'Thành công' : 'Đã có lỗi');
+            bootstrap.Toast.getOrCreateInstance(el).show();
+        }
 
+        function showPageLoading(show){
+            const el = document.getElementById('pageLoading');
+            if (!el) return;
+            el.classList.toggle('d-none', !show);
+        }
 
+        function formatCurrency(n){
+            return Number(n || 0).toLocaleString('vi-VN');
+        }
 
-    </style>
-    <script>
-        // Khắc phục lỗi CS0103: Sử dụng ViewBag.JsOrderId để lấy giá trị đã được gán toàn cục
-        const orderId = "@ViewBag.JsOrderId";
-        let cart = null;
-        let statusTimer = null;
-        let firstLoadDone = false;
+        function isDraft(c){
+            const s = c && (c.status || c.Status);
+            if (typeof s === 'number') return s === 0;
+            if (typeof s === 'string') {
+                const t = s.trim().toLowerCase();
+                if (t === 'draft' || t === '0') return true;
+            }
+            return !s;
+        }
 
-        const statusMap = {
-            Draft: 'Đang chọn món',
-            Submitted: 'Đã gửi bếp',
-            InProgress: 'Đang chế biến',
-            Ready: 'Món đã sẵn sàng',
-            Served: 'Đã phục vụ',
-            Cancelled: 'Đã hủy'
-        };
+        async function api(url, options = {}){
+            const init = { ...options };
+            const isForm = init.body instanceof URLSearchParams || init.body instanceof FormData;
+            // Only set JSON content-type when sending JSON bodies
+            const headers = new Headers(init.headers || {});
+            if (!isForm && init.body && !headers.has('Content-Type')) {
+                headers.set('Content-Type', 'application/json');
+            }
+            init.headers = headers;
 
-        function isDraft(c){
-            const s = c && c.status;
-            if (typeof s === 'number') return s ===0;
-            if (typeof s === 'string') {
-                const t = s.trim().toLowerCase();
-                if (t === 'draft' || t === '0') return true;
-            }
-            // Default: if status missing, allow editing (assume draft)
-            return !s;
-        }
+            const resp = await fetch(url, init);
+            const text = await resp.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+            if (!resp.ok){
+                const msg = (data && (data.title || data.detail || data.message || data.error)) || text || resp.statusText;
+                throw new Error(msg);
+            }
+            return data ?? null;
+        }
 
+        async function loadCart(){
+            if (!orderId || orderId === '00000000-0000-0000-0000-000000000000'){
+                const body = document.getElementById('cartBody');
+                if (body) body.innerHTML = '<tr><td colspan="6" class="text-danger">Thiếu Mã đơn hàng.</td></tr>';
+                return;
+            }
+            showPageLoading(!firstLoadDone);
+            try {
+                cart = await api(`/client/cart/${orderId}/data`);
+                renderCart(cart);
+                firstLoadDone = true;
+            } catch(e){
+                const body = document.getElementById('cartBody');
+                if (body) body.innerHTML = `<tr><td colspan="6" class="text-danger">${e.message}</td></tr>`;
+            } finally {
+                showPageLoading(false);
+            }
+        }
 
-        function fmt(x){ return (x||0).toLocaleString() + ' ₫'; }
-        function setLoading(show){
-            const el = document.getElementById('pageLoading');
-            if(!el) return;
-            el.classList.toggle('d-none', !show);
-        }
-        function toast(msg, typeOrOk=false){
-            const el = document.getElementById("toast");
-            const msgEl = document.getElementById("toastMsg");
-            const iconEl = document.getElementById("toastIcon");
-            // Backward compat: boolean => success/error
-            let type = typeof typeOrOk === 'boolean' ? (typeOrOk ? 'success' : 'danger') : (typeOrOk || 'info');
-            const cls = ['text-bg-success','text-bg-danger','text-bg-warning','text-bg-info'];
-            el.classList.remove(...cls);
-            el.classList.add(`text-bg-${type}`);
-            const icons = { success: '✅', danger: '⚠️', warning: '⚠️', info: 'ℹ️' };
-            if(iconEl) iconEl.textContent = icons[type] || '';
-            msgEl.textContent = msg || (type === 'success' ? 'Thành công' : 'Đã có lỗi');
-            bootstrap.Toast.getOrCreateInstance(el).show();
-        }
-        async function api(url, opt = {}, showLoading = false) {
-            try{
-                if (showLoading) setLoading(true);
-                console.debug('[api] Request:', opt.method || 'GET', url, opt);
-                const r = await fetch(url, { headers: { "Content-Type": "application/json" }, credentials: 'same-origin', ...opt });
-                const raw = await r.text();
-                console.debug('[api] Response raw:', r.status, raw);
-                // Determine content-type
-                const ct = (r.headers.get('content-type') || '').toLowerCase();
+        function renderCart(c){
+            if (!c){
+                const body = document.getElementById('cartBody');
+                if (body) body.innerHTML = '<tr><td colspan="6" class="text-muted">Giỏ hàng trống.</td></tr>';
+                return;
+            }
+            const meta = document.getElementById('cartMeta');
+            const status = c.status || c.Status;
+            const statusLabel = statusMap[status] || status || 'Đang xử lý';
+            const tableCode = c.tableCode || c.TableCode || '';
+            if (meta) meta.textContent = `Bàn ${tableCode} · Trạng thái: ${statusLabel}`;
 
-                if (!r.ok) {
-                    const serverMsg = raw || r.statusText || `HTTP ${r.status}`;
-                    console.error('[api] Error response:', r.status, serverMsg);
-                    throw new Error(serverMsg);
-                }
+            const items = c.items || c.Items || [];
+            const body = document.getElementById('cartBody');
+            if (!items || items.length === 0){
+                if (body) body.innerHTML = '<tr><td colspan="6" class="text-muted">Chưa có món.</td></tr>';
+            } else {
+                if (body) body.innerHTML = items.map(it => {
+                    const id = it.id || it.Id;
+                    const name = it.name || it.Name;
+                    const unit = it.unitPrice ?? it.UnitPrice ?? 0;
+                    const qty = it.quantity ?? it.Quantity ?? 0;
+                    const note = it.note ?? it.Note ?? '';
+                    const line = it.lineTotal ?? it.LineTotal ?? (unit * qty);
+                    return `
+<tr data-item-id="${id}">
+    <td>${name}</td>
+    <td>
+        <input type="text" class="form-control form-control-sm note-input" value="${note || ''}" ${isDraft(c) ? '' : 'disabled'} />
+    </td>
+    <td>
+        <div class="input-group input-group-sm" style="width:120px;">
+            <button class="btn btn-outline-secondary btn-dec" ${isDraft(c) ? '' : 'disabled'}>-</button>
+            <input type="number" class="form-control text-center qty-input" min="1" value="${qty}" ${isDraft(c) ? '' : 'disabled'} />
+            <button class="btn btn-outline-secondary btn-inc" ${isDraft(c) ? '' : 'disabled'}>+</button>
+        </div>
+    </td>
+    <td class="text-end">${formatCurrency(unit)}</td>
+    <td class="text-end">${formatCurrency(line)}</td>
+    <td class="text-end">
+        <button class="btn btn-sm btn-outline-danger btn-remove" ${isDraft(c) ? '' : 'disabled'}>Xóa</button>
+    </td>
+</tr>`;
+                }).join('');
+            }
 
-                // If response is JSON, parse only when body not empty
-                if (ct.includes('application/json')) {
-                    if (!raw || !raw.trim()) return null;
-                    try {
-                        return JSON.parse(raw);
-                    } catch (err) {
-                        console.warn('[api] JSON parse failed:', err, raw);
-                        throw new Error('Invalid JSON response from server');
-                    }
-                }
+            // totals
+            document.getElementById('subtotal').textContent = formatCurrency(c.subtotal ?? c.Subtotal ?? 0);
+            document.getElementById('svc').textContent = formatCurrency(c.serviceCharge ?? c.ServiceCharge ?? 0);
+            document.getElementById('tax').textContent = formatCurrency(c.tax ?? c.Tax ?? 0);
+            document.getElementById('total').textContent = formatCurrency(c.total ?? c.Total ?? 0);
 
-                // Otherwise return raw text
-                return raw;
-            } finally {
-                if (showLoading) setLoading(false);
-            }
-        }
-        function renderMeta(){
-            const statusText = statusMap[cart?.status] ?? cart?.status ?? '';
-            document.getElementById('cartMeta').textContent = cart?.tableCode ? `Bàn ${cart.tableCode} · Trạng thái: ${statusText}` : 'Giỏ hàng';
-        }
-        function updateBackLink(){
-            const backHref = cart?.tableCode ? `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}` : '#';
-            const back = document.getElementById('backMenu');
-            back.href = backHref;
-            back.classList.toggle('disabled', backHref === '#');
-        }
-        async function load(showErrorToast = true, withOverlay = false){
-            const prevTable = cart && cart.tableCode ? cart.tableCode : null;
-            try{
-                const data = await api(`/proxy/public/cart/${orderId}`, {}, withOverlay);
-                cart = (data && typeof data === 'object') ? data : { items: [] };
-            }catch(e){
-                cart = { items: [] };
-                if (showErrorToast) toast(e.message, 'danger');
-            }
-            if(!cart.tableCode && prevTable) cart.tableCode = prevTable;
-            const items = Array.isArray(cart.items) ? cart.items : [];
-            renderMeta();
-            document.getElementById('subtotal').textContent = fmt(cart.subtotal ||0);
-            document.getElementById('svc').textContent = fmt(cart.serviceCharge ||0);
-            document.getElementById('tax').textContent = fmt(cart.tax ||0);
-            document.getElementById('total').textContent = fmt(cart.total ||0);
-            updateBackLink();
-            renderItems(items);
-            const hasItems = items.length >0;
-            const editable = isDraft(cart);
-            document.getElementById('btnSubmit').disabled = !hasItems || !editable;
-            document.getElementById('btnClear').disabled = !hasItems || !editable;
-            document.getElementById('btnLeave').disabled = !orderId;
-            firstLoadDone = true;
-        }
-        function renderItems(items){
-            const body = document.getElementById('cartBody');
-            if(!items.length){ body.innerHTML = '<tr><td colspan="6" class="text-muted">Giỏ hàng đang trống.</td></tr>'; return; }
-            const editable = isDraft(cart);
-            body.innerHTML = items.map(it => `
-                <tr data-id="${it.id}" data-menu-id="${it.menuItemId}" data-order-item-id="${Number(it.id) || 0}">
-                    <td><div class="fw-semibold">${it.name || ''}</div></td>
-                    <td><textarea class="form-control form-control-sm note" rows="1" ${editable ? '' : 'disabled'}>${it.note || ''}</textarea></td>
-                    <td>
-                        <div class="input-group input-group-sm">
-                            <button class="btn btn-outline-secondary btn-dec" type="button" ${editable ? '' : 'disabled'}>-</button>
-                            <input type="number" class="form-control text-center qty" min="1" value="${it.quantity ||1}" ${editable ? '' : 'disabled'}>
-                            <button class="btn btn-outline-secondary btn-inc" type="button" ${editable ? '' : 'disabled'}>+</button>
-                        </div>
-                    </td>
-                    <td class="text-end">${fmt(it.unitPrice)}</td>
-                    <td class="text-end line-total">${fmt(it.lineTotal)}</td>
-                    <td class="text-end">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary btn-save" ${editable ? '' : 'disabled'}>Cập nhật</button>
-                            <button class="btn btn-outline-danger btn-del" ${editable ? '' : 'disabled'}>Xóa</button>
-                        </div>
-                    </td>
-                </tr>`).join('');
+            bindRowEvents();
 
-            if(editable){
-                body.querySelectorAll('tr[data-id]').forEach(tr =>{
-                    const qtyEl = tr.querySelector('.qty');
-                    const noteEl = tr.querySelector('.note');
-                    const btnSave = tr.querySelector('.btn-save');
-                    const btnInc = tr.querySelector('.btn-inc');
-                    const btnDec = tr.querySelector('.btn-dec');
-                    const btnDel = tr.querySelector('.btn-del');
+            // enable/disable actions
+            const canEdit = isDraft(c);
+            document.getElementById('btnClear').disabled = !canEdit;
+            document.getElementById('btnSubmit').disabled = !canEdit;
+        }
 
-                    // Thêm biến id (là id nội bộ của item)
-                    const id = tr.getAttribute('data-id');
-                    const orderItemId = parseInt(tr.getAttribute('data-order-item-id') || '0',10);
-                    // Only allow inline editing for items that already have an orderItemId (persisted)
-                    const rowEditable = orderItemId !== 0;
+        function bindRowEvents(){
+            // quantity +/-
+            document.querySelectorAll('#cartBody tr').forEach(row => {
+                const idAttr = row.getAttribute('data-item-id');
+                const cartItemId = idAttr ? parseInt(idAttr, 10) : 0;
+                const dec = row.querySelector('.btn-dec');
+                const inc = row.querySelector('.btn-inc');
+                const qtyInput = row.querySelector('.qty-input');
+                const noteInput = row.querySelector('.note-input');
+                const btnRemove = row.querySelector('.btn-remove');
 
-                    const setRowBusy = (busy)=>{
-                        [btnSave, btnInc, btnDec, btnDel, qtyEl, noteEl].forEach(el => {
-                            if (el) el.disabled = !!busy;
-                        });
-                        if (btnSave) {
-                            if (busy) {
-                                if (!btnSave.dataset.originalText) {
-                                    btnSave.dataset.originalText = btnSave.innerHTML;
-                                }
-                                btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu';
-                            } else {
-                                btnSave.innerHTML = btnSave.dataset.originalText || 'Cập nhật';
-                            }
-                        }
-                    };
+                dec?.addEventListener('click', async () => {
+                    const val = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
+                    await updateItem(cartItemId, val, noteInput?.value || null);
+                });
+                inc?.addEventListener('click', async () => {
+                    const val = (parseInt(qtyInput.value, 10) || 1) + 1;
+                    await updateItem(cartItemId, val, noteInput?.value || null);
+                });
+                qtyInput?.addEventListener('change', async () => {
+                    const val = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+                    await updateItem(cartItemId, val, noteInput?.value || null);
+                });
+                noteInput?.addEventListener('change', async () => {
+                    const val = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+                    await updateItem(cartItemId, val, noteInput?.value || null);
+                });
+                btnRemove?.addEventListener('click', async () => {
+                    await removeItem(cartItemId);
+                });
+            });
+        }
 
-                    // If the item is not yet persisted (orderItemId == 0) disable inc/dec/save to avoid PATCH errors.
-                    if(!rowEditable){
-                        if(btnSave) btnSave.disabled = true;
-                        if(btnInc) btnInc.disabled = true;
-                        if(btnDec) btnDec.disabled = true;
-                        // Keep delete button enabled: remove will call clear from server (it handles local items)
-                    } else {
-                        btnInc.onclick = async ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)+1); setRowBusy(true); await save(tr, qtyEl.value, noteEl.value, true).finally(()=> setRowBusy(false)); };
-                        btnDec.onclick = async ()=>{ qtyEl.value = Math.max(1, parseInt(qtyEl.value||'1',10)-1); setRowBusy(true); await save(tr, qtyEl.value, noteEl.value, true).finally(()=> setRowBusy(false)); };
-                        btnSave.onclick = async ()=>{ setRowBusy(true); await save(tr, qtyEl.value, noteEl.value, true).finally(()=> setRowBusy(false)); };
-                    }
+        async function updateItem(cartItemId, quantity, note){
+            try{
+                showPageLoading(true);
+                await api(`/client/cart/${orderId}/items/${cartItemId}`, {
+                    method: 'POST',
+                    body: new URLSearchParams({ quantity: String(quantity), note: note || '' })
+                });
+                await loadCart();
+            }catch(e){
+                toast(e.message, false);
+            }finally{
+                showPageLoading(false);
+            }
+        }
 
-                    // Only disable and handle this row's delete button instead of all delete buttons
-                    if(btnDel){
-                        btnDel.addEventListener('click', async (e)=>{
+        async function removeItem(cartItemId){
+            // Backend removal uses menuItemId, need to map from current cart data
+            const item = (cart && (cart.items || cart.Items || [])).find(x => (x.id || x.Id) === cartItemId);
+            const menuItemId = item ? (item.menuItemId || item.MenuItemId) : null;
+            if (!menuItemId){ toast('Không xác định được món để xóa.', false); return; }
+            try{
+                showPageLoading(true);
+                await api(`/client/cart/${orderId}/items/remove`, {
+                    method: 'POST',
+                    body: new URLSearchParams({ menuItemId: String(menuItemId) })
+                });
+                await loadCart();
+            }catch(e){
+                toast(e.message, false);
+            }finally{
+                showPageLoading(false);
+            }
+        }
 
-                            if(!confirm('Xóa món này khỏi giỏ?')) return;
-                            try{
-                                btnDel.disabled = true;
-                                // TH1: Món đã tồn tại trên Server (có OrderItemId)
-                                if (orderItemId !== 0) {
-                                    await removeItem(orderItemId, tr); // Gọi API DELETE
-                                } else {
-                                    // TH2: Món chưa tồn tại trên Server (ItemId = 0): Xóa cục bộ
-                                    // Tìm item trong cart.items bằng data-id (là id nội bộ của item)
-                                    cart.items = (cart.items || []).filter(x => x.id !== id);
-                                    if(tr && tr.parentNode) tr.parentNode.removeChild(tr); // Xóa khỏi DOM
-                                    setTimeout(()=> load(false), 200); // Tải lại để cập nhật tổng tiền
-                                    toast('Đã xóa món local', 'success');
-                                }
-                            } catch(err){ toast(err.message || err, 'danger'); }
-                            finally{ btnDel.disabled = false; }
-                        });
-                    }
-                });
-            }
-        }
-        async function save(rowEl, qty, note, showOverlay=false){
-            try{
-                qty = Math.max(1, parseInt(qty||'1',10));
-                const orderItemId = parseInt(rowEl.getAttribute('data-order-item-id')||'0',10);
-                if(!orderItemId){ throw new Error('Thiếu Id dòng món (orderItemId) - Không thể lưu món chưa được gửi'); }
+        async function clearCart(){
+            if (!confirm('Xóa hết các món trong giỏ?')) return;
+            try{
+                showPageLoading(true);
+                await api(`/client/cart/${orderId}/clear`, { method: 'DELETE' });
+                await loadCart();
+            }catch(e){
+                toast(e.message, false);
+            }finally{
+                showPageLoading(false);
+            }
+        }
 
-                // PATCH QUANTITY - VÀO /items/{orderItemId} VỚI BODY
-                await api(`/proxy/public/cart/${orderId}/items/${orderItemId}`, { method:'PATCH', body: JSON.stringify({ quantity: qty })}, showOverlay);
+        async function submitCart(){
+            if (!confirm('Gửi đơn hàng tới bếp?')) return;
+            try{
+                showPageLoading(true);
+                await api(`/client/cart/${orderId}/submit`, { method: 'POST', body: new URLSearchParams() });
+                await loadCart();
+                toast('Đã gửi đơn hàng.', true);
+            }catch(e){
+                toast(e.message, false);
+            }finally{
+                showPageLoading(false);
+            }
+        }
 
-                // PATCH NOTE - VÀO /items/{orderItemId}/note VỚI BODY
-                await api(`/proxy/public/cart/${orderId}/items/${orderItemId}/note`, { method:'PATCH', body: JSON.stringify({ note: note || null })}, false);
+        async function closeSession(){
+            if (!confirm('Rời bàn và đóng phiên?')) return;
+            try{
+                showPageLoading(true);
+                await api(`/client/cart/${orderId}/close-session`, { method: 'POST', body: new URLSearchParams() });
+                toast('Đã rời bàn.', true);
+                setTimeout(()=>{ window.location.href = '/client/qr-help'; }, 800);
+            }catch(e){
+                toast(e.message, false);
+            }finally{
+                showPageLoading(false);
+            }
+        }
 
-                await load(false);
-                toast('Đã cập nhật', 'success');
-            }catch(e){ toast(e.message, 'danger'); }
-        }
-        // Accepts an optional row element to remove from DOM immediately on success
-        async function removeItem(orderItemId, rowEl){
-            if(!orderItemId) { throw new Error('Lỗi: Thiếu OrderItemId để gọi API xóa'); }
-            try{
-                // DELETE ITEM - gửi body { orderItemId } theo đúng PublicProxyController
-                await api(`/proxy/public/cart/${orderId}/items`, {
-                    method:'DELETE',
-                    body: JSON.stringify({ orderItemId })
-                }, true);
+        document.getElementById('btnClear')?.addEventListener('click', () => { clearCart(); });
+        document.getElementById('btnSubmit')?.addEventListener('click', () => { submitCart(); });
+        document.getElementById('btnLeave')?.addEventListener('click', () => { closeSession(); });
+        document.getElementById('backMenu')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tbl = (cart && (cart.tableCode || cart.TableCode)) || '';
+            if (tbl) {
+                       console.log('Navigating back to menu for table:', tbl);
+                        window.location.href = `/client/menu?tableCode=`+tbl;
+            } else {
+                // fallback when cart not loaded
+                window.location.href = '/client/qr-help';
+            }
+        });
 
-                // Update local model and UI
-                cart.items = (cart.items || []).filter(x => x.id !== orderItemId);
-                // If a row element was provided remove it immediately
-                if(rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl);
-                // Refresh totals and meta from server to ensure consistency
-                setTimeout(()=> load(false), 200);
-                toast('Đã xóa', 'success');
-            }catch(e){
-                throw e;
-            }
-        }
-        async function clearAll(){
-            if(!confirm('Xóa tất cả món trong giỏ?')) return;
-            const btn = document.getElementById('btnClear');
-            try{
-                btn.disabled = true;
-                const old = btn.innerHTML;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xóa';
-
-                // CLEAR CART - GỌI DELETE /cart/{orderId}/clear
-                await api(`/proxy/public/cart/${orderId}/clear`, { method:'DELETE' }, true);
-
-                if(statusTimer) { clearInterval(statusTimer); statusTimer = null; }
-                // Xóa local thay vì chờ load trả về
-                cart.items = [];
-                renderItems(cart.items);
-                document.getElementById('subtotal').textContent = fmt(0);
-                document.getElementById('svc').textContent = fmt(0);
-                document.getElementById('tax').textContent = fmt(0);
-                document.getElementById('total').textContent = fmt(0);
-                document.getElementById('btnSubmit').disabled = true;
-                document.getElementById('btnClear').disabled = true;
-                // Tải lại sau một chút để đồng bộ trạng thái khác (nếu có)
-                setTimeout(()=> load(false),300);
-                toast('Đã xóa hết', 'success');
-            }catch(e){ toast(e.message, 'danger'); }
-            finally{ btn.innerHTML = old; btn.disabled = false; }
-        }
-        async function submit(){
-            const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
-            if(items.length ===0) { toast('Giỏ hàng đang trống', 'warning'); return; }
-            if(!isDraft(cart)){ toast('Đơn hàng đã được gửi / không thể gửi lại', 'warning'); return; }
-            if(!confirm('Gửi đơn hàng tới bếp?')) return;
-            const btn = document.getElementById('btnSubmit');
-            try{
-                btn.disabled = true;
-                const old = btn.innerHTML;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi';
-                await api(`/proxy/public/cart/${orderId}/submit`, { method:'POST', body: '{}' }, true);
-                toast('Đã gửi đơn hàng!', 'success');
-                // Điều hướng sang trang Chi tiết đơn
-                window.location.href = `/client/order/${orderId}`;
-            }catch(e){ toast(e.message, 'danger'); }
-            finally{ btn.innerHTML = old; btn.disabled = false; }
-        }
-        async function leaveTable(){
-            if(!orderId) return;
-            if(!confirm('Kết thúc phiên và xoá giỏ hàng (nếu chưa gửi)?')) return;
-            const btn = document.getElementById('btnLeave');
-            try{
-                btn.disabled = true;
-                const old = btn.innerHTML;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang rời bàn';
-                await api(`/proxy/public/cart/${orderId}/close-session`, { method:'POST', body:'{}' }, true);
-                toast('Đã rời bàn', 'success');
-                setTimeout(()=> window.location.href='/client/qr-help',800);
-            }catch(e){ toast(e.message, 'danger'); }
-            finally{ btn.innerHTML = old; btn.disabled = false; }
-        }
-        // Xử lý click quay lại menu ngay cả khi href '#' (chưa load xong)
-        document.getElementById('backMenu').addEventListener('click', (e)=>{
-            const href = e.currentTarget.getAttribute('href');
-            if(href === '#'){
-                e.preventDefault();
-                if(!cart) { load(false, true); return; }
-                if(cart.tableCode){ window.location.href = `/client/menu?tableCode=${encodeURIComponent(cart.tableCode)}`; }
-            }
-        });
-        // Bỏ auto-close khi đóng tab / reload: trước đây gửi beacon tới close-session, đã gỡ bỏ theo yêu cầu.
-        document.getElementById('btnLeave').addEventListener('click', leaveTable);
-        document.getElementById('btnClear').addEventListener('click', clearAll);
-        document.getElementById('btnSubmit').addEventListener('click', submit);
-        (async()=>{ try{ await load(true, true); } catch(e){ toast(e.message, 'danger'); } })();
-    </script>
+        (async () => {
+            await loadCart();
+            // Poll status to update view if needed (optional every 10s)
+            statusTimer = setInterval(async () => {
+                await loadCart();
+            }, 10000);
+        })();
+    </script>
 }

@@ -52,22 +52,23 @@
     el.closest(".stat, .card")?.classList.remove("loading");
   });
 
-  //2) Vẽ chart doanh thu theo giờ
+  //2) Vẽ chart doanh thu theo giờ (bar)
   const revLabels = payload.RevenueByHourLabels || [];
   const revValues = payload.RevenueByHourValues || [];
   if (revLabels.length && revValues.length && window.Chart) {
     const ctx = document.getElementById("revChart");
     if (ctx) {
       new Chart(ctx, {
-        type: "line",
+        type: "bar",
         data: {
           labels: revLabels,
           datasets: [
             {
               label: "Doanh thu",
               data: revValues,
-              tension: 0.3,
-              fill: true,
+              backgroundColor: "rgba(54, 162, 235, 0.5)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              borderWidth: 1,
             },
           ],
         },
@@ -79,6 +80,7 @@
               ticks: {
                 callback: (v) => v.toLocaleString("vi-VN"),
               },
+              beginAtZero: true,
             },
           },
         },

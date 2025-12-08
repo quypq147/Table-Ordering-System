@@ -1,17 +1,34 @@
 ﻿using TableOrdering.Contracts;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Http;
 public class BackendApiClient
 {
     private readonly HttpClient _http;
-    public BackendApiClient(HttpClient http, IConfiguration cfg)
+    private readonly IHttpContextAccessor? _ctx;
+    public BackendApiClient(HttpClient http, IConfiguration cfg, IHttpContextAccessor? ctx = null)
     {
         _http = http;
+        _ctx = ctx;
         var token = cfg["Backend:StaticBearer"];
         if (!string.IsNullOrWhiteSpace(token) && _http.DefaultRequestHeaders.Authorization is null)
         {
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
+    }
+
+    private void AttachBearer()
+    {
+        // Prefer dynamic token from current user session; fallback to any existing header
+        try
+        {
+            var token = _ctx?.HttpContext?.Request?.Cookies?["staff_token"]
+                        ?? _ctx?.HttpContext?.Request?.Cookies?["admin_token"]
+                        ?? _ctx?.HttpContext?.Request?.Cookies?["auth_token"];
+            if (!string.IsNullOrWhiteSpace(token))
+                _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        catch { /* noop */ }
     }
 
     // MENU
@@ -29,7 +46,10 @@ public class BackendApiClient
         => await _http.GetFromJsonAsync<OrderDetailDto>($"/api/orders/{id}");
 
     public async Task<HttpResponseMessage> UpdateOrderStatusAsync(Guid id, string status)
-        => await _http.PatchAsJsonAsync($"/api/orders/{id}/status", new { status });
+    {
+        AttachBearer();
+        return await _http.PatchAsJsonAsync($"/api/orders/{id}/status", new { status });
+    }
 
     // KDS
     public async Task<List<KitchenTicketDto>> GetTicketsAsync()
@@ -38,6 +58,7 @@ public class BackendApiClient
     // Generic POST helper for discrete endpoints (e.g., /api/kds/tickets/{id}/{action})
     public async Task<HttpResponseMessage> PostAsync(string url, object? body = null, CancellationToken ct = default)
     {
+        AttachBearer();
         if (body is null)
             return await _http.PostAsync(url, null, ct);
 

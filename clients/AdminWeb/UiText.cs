@@ -7,7 +7,8 @@ public static class UiText
         // Nếu backend trả về số (enum underlying value)
         if (int.TryParse(status, out var code))
         {
-            // Giả định mapping: 0=Draft,1=Submitted,2=InProgress,3=Ready,4=Served,5=WaitingForPayment,6=Paid,7=Cancelled
+            // Correct mapping per Domain.Enums.OrderStatus
+            // 0=Draft,1=Submitted,2=InProgress,3=Ready,4=Served,5=Paid,6=Cancelled,7=WaitingForPayment
             return code switch
             {
                 0 => "Đang chọn món",
@@ -15,9 +16,9 @@ public static class UiText
                 2 => "Đang chế biến",
                 3 => "Món sẵn sàng",
                 4 => "Đã phục vụ",
-                5 => "Đang chờ thanh toán",
-                6 => "Đã thanh toán",
-                7 => "Đã hủy",
+                5 => "Đã thanh toán",
+                6 => "Đã hủy",
+                7 => "Đang chờ thanh toán",
                 _ => status // trả về nguyên giá trị nếu không nằm trong mapping
             };
         }
@@ -44,6 +45,7 @@ public static class UiText
     {
         if (int.TryParse(status, out var code))
         {
+            // Correct mapping consistent with labels
             return code switch
             {
                 0 => "bg-secondary",      // Draft
@@ -51,9 +53,9 @@ public static class UiText
                 2 => "bg-warning text-dark", // InProgress
                 3 => "bg-primary",        // Ready
                 4 => "bg-success",        // Served
-                5 => "bg-warning text-dark", // WaitingForPayment
-                6 => "bg-success",        // Paid
-                7 => "bg-danger",         // Cancelled
+                5 => "bg-success",        // Paid
+                6 => "bg-danger",         // Cancelled
+                7 => "bg-warning text-dark", // WaitingForPayment
                 _ => "bg-secondary"
             };
         }
@@ -74,22 +76,18 @@ public static class UiText
         };
     }
 
-    // Table status helpers: 0=Available,1=Occupied,2=Reserved,3=InUse
+    // Table status helpers updated comment to reflect actual enum (0=Available,1=InUse)
     public static string TableStatusLabel(int status) => status switch
     {
         0 => "Trống",
-        1 => "Đang có khách",
-        2 => "Đã đặt trước",
-        3 => "Đang sử dụng",
+        1 => "Đang sử dụng",
         _ => "Không rõ"
     };
 
     public static string TableStatusBadgeClass(int status) => status switch
     {
         0 => "bg-success",
-        1 => "bg-danger",
-        2 => "bg-primary",
-        3 => "bg-warning text-dark",
+        1 => "bg-warning text-dark",
         _ => "bg-secondary"
     };
 

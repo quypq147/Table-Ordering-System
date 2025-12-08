@@ -57,4 +57,16 @@ public sealed class BackendApiClient(HttpClient http) : IBackendApiClient
         var res = await http.PostAsJsonAsync($"/api/public/cart/{orderId}/submit", new { }, ct);
         res.EnsureSuccessStatusCode();
     }
+
+    public async Task ClearCartAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var res = await http.DeleteAsync($"/api/public/cart/{orderId}/all", ct);
+        res.EnsureSuccessStatusCode();
+    }
+
+    public async Task CloseSessionAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var res = await http.PostAsJsonAsync($"/api/public/cart/{orderId}/close-session", new { }, ct);
+        res.EnsureSuccessStatusCode();
+    }
 }

@@ -12,15 +12,32 @@ public sealed class ChangeTicketStatusHandler(IApplicationDbContext db, IKitchen
     public async Task<KitchenTicketDto> Handle(ChangeTicketStatusCommand cmd, CancellationToken ct)
     {
         var ticket = await db.KitchenTickets.FindAsync(new object[] { cmd.TicketId }, ct);
-        if (ticket is null) throw new KeyNotFoundException("Ticket kh?ng ton tai");
+        if (ticket is null) throw new KeyNotFoundException("Ticket khong ton tai");
         var action = cmd.Action?.Trim().ToLowerInvariant();
         switch (action)
         {
-            case "start": ticket.Start(); break;
-            case "done": ticket.MarkReady(); break;
-            case "served": ticket.MarkServed(); break;
-            case "cancel": ticket.Cancel("Cancelled from KDS"); break;
-            default: throw new InvalidOperationException("Action kh?ng hop le (start|done|served)");
+            case "start":
+            case "begin":
+            case "in-progress":
+            case "inprogress":
+                ticket.Start();
+                break;
+            case "done":
+            case "ready":
+            case "finish":
+                ticket.MarkReady();
+                break;
+            case "served":
+            case "serve":
+                ticket.MarkServed();
+                break;
+            case "cancel":
+            case "cancelled":
+            case "cancelled-by-kds":
+                ticket.Cancel("Cancelled from KDS");
+                break;
+            default:
+                throw new InvalidOperationException("Action khong hop le (start|done|served|cancel)");
         }
         await db.SaveChangesAsync(ct);
 

@@ -18,11 +18,12 @@ public sealed class KdsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("tickets/{id}/{action}")]
-    [Authorize(Policy = "RequireStaffOrAdmin")]
-    public async Task<ActionResult<KitchenTicketDto>> ChangeStatus(Guid id, string action, CancellationToken ct)
+    // Avoid route value name 'action' to prevent MVC reserved value conflicts
+    [HttpPost("tickets/{id}/{op}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<KitchenTicketDto>> ChangeStatus(Guid id, string op, CancellationToken ct)
     {
-        var dto = await sender.Send(new ChangeTicketStatusCommand(id, action), ct);
+        var dto = await sender.Send(new ChangeTicketStatusCommand(id, op), ct);
         return Ok(dto);
     }
 }

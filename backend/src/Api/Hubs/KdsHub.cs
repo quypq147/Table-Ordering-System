@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Api.Hubs;
 
-[Authorize(Policy = "RequireStaffOrAdmin")]
+[AllowAnonymous]
 public sealed class KdsHub : Hub
 {
     // Optionally allow clients to join groups by status

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using TableOrdering.Contracts;
 
 namespace KdsWeb.Controllers
 {
@@ -13,16 +14,28 @@ namespace KdsWeb.Controllers
             return View(tickets);
         }
 
+        // Xem chi tiết đơn từ phiếu bếp
+        [HttpGet]
+        public async Task<IActionResult> Details(Guid orderId)
+        {
+            if (orderId == Guid.Empty)
+                return BadRequest("Thiếu OrderId");
+
+            var order = await api.GetOrderAsync(orderId);
+            if (order is null) return NotFound();
+
+            return View(order);
+        }
+
         [HttpPost]
         public async Task<IActionResult> ChangeStatus(Guid id, string action)
         {
             _logger.LogInformation("Proxying KDS action '{Action}' for ticket {TicketId}", action, id);
 
-            // Proxy the request to backend API
+            // Proxy the request to backend API (note: backend route now uses {op} instead of {action})
             var res = await api.PostAsync($"/api/kds/tickets/{id}/{action}");
             var content = await res.Content.ReadAsStringAsync();
 
-            // Add diagnostic headers to the response so browser can confirm proxy target and status
             Response.Headers["X-Proxy-To"] = api is not null ? (api.GetType().Name + ":" + (Request.Scheme + ":" + Request.Host.Value)) : "BackendApiClient";
             Response.Headers["X-Proxy-Status"] = ((int)res.StatusCode).ToString();
 
@@ -33,8 +46,6 @@ namespace KdsWeb.Controllers
             }
 
             _logger.LogInformation("Proxy call succeeded for ticket {TicketId} action {Action}", id, action);
-
-            // Return backend JSON untouched
             return Content(content, "application/json");
         }
     }

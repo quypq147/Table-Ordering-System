@@ -44,5 +44,13 @@ public class CategoriesController : ControllerBase
     public Task<IReadOnlyList<CategoryDto>> List([FromQuery] string? search, [FromQuery] bool? onlyActive,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         => _sender.Send(new ListCategoriesQuery(search, onlyActive, page, pageSize), ct);
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var ok = await _sender.Send(new DeleteCategoryCommand(id), ct);
+        if (!ok) return NotFound();
+        return NoContent();
+    }
 }
 
