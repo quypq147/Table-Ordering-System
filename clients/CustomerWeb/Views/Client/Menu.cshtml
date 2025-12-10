@@ -7,16 +7,19 @@
 <script>
     const TABLE_CODE = '@Model.TableCode';
     const ORDER_ID = '@Model.CurrentCart?.OrderId';
+    const ORDER_CODE = '@Model.CurrentCart?.OrderCode';
 </script>
 
 <div class="flex flex-1 w-full h-full overflow-hidden">
     
     <aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col h-full z-10">
-        <div class="h-20 flex items-center justify-center border-b border-gray-50">
-            <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
-                <i class="fas fa-utensils"></i>
+        <div class="h-20 flex items-center justify-between border-b border-gray-50 px-3">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <span class="ml-3 font-bold text-xl hidden lg:block text-gray-800">Lezato</span>
             </div>
-            <span class="ml-3 font-bold text-xl hidden lg:block text-gray-800">Lezato</span>
         </div>
 
         <nav class="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
@@ -34,6 +37,7 @@
                 </a>
             }
         </nav>
+        <button>Rời bàn</button>
     </aside>
 
     <main class="flex-1 bg-gray-50 h-full overflow-hidden flex flex-col relative">
@@ -42,9 +46,14 @@
                 <h1 class="text-2xl font-bold text-gray-800">Thực đơn</h1>
                 <p class="text-sm text-gray-400">Bàn: <span class="text-orange-500 font-bold">@Model.TableCode</span></p>
             </div>
-            <div class="hidden md:flex bg-white px-4 py-2 rounded-2xl border border-gray-200 w-64 shadow-sm">
-                <i class="fas fa-search text-gray-400 mt-1 mr-3"></i>
-                <input type="text" placeholder="Tìm món ăn..." class="bg-transparent outline-none text-sm w-full text-gray-700">
+            <div class="hidden md:flex items-center gap-2">
+                <div class="bg-white px-4 py-2 rounded-2xl border border-gray-200 w-64 shadow-sm">
+                    <i class="fas fa-search text-gray-400 mt-1 mr-3"></i>
+                    <input type="text" placeholder="Tìm món ăn..." class="bg-transparent outline-none text-sm w-full text-gray-700">
+                </div>
+                <form method="post" action="@Url.Action("LeaveTable", "Client")" class="md:block">
+                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-gray-100 hover:bg-red-500 hover:text-white text-gray-600 rounded-2xl transition">Rời Bàn</button>
+                </form>
             </div>
         </header>
 
@@ -98,10 +107,10 @@
 @section Scripts {
     <script>
         function addToCart(menuItemId, qty) {
-            const orderCode = ORDER_ID;
-            if(!orderCode){ alert('Chưa có giỏ hàng'); return; }
+            const orderId = ORDER_ID;
+            if(!orderId){ alert('Chưa có giỏ hàng'); return; }
             $.post('/Client/AddToCart', { 
-                orderCode: orderCode,
+                orderId: orderId,
                 menuItemId: menuItemId, 
                 quantity: qty, 
                 note: '' 

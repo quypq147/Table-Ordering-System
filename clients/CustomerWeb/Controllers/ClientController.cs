@@ -74,19 +74,19 @@ public class ClientController : Controller
             CurrentCart = currentCart
         };
 
-        // Lưu orderCode (orderId) vào ViewBag để sử dụng trong view nếu cần
-        ViewBag.OrderCode = orderId;
+        // Lưu orderId vào ViewBag để sử dụng trong view nếu cần
+        ViewBag.OrderId = orderId;
         return View(model);
     }
 
     // --- CÁC ACTION AJAX ---
     [HttpPost]
-    public async Task<IActionResult> AddToCart(Guid orderCode, Guid menuItemId, int quantity, string? note)
+    public async Task<IActionResult> AddToCart(Guid orderId, Guid menuItemId, int quantity, string? note)
     {
         try
         {
-            await _apiClient.AddCartItemAsync(orderCode, menuItemId, quantity, note);
-            var updatedCart = await _apiClient.GetCartAsync(orderCode);
+            await _apiClient.AddCartItemAsync(orderId, menuItemId, quantity, note);
+            var updatedCart = await _apiClient.GetCartAsync(orderId);
             return PartialView("~/Views/Shared/_CartPartial.cshtml", updatedCart);
         }
         catch (Exception ex)
@@ -97,12 +97,12 @@ public class ClientController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> UpdateCartItem(Guid orderCode, int cartItemId, int quantity, string? note)
+    public async Task<IActionResult> UpdateCartItem(Guid orderId, int cartItemId, int quantity, string? note)
     {
         try
         {
-            await _apiClient.UpdateCartItemAsync(orderCode, cartItemId, quantity, note);
-            var updatedCart = await _apiClient.GetCartAsync(orderCode);
+            await _apiClient.UpdateCartItemAsync(orderId, cartItemId, quantity, note);
+            var updatedCart = await _apiClient.GetCartAsync(orderId);
             return PartialView("~/Views/Shared/_CartPartial.cshtml", updatedCart);
         }
         catch (Exception ex)
@@ -112,19 +112,38 @@ public class ClientController : Controller
         }
     }
 
+    // API gửi bếp dạng JSON để JS gọi trực tiếp
     [HttpPost]
-    public async Task<IActionResult> SubmitOrder(Guid orderCode)
+    public async Task<IActionResult> SubmitOrder(string orderId)
     {
         try
         {
-            await _apiClient.SubmitCartAsync(orderCode);
-            var updatedCart = await _apiClient.GetCartAsync(orderCode);
-            return PartialView("~/Views/Shared/_CartPartial.cshtml", updatedCart);
+            if (!Guid.TryParse(orderId, out var guid))
+                return BadRequest("Mã đơn hàng không hợp lệ");
+
+            await _apiClient.SubmitCartAsync(guid);
+            return Ok(new { success = true, message = "Đã gửi thực đơn xuống bếp!" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SubmitOrder failed");
-            return BadRequest(ex.Message);
+            return BadRequest("Lỗi gửi đơn: " + ex.Message);
+        }
+    }
+
+    [HttpPost]
+    public IActionResult LeaveTable(string? tableCode)
+    {
+        try
+        {
+            // Clear any server-side session data and redirect user out of table session
+            HttpContext.Session?.Clear();
+            return RedirectToAction(nameof(ScanHelp));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LeaveTable failed");
+            return BadRequest("Không thể rời bàn lúc này");
         }
     }
 

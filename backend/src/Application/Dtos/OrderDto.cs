@@ -17,6 +17,7 @@ public sealed record OrderItemDto(
 public sealed record OrderDto(
     Guid Id,
     Guid TableId,
+    string OrderCode,
     OrderStatus Status,
     IReadOnlyList<OrderItemDto> Items,
     decimal Total,

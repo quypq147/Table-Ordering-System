@@ -1,3 +1,6 @@
+@using AdminWeb.Services.Models
+@using System.Text.Json
+@model DashboardVm
 @{
     ViewData["Title"] = "Tổng quan";
 }
@@ -36,7 +39,6 @@
     </div>
 </div>
 
-<!-- New charts using Chart.js -->
 <div class="container my-4">
     <div class="row g-3">
         <div class="col-12 col-md-6">
@@ -79,7 +81,6 @@
 </script>
 
 <script>
-    // Renders Revenue (Last 7 Days) bar chart and Top 5 Items pie chart using Chart.js
     function renderCharts(model){
         try {
             const revEl = document.getElementById('rev7DaysChart');
@@ -87,28 +88,13 @@
             if (!revEl || !topEl || !model) return;
 
             const rev = Array.isArray(model.revenueLast7Days) ? model.revenueLast7Days : [];
-            const revLabels = rev.map(r => (r.date || r.Date || '').toString().slice(5)); // MM-DD
+            const revLabels = rev.map(r => (r.date || r.Date || '').toString().slice(5));
             const revData = rev.map(r => Number(r.total ?? r.Total ?? 0));
 
             new Chart(revEl, {
                 type: 'bar',
-                data: {
-                    labels: revLabels,
-                    datasets: [{
-                        label: 'Doanh Thu (VND)',
-                        data: revData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
+                data: { labels: revLabels, datasets: [{ label: 'Doanh Thu (VND)', data: revData, backgroundColor: 'rgba(54, 162, 235, 0.5)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] },
+                options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
             });
 
             const items = Array.isArray(model.topItems) ? model.topItems.slice(0,5) : [];
@@ -116,27 +102,10 @@
             const itemData = items.map(i => Number(i.totalQty ?? i.TotalQty ?? i.qty ?? i.Quantity ?? 0));
             const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF'];
 
-            new Chart(topEl, {
-                type: 'pie',
-                data: {
-                    labels: itemLabels,
-                    datasets: [{
-                        data: itemData,
-                        backgroundColor: colors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true
-                }
-            });
-        } catch (e) {
-            console.warn('Chart render error', e);
-        }
+            new Chart(topEl, { type: 'pie', data: { labels: itemLabels, datasets: [{ data: itemData, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: true } });
+        } catch (e) { console.warn('Chart render error', e); }
     }
 
-    // Auto-init from embedded dashboard data, defer until Chart.js is ready
     (function(){
         const el = document.getElementById('dashboard-data');
         if (!el) return;
@@ -146,5 +115,3 @@
         if (window.Chart) init(); else window.addEventListener('load', init);
     })();
 </script>
-
-<!-- dashboard.js should read #dashboard-data and render charts/metrics -->

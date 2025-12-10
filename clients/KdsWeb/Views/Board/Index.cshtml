@@ -3,7 +3,7 @@
 @* Lưu ý: Đảm bảo Model trả về là List<KitchenTicketDto> *@
 
 @{
-    ViewData["Title"] = "Kitchen Board";
+    ViewData["Title"] = "Bếp Chính";
 }
 
 <div id="tickets-container" class="tickets-container">
@@ -11,7 +11,6 @@
     {
         foreach (var ticket in Model)
         {
-            // Xác định class màu dựa trên trạng thái (dùng string)
             string statusClass = "status-new";
             string statusLabel = "MỚI";
 
@@ -44,7 +43,6 @@
                             <span>@ticket.ItemName</span>
                             <span class="badge bg-dark rounded-pill">x @ticket.Qty</span>
                         </div>
-                        @* DTO hiện không có Note *@
                     </div>
                 </div>
 
@@ -52,13 +50,13 @@
                     @if (ticket.Status == "New")
                     {
                         <button onclick="changeStatus('@ticket.Id', 'start')" class="btn btn-outline-primary btn-action">
-                            <i class="fas fa-fire me-2"></i>Nấu ngay
+                            <i class="fas fa-fire me-2"></i>Bắt đầu nấu
                         </button>
                     }
                     else if (ticket.Status == "InProgress")
                     {
                         <button onclick="changeStatus('@ticket.Id', 'done')" class="btn btn-outline-success btn-action">
-                            <i class="fas fa-check me-2"></i>Hoàn thành
+                            <i class="fas fa-check me-2"></i>Hoàn tất
                         </button>
                     }
                     else if (ticket.Status == "Ready")
@@ -75,7 +73,6 @@
 
 @section Scripts {
     <script>
-        // Hàm đếm thời gian trôi qua cho từng vé
         function updateTimers() {
             document.querySelectorAll('.ticket-card').forEach(card => {
                 const createdStr = card.getAttribute('data-created');
@@ -93,7 +90,6 @@
                 const badge = card.querySelector('.timer-badge');
                 if(badge) {
                     badge.innerText = timeStr;
-                    // Nếu quá 15 phút thì đổi màu header thành đỏ (Late)
                     if (diffMins >= 15) {
                         const header = card.querySelector('.ticket-header');
                         if(!header.classList.contains('status-late') && !header.classList.contains('status-ready')) {
@@ -107,7 +103,6 @@
         setInterval(updateTimers, 1000);
         updateTimers();
 
-        // Gọi API thay đổi trạng thái
         async function changeStatus(id, op) {
              try {
                 const res = await fetch(`/Board/ChangeStatus?id=${id}&op=${op}`, { method: 'POST' });

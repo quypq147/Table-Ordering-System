@@ -23,6 +23,7 @@ public static class OrderMapper
         return new OrderDto(
             o.Id,
             o.TableId,
+            o.Code,
             o.OrderStatus,
             items,
             total.Amount,
