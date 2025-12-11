@@ -37,7 +37,16 @@
                 </a>
             }
         </nav>
-        <button>Rời bàn</button>
+
+        <!-- Sidebar footer: Leave Table -->
+        <div class="mt-auto border-t p-4">
+            <button type="button"
+                    onclick="leaveTable()"
+                    class="w-full bg-red-50 text-red-600 hover:bg-red-100 rounded-xl flex items-center justify-center gap-2 py-2 transition">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Rời bàn</span>
+            </button>
+        </div>
     </aside>
 
     <main class="flex-1 bg-gray-50 h-full overflow-hidden flex flex-col relative">
@@ -51,9 +60,6 @@
                     <i class="fas fa-search text-gray-400 mt-1 mr-3"></i>
                     <input type="text" placeholder="Tìm món ăn..." class="bg-transparent outline-none text-sm w-full text-gray-700">
                 </div>
-                <form method="post" action="@Url.Action("LeaveTable", "Client")" class="md:block">
-                    <button type="submit" class="px-4 py-2 text-sm font-bold bg-gray-100 hover:bg-red-500 hover:text-white text-gray-600 rounded-2xl transition">Rời Bàn</button>
-                </form>
             </div>
         </header>
 
@@ -121,22 +127,24 @@
             });
         }
 
-        function updateCartItem(itemId, newQty) {
-            if(newQty < 0) return;
-            alert("Đang cập nhật món " + itemId + " thành " + newQty);
-        }
-
-        function submitOrder() {
-             if(!confirm("Xác nhận gửi đơn xuống bếp?")) return;
-             alert("Đơn hàng đã được gửi!");
-        }
-
         function toggleCart() {
             const cart = document.getElementById('cart-container');
             cart.classList.toggle('hidden');
             cart.classList.toggle('fixed');
             cart.classList.toggle('inset-0');
             cart.classList.toggle('bg-black/50');
+        }
+
+        async function leaveTable(){
+            try{
+                if(!confirm('Bạn có chắc muốn rời bàn không?')) return;
+                const resp = await fetch('/Client/LeaveTable', { method: 'POST' });
+                if (!resp.ok) throw new Error('Rời bàn thất bại.');
+                // Redirect to welcome/QR help page
+                window.location.href = '/client/qr-help';
+            }catch(err){
+                alert(err.message || 'Có lỗi xảy ra khi rời bàn.');
+            }
         }
     </script>
 }

@@ -304,16 +304,9 @@
                 }
 
                 async function removeItem(cartItemId){
-                    // Backend removal uses menuItemId, need to map from current cart data
-                    const item = (cart && (cart.items || cart.Items || [])).find(x => (x.id || x.Id) === cartItemId);
-                    const menuItemId = item ? (item.menuItemId || item.MenuItemId) : null;
-                    if (!menuItemId){ toast('Không xác định được món để xóa.', false); return; }
                     try{
                         showPageLoading(true);
-                        await api(`/client/cart/${orderId}/items/remove`, {
-                            method: 'POST',
-                            body: new URLSearchParams({ menuItemId: String(menuItemId) })
-                        });
+                        await api(`/client/cart/${orderId}/items/${cartItemId}`, { method: 'DELETE' });
                         await loadCart();
                     }catch(e){
                         toast(e.message, false);

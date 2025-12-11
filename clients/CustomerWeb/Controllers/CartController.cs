@@ -6,7 +6,6 @@ namespace CustomerWeb.Controllers;
 
 public class CartController(IBackendApiClient backend) : Controller
 {
-    // /client/cart/{orderId}
     [HttpGet("/client/cart/{orderId:guid}")]
     public IActionResult Index(Guid orderId)
     {
@@ -15,7 +14,6 @@ public class CartController(IBackendApiClient backend) : Controller
         return View();
     }
 
-    // Load cart details
     [HttpGet("/client/cart/{orderId:guid}/data")]
     public async Task<IActionResult> GetCart(Guid orderId, CancellationToken ct)
     {
@@ -24,36 +22,51 @@ public class CartController(IBackendApiClient backend) : Controller
         return Ok(cart);
     }
 
-    // Add item to cart
     [HttpPost("/client/cart/{orderId:guid}/items")]
     public async Task<IActionResult> AddItem(Guid orderId, [FromForm] Guid menuItemId, [FromForm] int quantity, [FromForm] string? note, CancellationToken ct)
     {
         if (orderId == Guid.Empty || menuItemId == Guid.Empty) return BadRequest("Thiếu tham số.");
         if (quantity <= 0) return BadRequest("Số lượng phải > 0.");
+
         await backend.AddCartItemAsync(orderId, menuItemId, quantity, note, ct);
-        return Ok(new { success = true });
+        var cart = await backend.GetCartAsync(orderId, ct);
+        return PartialView("Shared/_CartPartial", cart);
     }
 
-    // Update item in cart
     [HttpPost("/client/cart/{orderId:guid}/items/{cartItemId:int}")]
     public async Task<IActionResult> UpdateItem(Guid orderId, int cartItemId, [FromForm] int quantity, [FromForm] string? note, CancellationToken ct)
     {
         if (orderId == Guid.Empty || cartItemId <= 0) return BadRequest("Thiếu tham số.");
         if (quantity <= 0) return BadRequest("Số lượng phải > 0.");
+
         await backend.UpdateCartItemAsync(orderId, cartItemId, quantity, note, ct);
-        return Ok(new { success = true });
+        var cart = await backend.GetCartAsync(orderId, ct);
+        return PartialView("Shared/_CartPartial", cart);
     }
 
-    // Remove item from cart (by menuItemId per backend API)
+    // RESTful DELETE: remove by cartItemId -> return PartialView
+    [HttpDelete("/client/cart/{orderId:guid}/items/{cartItemId:int}")]
+    public async Task<IActionResult> RemoveItem(Guid orderId, int cartItemId, CancellationToken ct)
+    {
+        if (orderId == Guid.Empty || cartItemId <= 0) return BadRequest("Thiếu tham số.");
+        await backend.RemoveCartItemByIdAsync(orderId, cartItemId, ct);
+
+        var cart = await backend.GetCartAsync(orderId, ct);
+        return PartialView("Shared/_CartPartial", cart);
+    }
+
+    // Legacy remove by menuItemId (still available if needed elsewhere)
     [HttpPost("/client/cart/{orderId:guid}/items/remove")]
-    public async Task<IActionResult> RemoveItem(Guid orderId, [FromForm] Guid menuItemId, CancellationToken ct)
+    public async Task<IActionResult> RemoveItemLegacy(Guid orderId, [FromForm] Guid menuItemId, CancellationToken ct)
     {
         if (orderId == Guid.Empty || menuItemId == Guid.Empty) return BadRequest("Thiếu tham số.");
-        await backend.RemoveCartItemAsync(orderId, menuItemId, ct);
-        return Ok(new { success = true });
+        // map legacy to new typed method if backend supports it, otherwise keep old if needed.
+        // Here we refresh cart after removing by menuItemId using public method.
+        await backend.RemoveCartItemAsync(orderId, menuItemId, ct); // fixed: pass menuItemId (Guid) instead of (int)0
+        var cart = await backend.GetCartAsync(orderId, ct);
+        return PartialView("Shared/_CartPartial", cart);
     }
 
-    // Submit cart
     [HttpPost("/client/cart/{orderId:guid}/submit")]
     public async Task<IActionResult> Submit(Guid orderId, CancellationToken ct)
     {
@@ -62,7 +75,6 @@ public class CartController(IBackendApiClient backend) : Controller
         return Ok(new { success = true });
     }
 
-    // Clear all items in cart
     [HttpDelete("/client/cart/{orderId:guid}/clear")]
     public async Task<IActionResult> Clear(Guid orderId, CancellationToken ct)
     {
@@ -71,7 +83,6 @@ public class CartController(IBackendApiClient backend) : Controller
         return Ok(new { success = true });
     }
 
-    // Close session
     [HttpPost("/client/cart/{orderId:guid}/close-session")]
     public async Task<IActionResult> CloseSession(Guid orderId, CancellationToken ct)
     {

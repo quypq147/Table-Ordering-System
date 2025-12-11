@@ -45,23 +45,27 @@ public sealed class BackendApiClient(HttpClient http, IHttpContextAccessor acces
 
     public async Task UpdateCartItemAsync(Guid orderId, int cartItemId, int quantity, string? note, CancellationToken ct = default)
     {
-        var resQty = await http.PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{cartItemId}", new { newQuantity = quantity }, ct);
+        var resQty = await http.PatchAsJsonAsync($"/api/public/cart-public/{orderId}/items/{cartItemId}", new { quantity }, ct);
         resQty.EnsureSuccessStatusCode();
 
         if (!string.IsNullOrWhiteSpace(note))
         {
-            var resNote = await http.PatchAsJsonAsync($"/api/public/cart/{orderId}/items/{cartItemId}/note", new { note }, ct);
+            var resNote = await http.PatchAsJsonAsync($"/api/public/cart-public/{orderId}/items/{cartItemId}/note", new { note }, ct);
             resNote.EnsureSuccessStatusCode();
         }
     }
 
+    // RESTful: remove by cartItemId via DELETE (no body)
     public async Task RemoveCartItemAsync(Guid orderId, Guid menuItemId, CancellationToken ct = default)
     {
-        var req = new HttpRequestMessage(HttpMethod.Delete, $"/api/public/cart/{orderId}/items")
-        {
-            Content = JsonContent.Create(new { menuItemId })
-        };
-        var res = await http.SendAsync(req, ct);
+        var res = await http.DeleteAsync($"/api/public/cart/{orderId}/items/{menuItemId}", ct);
+        res.EnsureSuccessStatusCode();
+    }
+
+    // New: remove by cartItemId (public cart-public variant kept if needed elsewhere)
+    public async Task RemoveCartItemByIdAsync(Guid orderId, int cartItemId, CancellationToken ct = default)
+    {
+        var res = await http.DeleteAsync($"/api/public/cart-public/{orderId}/items/{cartItemId}", ct);
         res.EnsureSuccessStatusCode();
     }
 

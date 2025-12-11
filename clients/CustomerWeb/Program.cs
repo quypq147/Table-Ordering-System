@@ -26,6 +26,17 @@ builder.Services.AddHttpClient("backend", c =>
 // ✅ Đăng ký IHttpContextAccessor để BackendApiClient có thể truy cập cookies/session
 builder.Services.AddHttpContextAccessor();
 
+// ✅ Session requires a distributed cache
+builder.Services.AddDistributedMemoryCache();
+
+// ✅ Kích hoạt Session
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = ".CustomerWeb.Session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 // (tuỳ chọn) bật HSTS/HTTPS cho Production, tắt ở Dev để khỏi cảnh báo
 if (builder.Environment.IsProduction())
 {
@@ -48,6 +59,9 @@ if (app.Environment.IsProduction())
 // Static files + routing
 app.UseStaticFiles();
 app.UseRouting();
+
+// ✅ Sử dụng Session (phải SAU UseRouting và TRƯỚC MapControllerRoute)
+app.UseSession();
 
 // MVC routes
 app.MapControllerRoute(

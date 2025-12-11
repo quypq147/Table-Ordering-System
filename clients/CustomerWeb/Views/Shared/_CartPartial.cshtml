@@ -27,12 +27,15 @@
                         <div class="flex justify-between items-end mt-2">
                             <p class="text-xs text-gray-400 italic line-clamp-1 w-20">@item.Note</p>
                             <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm h-8">
-                                <button onclick="updateCartItem('@item.Id', @(item.Quantity - 1))" class="w-8 h-full text-gray-400 hover:text-orange-500 flex items-center justify-center transition">
+                                <button onclick="updateCartItem(@item.Id, @(item.Quantity - 1))" class="w-8 h-full text-gray-400 hover:text-orange-500 flex items-center justify-center transition">
                                     <i class="fas fa-minus text-xs"></i>
                                 </button>
                                 <span class="text-xs font-bold w-6 text-center">@item.Quantity</span>
-                                <button onclick="updateCartItem('@item.Id', @(item.Quantity + 1))" class="w-8 h-full text-gray-400 hover:text-orange-500 flex items-center justify-center transition">
+                                <button onclick="updateCartItem(@item.Id, @(item.Quantity + 1))" class="w-8 h-full text-gray-400 hover:text-orange-500 flex items-center justify-center transition">
                                     <i class="fas fa-plus text-xs"></i>
+                                </button>
+                                <button onclick="removeCartItem(@item.Id)" class="ml-2 w-8 h-full text-red-500 hover:text-red-600 flex items-center justify-center transition" title="Xóa món">
+                                    <i class="fas fa-trash text-xs"></i>
                                 </button>
                             </div>
                         </div>
@@ -61,27 +64,42 @@
     </div>
 </div>
 
-@section Scripts {
 <script>
-    const ORDER_ID = '@Model?.OrderId';
-    const ORDER_CODE = '@Model?.OrderCode';
+    var cartOrderId = '@Model?.OrderId';
+    var cartOrderCode = '@Model?.OrderCode';
+
     function submitOrder(e){
         try {
-            if (!ORDER_ID) { alert('Không tìm thấy thông tin đơn hàng!'); return; }
+            if (!cartOrderId) { alert('Không tìm thấy thông tin đơn hàng!'); return; }
             if(!confirm('Bạn có chắc muốn gửi món xuống bếp không?')) return;
             const btn = e?.currentTarget;
             const original = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...'; }
-            $.post('/Client/SubmitOrder', { orderId: ORDER_ID })
-            .done(function(res){ alert(res.message || 'Đã gửi thực đơn xuống bếp!'); window.location.reload(); })
+            $.post(`/client/cart/${cartOrderId}/submit`, {})
+            .done(function(){
+                alert('Đã gửi thực đơn xuống bếp!');
+                window.location.href = `/client/order/${cartOrderId}/track`;
+            })
             .fail(function(xhr){ alert('Lỗi: ' + (xhr.responseText || 'Không rõ')); if(btn){ btn.disabled=false; btn.innerHTML=original; } });
         } catch(err){ alert('Lỗi: ' + err); }
     }
+
     function updateCartItem(id, qty){
-        if(!ORDER_ID) return;
-        $.post('/Client/UpdateCartItem', { orderId: ORDER_ID, cartItemId: id, quantity: qty })
+        if(!cartOrderId) return;
+        const nextQty = qty <= 0 ? 1 : qty;
+        $.post(`/client/cart/${cartOrderId}/items/${id}`, { quantity: nextQty, note: '' })
          .done(html => { $('#cart-container').html(html); })
          .fail(xhr => alert('Lỗi cập nhật: ' + (xhr.responseText||'Không rõ')));
     }
+
+    function removeCartItem(id){
+        if(!cartOrderId) return;
+        if(!confirm('Bạn có chắc muốn xóa món này không?')) return;
+        $.ajax({
+            url: `/client/cart/${cartOrderId}/items/${id}`,
+            type: 'DELETE'
+        })
+        .done(function(html){ $('#cart-container').html(html); })
+        .fail(function(xhr){ alert('Lỗi xóa món: ' + (xhr.responseText||'Không rõ')); });
+    }
 </script>
-}
