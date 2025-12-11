@@ -174,3 +174,40 @@ connection.start()
     .then(() => console.info('Connected to SignalR'))
     .catch(err => console.error(err));
 
+// Bootstrap toast API for KdsWeb
+(function (w, $) {
+    function ensureContainer() {
+        if ($('#toast-container').length === 0) {
+            $('body').append('<div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index:1080; min-width:280px;"><div id="toast-container" class="toast-container"></div><template id="toast-template"><div class="toast align-items-center text-bg-light border-0" role="alert" aria-live="assertive" aria-atomic="true"><div class="d-flex"><div class="toast-body"><span class="message"></span><div class="progress mt-2" style="height:3px;"><div class="progress-bar" role="progressbar" style="width:0%;"></div></div></div><button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div></template></div>');
+        }
+    }
+    function show(type, message) {
+        ensureContainer();
+        const $template = $('#toast-template');
+        const $toast = $($template.html());
+        const $bar = $toast.find('.progress-bar');
+        const classes = {
+            success: 'text-bg-success',
+            error: 'text-bg-danger',
+            info: 'text-bg-info'
+        };
+        $toast.removeClass('text-bg-light').addClass(classes[type] || 'text-bg-secondary');
+        $toast.find('.message').text(message);
+        $('#toast-container').append($toast);
+        const t = new bootstrap.Toast($toast[0], { autohide: true, delay: 5000 });
+        t.show();
+        const duration = 5000;
+        const start = Date.now();
+        const interval = setInterval(function () {
+            const pct = Math.min(100, ((Date.now() - start) / duration) * 100);
+            $bar.css('width', pct + '%');
+            if (pct >= 100) { clearInterval(interval); }
+        }, 50);
+        $toast.on('hidden.bs.toast', function () { clearInterval(interval); $toast.remove(); });
+    }
+    w.toast = w.toast || {};
+    w.toast.success = function (m) { show('success', m); };
+    w.toast.error = function (m) { show('error', m); };
+    w.toast.info = function (m) { show('info', m); };
+})(window, jQuery);
+

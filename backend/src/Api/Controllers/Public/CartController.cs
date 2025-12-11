@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.RateLimiting; // attribute
 namespace Api.Controllers.Public;
 
 [ApiController]
-[Route("api/public/cart")]
-public class CartController : ControllerBase
+[Route("api/public/cart")] 
+public partial class CartController : ControllerBase
 {
     private readonly Application.Common.CQRS.ISender _cqrs; // for custom ICommand/IQuery
     private readonly MediatR.ISender _mediator; // for MediatR IRequest
@@ -98,7 +98,7 @@ public class CartController : ControllerBase
     [HttpPatch("{orderId:guid}/items/{orderItemId:int}")]
     public async Task<ActionResult> ChangeQty(Guid orderId, int orderItemId, [FromBody] ChangeQtyDto body, CancellationToken ct)
     {
-        await _cqrs.Send(new ChangeItemQuantityCommand(orderId, orderItemId, body.NewQuantity), ct);
+        await _mediator.Send(new ChangeItemQuantityCommand(orderId, orderItemId, body.NewQuantity), ct);
         return NoContent();
     }
 
@@ -118,7 +118,7 @@ public class CartController : ControllerBase
     [HttpDelete("{orderId:guid}/items")]
     public async Task<ActionResult> RemoveItem(Guid orderId, [FromBody] RemoveItemDto body, CancellationToken ct)
     {
-        await _cqrs.Send(new RemoveItemCommand(orderId, body.OrderItemId), ct);
+        await _mediator.Send(new RemoveItemCommand(orderId, body.OrderItemId), ct);
         return NoContent();
     }
 

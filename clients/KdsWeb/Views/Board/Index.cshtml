@@ -1,35 +1,43 @@
 ﻿@using TableOrdering.Contracts
 @model IEnumerable<KitchenTicketDto>
-@* Lưu ý: Đảm bảo Model trả về là List<KitchenTicketDto> *@
+@* Lưu ý: Gộp các món chung đơn vào 1 phiếu *@
 
 @{
     ViewData["Title"] = "Bếp Chính";
+
+    // Nhóm ticket theo OrderId để hiển thị 1 phiếu / đơn
+    var grouped = Model?
+        .GroupBy(t => new { t.OrderId, t.OrderCode, t.TableCode })
+        .OrderBy(g => g.Min(x => x.CreatedAt))
+        .ToList();
 }
 
 <div id="tickets-container" class="tickets-container">
-    @if (Model != null)
+    @if (grouped != null)
     {
-        foreach (var ticket in Model)
+        foreach (var orderGroup in grouped)
         {
+            var first = orderGroup.First();
             string statusClass = "status-new";
             string statusLabel = "MỚI";
 
-            if (ticket.Status == "InProgress")
-            {
-                statusClass = "status-inprogress";
-                statusLabel = "ĐANG NẤU";
-            }
-            else if (ticket.Status == "Ready")
+            // Chọn trạng thái hiển thị theo ưu tiên từ nhóm (nếu có món đang nấu/đã xong)
+            if (orderGroup.Any(x => x.Status == "Ready"))
             {
                 statusClass = "status-ready";
                 statusLabel = "ĐÃ XONG";
             }
+            else if (orderGroup.Any(x => x.Status == "InProgress"))
+            {
+                statusClass = "status-inprogress";
+                statusLabel = "ĐANG NẤU";
+            }
 
-            <div class="ticket-card" id="ticket-@ticket.Id" data-id="@ticket.Id" data-created="@ticket.CreatedAt.ToString("o")">
+            <div class="ticket-card" id="order-@orderGroup.Key.OrderId" data-id="@orderGroup.Key.OrderId" data-created="@first.CreatedAt.ToString("o")">
                 <div class="ticket-header @statusClass">
                     <div>
-                        <span class="fw-bold fs-5">#@ticket.OrderCode</span>
-                        <div class="small opacity-75">Bàn: @ticket.TableCode</div>
+                        <span class="fw-bold fs-5">#@orderGroup.Key.OrderCode</span>
+                        <div class="small opacity-75">Bàn: @orderGroup.Key.TableCode</div>
                     </div>
                     <div class="text-end">
                         <div class="timer-badge">00:00</div>
@@ -38,33 +46,42 @@
                 </div>
 
                 <div class="ticket-body">
-                    <div class="order-item">
-                        <div class="d-flex justify-content-between">
-                            <span>@ticket.ItemName</span>
-                            <span class="badge bg-dark rounded-pill">x @ticket.Qty</span>
+                    @foreach (var ticket in orderGroup)
+                    {
+                        <div class="order-item">
+                            <div class="d-flex justify-content-between">
+                                <span>@ticket.ItemName</span>
+                                <span class="badge bg-dark rounded-pill">x @ticket.Qty</span>
+                            </div>
                         </div>
-                    </div>
+                    }
                 </div>
 
                 <div class="ticket-footer">
-                    @if (ticket.Status == "New")
-                    {
-                        <button onclick="changeStatus('@ticket.Id', 'start')" class="btn btn-outline-primary btn-action">
-                            <i class="fas fa-fire me-2"></i>Bắt đầu nấu
-                        </button>
-                    }
-                    else if (ticket.Status == "InProgress")
-                    {
-                        <button onclick="changeStatus('@ticket.Id', 'done')" class="btn btn-outline-success btn-action">
-                            <i class="fas fa-check me-2"></i>Hoàn tất
-                        </button>
-                    }
-                    else if (ticket.Status == "Ready")
-                    {
-                        <button onclick="changeStatus('@ticket.Id', 'served')" class="btn btn-dark btn-action">
-                            <i class="fas fa-concierge-bell me-2"></i>Đã bê ra
-                        </button>
-                    }
+                    @* Hiển thị nút thao tác theo từng ticket để giữ chức năng *@
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var ticket in orderGroup)
+                        {
+                            if (ticket.Status == "New")
+                            {
+                                <button onclick="changeStatus('@ticket.Id', 'start')" class="btn btn-outline-primary btn-action">
+                                    <i class="fas fa-fire me-2"></i>Bắt đầu nấu (@ticket.ItemName)
+                                </button>
+                            }
+                            else if (ticket.Status == "InProgress")
+                            {
+                                <button onclick="changeStatus('@ticket.Id', 'done')" class="btn btn-outline-success btn-action">
+                                    <i class="fas fa-check me-2"></i>Hoàn tất (@ticket.ItemName)
+                                </button>
+                            }
+                            else if (ticket.Status == "Ready")
+                            {
+                                <button onclick="changeStatus('@ticket.Id', 'served')" class="btn btn-dark btn-action">
+                                    <i class="fas fa-concierge-bell me-2"></i>Đã bê ra (@ticket.ItemName)
+                                </button>
+                            }
+                        }
+                    </div>
                 </div>
             </div>
         }

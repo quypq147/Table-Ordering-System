@@ -2,216 +2,232 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Theo dõi đơn hàng";
+
     var orderId = ViewBag.OrderId is Guid g ? g : Model?.OrderId ?? Guid.Empty;
-    var currency = "VND"; // currency not in DTO, default VND
     var initialStatus = Model?.Status ?? "Draft";
-    Func<string,int> stepIndex = status => status switch {
-        "Submitted" => 1,
-        "InProgress" => 2,
-        "Ready" => 3,
-        "Served" => 4,
-        "Paid" => 5,
-        _ => 0
-    };
-    var initialStep = stepIndex(initialStatus);
 }
-<div class="container py-3">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-1">Theo dõi đơn hàng</h5>
-            <div class="small text-muted">Mã đơn: <span class="fw-semibold" id="orderCode">@Model?.OrderCode.ToString().Substring(0,8)</span> · Bàn: <span class="fw-semibold" id="tableCode">@Model?.TableCode</span></div>
-        </div>
-        <a href="/client/menu?tableCode=@Model?.TableCode" class="btn btn-link">← Menu</a>
+
+<div class="min-h-screen bg-[#F9F9F9] pb-24">
+
+    <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+        <a href="/" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-[#FE724C] hover:text-white transition-all">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <h1 class="text-lg font-bold text-gray-800 hidden md:block">Theo dõi trạng thái đơn hàng</h1>
+        <h1 class="text-lg font-bold text-gray-800 md:hidden">Theo dõi đơn</h1>
+
+        <button onclick="requestPayment()" class="md:hidden w-10 h-10 flex items-center justify-center rounded-xl text-[#FE724C] bg-orange-50 hover:bg-orange-100 transition-all">
+            <i class="fas fa-bell"></i>
+        </button>
+        <div class="hidden md:block w-10"></div>
     </div>
 
-    <div class="card mt-2">
-        <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between stepper" id="statusStepper">
-                <div class="step @(initialStep >= 1 ? "done" : "") @(initialStep == 1 ? "active" : "")" data-step="1">
-                    <div class="dot">1</div>
-                    <div class="label">Đã đặt</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 2 ? "done" : "") @(initialStep == 2 ? "active" : "")" data-step="2">
-                    <div class="dot dot-yellow">2</div>
-                    <div class="label">Trong bếp</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 3 ? "done" : "") @(initialStep == 3 ? "active" : "")" data-step="3">
-                    <div class="dot dot-green">3</div>
-                    <div class="label">Đang mang ra</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 4 ? "done" : "") @(initialStep == 4 ? "active" : "")" data-step="4">
-                    <div class="dot">4</div>
-                    <div class="label">Đã phục vụ</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 5 ? "done" : "") @(initialStep == 5 ? "active" : "")" data-step="5">
-                    <div class="dot">5</div>
-                    <div class="label">Đã thanh toán</div>
+    <div class="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10">
+
+        <div class="md:col-span-5 space-y-6">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] text-center relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FFC529] to-[#FE724C]"></div>
+
+                <p class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">Mã đơn hàng</p>
+                <h2 class="text-4xl font-black text-gray-800 tracking-tight mb-6">#@(Model?.OrderCode ?? "---")</h2>
+
+                <div class="flex justify-center items-center gap-4">
+                    <div class="inline-flex items-center gap-2 px-5 py-3 bg-orange-50 rounded-2xl text-[#FE724C] font-bold border border-orange-100">
+                        <i class="fas fa-chair text-lg"></i>
+                        <span class="text-lg">Bàn @(Model?.TableCode ?? "--")</span>
+                    </div>
+                    <div class="inline-flex items-center gap-2 px-5 py-3 bg-gray-50 rounded-2xl text-gray-500 font-bold border border-gray-200">
+                        <i class="fas fa-clock"></i>
+                        <span>@(DateTime.Now.ToString("HH:mm"))</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-2">
-                Trạng thái hiện tại:
-                <span id="currentStatus" class="badge bg-secondary">@Model?.Status</span>
+            <div class="hidden md:grid grid-cols-2 gap-4">
+                <a href="/client/menu" class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-white border border-gray-100 text-gray-600 font-bold hover:border-[#FE724C] hover:text-[#FE724C] hover:shadow-lg transition-all group">
+                    <div class="w-12 h-12 rounded-full bg-gray-50 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
+                        <i class="fas fa-plus text-xl"></i>
+                    </div>
+                    <span>Gọi thêm món</span>
+                </a>
+                <button onclick="requestPayment()" class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-[#FE724C] text-white font-bold shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all transform active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                        <i class="fas fa-receipt text-xl"></i>
+                    </div>
+                    <span>Thanh toán</span>
+                </button>
             </div>
         </div>
-    </div>
 
-    <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold">Món trong đơn</span>
-            <span class="badge bg-light text-dark">Tổng: <b id="totalAmount">@Model?.Total.ToString("N0")</b> @currency</span>
-        </div>
-        <div class="list-group list-group-flush" id="orderItems">
-            @if (Model?.Items is { Count: > 0 })
-            {
-                foreach (var it in Model.Items)
-                {
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold">@it.Name</div>
-                            @if (!string.IsNullOrWhiteSpace(it.Note))
-                            {
-                                <div class="small text-muted">@it.Note</div>
-                            }
-                        </div>
-                        <div class="text-end">
-                            <div class="small text-muted">SL: @it.Quantity</div>
-                            <div class="fw-semibold">@it.LineTotal.ToString("N0") @currency</div>
+        <div class="md:col-span-7">
+            <div class="bg-white rounded-3xl p-6 md:p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] h-full">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="font-bold text-gray-800 text-xl">Trạng thái</h3>
+                    <span class="animate-pulse w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)]"></span>
+                </div>
+
+                <div class="relative pl-4 md:pl-8 border-l-2 border-gray-100 space-y-10" id="tracking-steps">
+                    <div class="step-item relative group" data-step="1">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đã gửi bếp</h4>
+                            <p class="text-sm text-gray-400 mt-1">Đơn hàng đã được chuyển xuống bếp</p>
                         </div>
                     </div>
-                }
-            }
-            else
-            {
-                <div class="list-group-item text-muted">Chưa có món.</div>
-            }
+
+                    <div class="step-item relative group" data-step="2">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đang chế biến</h4>
+                            <p class="text-sm text-gray-400 mt-1">Đầu bếp đang thực hiện món ăn</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item relative group" data-step="3">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Sẵn sàng phục vụ</h4>
+                            <p class="text-sm text-gray-400 mt-1">Món ăn đã nấu xong</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item relative group" data-step="4">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đã phục vụ</h4>
+                            <p class="text-sm text-gray-400 mt-1">Chúc quý khách ngon miệng!</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item relative group" data-step="5">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đã thanh toán</h4>
+                            <p class="text-sm text-gray-400 mt-1">Cảm ơn quý khách!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
-        <div id="toast" class="toast align-items-center text-bg-secondary border-0" data-bs-delay="2800" data-bs-autohide="true">
-            <div class="d-flex">
-                <div class="toast-body d-flex align-items-center">
-                    <span id="toastMsg">—</span>
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
+    <div class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
+        <div class="grid grid-cols-2 gap-4">
+            <a href="/client/menu" class="flex items-center justify-center gap-2 py-4 rounded-2xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-all">
+                <i class="fas fa-plus"></i> Gọi thêm
+            </a>
+            <button onclick="requestPayment()" class="flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#FE724C] text-white font-bold shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all">
+                <i class="fas fa-receipt"></i> Thanh toán
+            </button>
         </div>
     </div>
 </div>
 
-<style>
-    .stepper { gap: .5rem; }
-    .step { display:flex; flex-direction:column; align-items:center; min-width:64px; }
-    .step .dot {
-        width:32px; height:32px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        background:#e5e7eb; color:#111827; font-weight:600;
-        border:2px solid #9ca3af;
-    }
-    .step.active .dot { border-color:#2563EB; box-shadow:0 0 0 3px rgba(37,99,235,.2); }
-    .step.done .dot { background:#111827; color:#fff; border-color:#111827; }
-    .step .label { margin-top:.25rem; font-size:.85rem; color:#6b7280; white-space:nowrap; }
-    .step.active .label { color:#111827; font-weight:600; }
-    .bar { flex:1; height:2px; background:#e5e7eb; }
-    .dot-yellow { background:#f59e0b !important; color:#111827 !important; border-color:#f59e0b !important; }
-    .dot-green { background:#10b981 !important; color:#06251b !important; border-color:#10b981 !important; }
-</style>
-
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
     <script>
-        (function(){
-            const orderId = "@orderId";
-            const currency = "@currency";
+        (function() {
+            const orderId = "@(orderId == Guid.Empty ? "" : orderId.ToString())";
+            if (!orderId) return;
 
             const statusMap = {
-                Draft: { step: 0, badge: "secondary", text: "Đang chọn món" },
-                Submitted: { step: 1, badge: "primary", text: "Đã đặt" },
-                InProgress: { step: 2, badge: "warning", text: "Trong bếp" },
-                Ready: { step: 3, badge: "success", text: "Đang mang ra" },
-                Served: { step: 4, badge: "dark", text: "Đã phục vụ" },
-                Paid: { step: 5, badge: "success", text: "Đã thanh toán" },
-                Cancelled: { step: -1, badge: "danger", text: "Đã hủy" },
-                WaitingForPayment: { step: 2, badge: "info", text: "Chờ thanh toán" }
+                "Draft": 0,
+                "Submitted": 1,
+                "InProgress": 2,
+                "Ready": 3,
+                "Served": 4,
+                "Paid": 5,
+                "Cancelled": -1
             };
 
-            function toast(msg, cls){
-                const el = document.getElementById('toast');
-                if(!el) return;
-                el.classList.remove('text-bg-secondary','text-bg-success','text-bg-danger','text-bg-info','text-bg-warning','text-bg-primary','text-bg-dark');
-                el.classList.add(cls || 'text-bg-secondary');
-                const body = document.getElementById('toastMsg');
-                if(body) body.textContent = msg || '';
-                bootstrap.Toast.getOrCreateInstance(el).show();
-            }
+            function updateStepper(statusStr) {
+                let currentStep = statusMap[statusStr] || 0;
 
-            function updateBadge(status){
-                const s = statusMap[status] || statusMap.Draft;
-                const el = document.getElementById('currentStatus');
-                if(!el) return;
-                el.className = 'badge';
-                el.classList.add('bg-' + s.badge);
-                el.textContent = s.text;
-            }
+                if (statusStr === 'Cancelled') {
+                    if(window.toast) toast.error('Đơn hàng đã bị hủy!');
+                    else alert('Đơn hàng đã bị hủy!');
+                    return;
+                }
 
-            function setStepper(step){
-                const container = document.getElementById('statusStepper');
-                if(!container) return;
-                const steps = container.querySelectorAll('.step');
-                steps.forEach(s => {
-                    const idx = parseInt(s.dataset.step, 10);
-                    s.classList.toggle('active', idx === step);
-                    s.classList.toggle('done', idx < step);
+                $('.step-item').each(function() {
+                    const stepIndex = parseInt($(this).data('step'));
+                    const $dot = $(this).find('.absolute');
+                    const $title = $(this).find('h4');
+
+                    $dot.removeClass('bg-[#FE724C] bg-gray-200 bg-green-500 ring-orange-100 border-orange-500 text-white');
+                    $title.removeClass('text-[#FE724C] text-gray-300 text-gray-800');
+                    $dot.html('');
+
+                    if (stepIndex < currentStep) {
+                        $dot.addClass('bg-green-500 border-green-500');
+                        $title.addClass('text-gray-800');
+                        $dot.html('<i class="fas fa-check text-xs md:text-sm"></i>');
+                    } else if (stepIndex === currentStep) {
+                        $dot.addClass('bg-[#FE724C] border-[#FE724C] ring-4 ring-orange-100 text-white');
+                        $title.addClass('text-[#FE724C]');
+                        $dot.html('<i class="fas fa-circle text-[6px] md:text-[8px] animate-pulse"></i>');
+                    } else {
+                        $dot.addClass('bg-gray-200 border-gray-200');
+                        $title.addClass('text-gray-300');
+                    }
                 });
             }
 
-            async function startSignalR(){
-                const hubUrl = "/hubs/customer";
+            async function startSignalR() {
+                if (typeof signalR === 'undefined') {
+                    console.error("SignalR chưa được load. Kiểm tra lại kết nối mạng hoặc đường dẫn CDN.");
+                    return;
+                }
+
                 const connection = new signalR.HubConnectionBuilder()
-                    .withUrl(hubUrl)
+                    .withUrl("/hubs/customer")
                     .withAutomaticReconnect()
                     .build();
 
-                connection.on("OrderStatusChanged", payload => {
+                connection.on("OrderStatusChanged", (payload) => {
                     const status = (payload && payload.status) || 'Draft';
-                    const m = statusMap[status] || statusMap.Draft;
-                    updateBadge(status);
-                    setStepper(m.step);
-                    toast(`Trạng thái đơn đã cập nhật: ${m.text}`, 'text-bg-info');
+                    updateStepper(status);
+
+                    const msgMap = {
+                        "InProgress": "Bếp đang nấu món của bạn!",
+                        "Ready": "Món ăn đã sẵn sàng!",
+                        "Served": "Chúc quý khách ngon miệng!",
+                        "Paid": "Thanh toán thành công!",
+                        "Cancelled": "Đơn hàng đã hủy."
+                    };
+
+                    if(msgMap[status]) {
+                         if(window.toast) toast.info(msgMap[status]);
+                    }
                 });
 
-                connection.on("OrderPaid", payload => {
-                    updateBadge("Paid");
-                    setStepper(5);
-                    toast("Thanh toán thành công. Cảm ơn!", 'text-bg-success');
+                connection.on("OrderPaid", () => {
+                    updateStepper("Paid");
+                    if(window.toast) toast.success("Thanh toán thành công. Cảm ơn quý khách!");
                 });
 
                 try {
                     await connection.start();
-                    if (connection.state === signalR.HubConnectionState.Connected) {
-                        try {
-                            await connection.invoke("JoinOrderGroup", orderId);
-                        } catch (e) {
-                            console.warn("JoinOrderGroup failed:", e);
-                        }
-                    }
-                } catch (e) {
-                    console.error("SignalR connection failed:", e);
-                    toast("Không thể kết nối realtime.", 'text-bg-warning');
+                    await connection.invoke("JoinOrderGroup", orderId);
+                    console.log("Connected to OrderHub via SignalR");
+                } catch (err) {
+                    console.error("SignalR Error:", err);
                 }
             }
 
-            document.addEventListener('DOMContentLoaded', async () => {
+            $(document).ready(function() {
                 const initial = "@initialStatus";
-                updateBadge(initial);
-                setStepper((statusMap[initial]||statusMap.Draft).step);
-                await startSignalR();
+                updateStepper(initial);
+                startSignalR();
             });
+
+            window.requestPayment = function() {
+                 if(!confirm('Bạn muốn gọi nhân viên thanh toán?')) return;
+                 if(window.toast) toast.success('Đã gửi yêu cầu thanh toán!');
+                 else alert('Đã gửi yêu cầu thanh toán!');
+            }
+
         })();
     </script>
 }

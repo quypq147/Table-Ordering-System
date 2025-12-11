@@ -30,7 +30,8 @@ public class CartController(IBackendApiClient backend) : Controller
 
         await backend.AddCartItemAsync(orderId, menuItemId, quantity, note, ct);
         var cart = await backend.GetCartAsync(orderId, ct);
-        return PartialView("Shared/_CartPartial", cart);
+        // Return JSON for client-side updates
+        return Ok(new { success = true, total = cart.Total, itemsCount = cart.Items?.Count ?? 0 });
     }
 
     [HttpPost("/client/cart/{orderId:guid}/items/{cartItemId:int}")]
@@ -41,10 +42,22 @@ public class CartController(IBackendApiClient backend) : Controller
 
         await backend.UpdateCartItemAsync(orderId, cartItemId, quantity, note, ct);
         var cart = await backend.GetCartAsync(orderId, ct);
-        return PartialView("Shared/_CartPartial", cart);
+        var updatedItem = cart.Items?.FirstOrDefault(i => i.Id == cartItemId);
+        return Ok(new
+        {
+            success = true,
+            total = cart.Total,
+            itemsCount = cart.Items?.Count ?? 0,
+            item = updatedItem == null ? null : new
+            {
+                id = updatedItem.Id,
+                quantity = updatedItem.Quantity,
+                lineTotal = updatedItem.LineTotal,
+            }
+        });
     }
 
-    // RESTful DELETE: remove by cartItemId -> return PartialView
+    // RESTful DELETE: remove by cartItemId -> return JSON
     [HttpDelete("/client/cart/{orderId:guid}/items/{cartItemId:int}")]
     public async Task<IActionResult> RemoveItem(Guid orderId, int cartItemId, CancellationToken ct)
     {
@@ -52,7 +65,7 @@ public class CartController(IBackendApiClient backend) : Controller
         await backend.RemoveCartItemByIdAsync(orderId, cartItemId, ct);
 
         var cart = await backend.GetCartAsync(orderId, ct);
-        return PartialView("Shared/_CartPartial", cart);
+        return Ok(new { success = true, total = cart.Total, itemsCount = cart.Items?.Count ?? 0, removedItemId = cartItemId });
     }
 
     // Legacy remove by menuItemId (still available if needed elsewhere)
@@ -60,11 +73,9 @@ public class CartController(IBackendApiClient backend) : Controller
     public async Task<IActionResult> RemoveItemLegacy(Guid orderId, [FromForm] Guid menuItemId, CancellationToken ct)
     {
         if (orderId == Guid.Empty || menuItemId == Guid.Empty) return BadRequest("Thiếu tham số.");
-        // map legacy to new typed method if backend supports it, otherwise keep old if needed.
-        // Here we refresh cart after removing by menuItemId using public method.
-        await backend.RemoveCartItemAsync(orderId, menuItemId, ct); // fixed: pass menuItemId (Guid) instead of (int)0
+        await backend.RemoveCartItemAsync(orderId, menuItemId, ct);
         var cart = await backend.GetCartAsync(orderId, ct);
-        return PartialView("Shared/_CartPartial", cart);
+        return Ok(new { success = true, total = cart.Total, itemsCount = cart.Items?.Count ?? 0 });
     }
 
     [HttpPost("/client/cart/{orderId:guid}/submit")]

@@ -1,0 +1,18 @@
+<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3 pointer-events-none">
+    <template id="toast-template">
+        <div class="toast-item transform transition-all duration-300 translate-x-4 opacity-0 pointer-events-auto min-w-[260px] max-w-sm rounded-xl shadow-lg border bg-white overflow-hidden">
+            <div class="flex items-start p-4">
+                <div class="icon mr-3"></div>
+                <div class="flex-1">
+                    <div class="message text-sm font-medium text-gray-800"></div>
+                    <div class="progress h-1 mt-3 rounded bg-gray-100">
+                        <div class="bar h-1 rounded"></div>
+                    </div>
+                </div>
+                <button type="button" class="ml-3 text-gray-400 hover:text-gray-600 close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+</div>

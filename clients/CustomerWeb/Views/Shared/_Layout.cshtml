@@ -30,9 +30,12 @@
     </style>
 </head>
 
-<body class="bg-gray-100 text-gray-800 h-screen w-screen overflow-hidden flex flex-col md:flex-row">
+<body class="bg-[#F9F9F9] text-gray-800 min-h-screen">
 
     @RenderBody()
+
+    @Html.Partial("_ToastContainer")
+    @Html.Partial("_ConfirmModal")
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

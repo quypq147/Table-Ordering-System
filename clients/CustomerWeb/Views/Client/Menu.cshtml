@@ -41,7 +41,7 @@
         <!-- Sidebar footer: Leave Table -->
         <div class="mt-auto border-t p-4">
             <button type="button"
-                    onclick="leaveTable()"
+                    onclick="openLeaveConfirm()"
                     class="w-full bg-red-50 text-red-600 hover:bg-red-100 rounded-xl flex items-center justify-center gap-2 py-2 transition">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Rời bàn</span>
@@ -108,6 +108,25 @@
             @(Model.CurrentCart?.Items.Count ?? 0)
         </span>
     </button>
+
+    <!-- Leave table confirmation modal -->
+    <div id="leave-confirm" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100]">
+        <div class="bg-white rounded-2xl w-11/12 max-w-md shadow-xl p-6">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="flex-1">
+                    <h2 class="font-bold text-lg text-gray-800">Bạn muốn rời bàn không?</h2>
+                    <p class="text-sm text-gray-500 mt-1">Các món trong bàn sẽ không được lưu.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button type="button" onclick="proceedLeave()" class="flex-1 bg-red-500 text-white rounded-xl py-2 hover:bg-red-600 transition">Rời bàn</button>
+                <button type="button" onclick="closeLeaveConfirm()" class="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2 hover:bg-gray-200 transition">Hủy</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -135,16 +154,31 @@
             cart.classList.toggle('bg-black/50');
         }
 
-        async function leaveTable(){
+        function openLeaveConfirm(){
+            const modal = document.getElementById('leave-confirm');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        function closeLeaveConfirm(){
+            const modal = document.getElementById('leave-confirm');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        async function proceedLeave(){
             try{
-                if(!confirm('Bạn có chắc muốn rời bàn không?')) return;
                 const resp = await fetch('/Client/LeaveTable', { method: 'POST' });
                 if (!resp.ok) throw new Error('Rời bàn thất bại.');
-                // Redirect to welcome/QR help page
                 window.location.href = '/client/qr-help';
             }catch(err){
                 alert(err.message || 'Có lỗi xảy ra khi rời bàn.');
+            } finally {
+                closeLeaveConfirm();
             }
+        }
+
+        // Keep old API for potential reuse
+        async function leaveTable(){
+            openLeaveConfirm();
         }
     </script>
 }

@@ -1,13 +1,13 @@
 ﻿// Application/Orders/Commands/ChangeItemQuantityHandler.cs
-using Application.Abstractions;
 using Application.Dtos;
 using Application.Mappings;
 using Domain.Repositories;
+using MediatR;
 
 namespace Application.Orders.Commands;
 
 public sealed class ChangeItemQuantityHandler
-    : ICommandHandler<ChangeItemQuantityCommand, OrderDto>
+    : IRequestHandler<ChangeItemQuantityCommand, OrderDto>
 {
     private readonly IOrderRepository _orders;
     private readonly IUnitOfWork _uow;
