@@ -61,21 +61,7 @@ namespace WaiterApp
             OrdersRealtimeService.ConfigurationError += OnConfigurationError;
             KdsRealtimeService.ConfigurationError += OnConfigurationError;
 
-            // Hybrid Blazor: host the app entirely in a BlazorWebView
-            var blazor = new BlazorWebView
-            {
-                HostPage = "wwwroot/index.html"
-            };
-            blazor.RootComponents.Add(new RootComponent
-            {
-                Selector = "#app",
-                ComponentType = typeof(WaiterApp.Components.Routes)
-            });
-
-            MainPage = new ContentPage
-            {
-                Content = blazor
-            };
+            MainPage = new MainPage();
         }
 
         private void OnConfigurationError(string message)

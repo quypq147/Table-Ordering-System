@@ -72,4 +72,10 @@
         <ProjectReference Include="..\TableOrdering.Contracts\TableOrdering.Contracts.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <MauiXaml Update="MainPage.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </MauiXaml>
+    </ItemGroup>
+
 </Project>

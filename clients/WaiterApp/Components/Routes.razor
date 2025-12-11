@@ -1,6 +1,25 @@
-﻿<Router AppAssembly="typeof(MauiProgram).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+﻿@using WaiterApp.Components.Pages
+@using WaiterApp.Services
+@inject NavigationBridge NavigationBridge
+@inject NavigationManager NavigationManager
+
+<h1>Test MAUI Blazor</h1>
+
+<Router AppAssembly="@typeof(MauiProgram).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <RouteView RouteData="routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(Layout.MainLayout)">
+            <NotFound />
+        </LayoutView>
+    </NotFound>
 </Router>
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationBridge.Register(NavigationManager);
+    }
+}
