@@ -1,4 +1,4 @@
-@page "/settings"
+ï»¿@page "/settings"
 @using Microsoft.Maui.Storage
 @using System.Net.Http.Json
 @inject WaiterApp.Services.AuthService Auth
@@ -9,7 +9,7 @@
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h4 class="mb-3">Thi?t l?p h? th?ng</h4>
+                    <h4 class="mb-3">Thiáº¿t láº­p há»‡ thá»‘ng</h4>
 
                     @if (!string.IsNullOrEmpty(statusMessage))
                     {
@@ -26,7 +26,7 @@
                         <button class="btn btn-primary flex-fill" @onclick="Save" disabled="@string.IsNullOrWhiteSpace(apiUrl)">L?u</button>
                         <button class="btn btn-outline-secondary flex-fill" @onclick="TestAsync" disabled="@isTesting">
                             <span class="spinner-border spinner-border-sm me-1" role="status" hidden="@(!isTesting)"></span>
-                            Ki?m tra
+                            Kiá»ƒm tra
                         </button>
                     </div>
 
@@ -59,20 +59,20 @@
     {
         if (string.IsNullOrWhiteSpace(apiUrl))
         {
-            ShowStatus("URL không h?p l?.", isError: true);
+            ShowStatus("URL khÃ´ng h?p l?.", isError: true);
             return;
         }
 
         Preferences.Set(PrefKeyApiBaseUrl, apiUrl);
         App.UpdateApiBaseUrl(apiUrl);
-        ShowStatus("?ã l?u c?u hình.", isError: false);
+        ShowStatus("?Ã£ l?u c?u hÃ¬nh.", isError: false);
     }
 
     private async Task TestAsync()
     {
         if (string.IsNullOrWhiteSpace(apiUrl))
         {
-            ShowStatus("Vui lòng nh?p API URL.", isError: true);
+            ShowStatus("Vui lÃ²ng nh?p API URL.", isError: true);
             return;
         }
 
@@ -82,7 +82,7 @@
             using var client = new HttpClient { BaseAddress = new Uri(apiUrl) };
             var resp = await client.GetAsync("api/auth/login");
             ShowStatus(resp.IsSuccessStatusCode
-                ? "K?t n?i thành công (endpoint yêu c?u POST)."
+                ? "K?t n?i thÃ nh cÃ´ng (endpoint yÃªu c?u POST)."
                 : $"Ph?n h?i: {(int)resp.StatusCode} {resp.ReasonPhrase}", !resp.IsSuccessStatusCode);
         }
         catch (Exception ex)

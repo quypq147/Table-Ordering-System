@@ -2,38 +2,45 @@
 @inject WaiterApp.Services.NavigationBridge NavigationBridge
 @inject Microsoft.AspNetCore.Components.NavigationManager NavManager
 
-<div class="d-flex flex-column min-vh-100 bg-light">
-    <!-- Header -->
-    <header class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+<div class="d-flex flex-column min-vh-100 bg-dark">
+    <header class="navbar navbar-dark bg-dark border-bottom border-opacity-25 py-3">
         <div class="container-fluid">
-            <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-controls="#sidebar" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <a class="navbar-brand fw-semibold" href="/">WaiterApp</a>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-outline-light me-3 d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <a class="navbar-brand fw-semibold text-uppercase tracking-wide" href="/">WaiterApp</a>
+            </div>
 
             <div class="ms-auto d-flex align-items-center gap-3">
                 <span class="text-white-50 small">Đăng nhập: <strong class="text-white">@EmployeeName</strong></span>
-                <img src="/lib/bootstrap-icons/person-circle.svg" alt="avatar" width="28" height="28" class="rounded-circle border border-secondary" />
+                <img src="/lib/bootstrap-icons/person-circle.svg" alt="avatar" width="32" height="32" class="rounded-circle border border-secondary" />
             </div>
         </div>
     </header>
 
-    <div class="container-fluid flex-grow-1">
-        <div class="row g-0">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-12 col-md-3 col-lg-2 collapse show bg-white border-end">
-                <div class="p-3">
-                    <NavMenu />
-                </div>
-            </nav>
+    <div class="flex-grow-1 d-flex">
+        <aside class="d-none d-lg-flex flex-column bg-dark text-white" style="width: 280px;">
+            <div class="flex-grow-1 overflow-auto py-4">
+                <NavMenu />
+            </div>
+        </aside>
 
-            <!-- Content -->
-            <main class="col-12 col-md-9 col-lg-10">
-                <div class="p-4">
-                    @Body
-                </div>
-            </main>
-        </div>
+        <main class="flex-grow-1" style="background-color: #f8f9fa;">
+            <div class="container-fluid py-4">
+                @Body
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title" id="mobileSidebarLabel">WaiterApp</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <NavMenu />
     </div>
 </div>
 

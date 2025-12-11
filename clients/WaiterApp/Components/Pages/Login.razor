@@ -1,4 +1,4 @@
-@page "/login"
+﻿@page "/login"
 @using WaiterApp.Services
 @inject AuthService Auth
 @inject NavigationManager Navigation
@@ -14,16 +14,16 @@
             }
 
             <div class="mb-3">
-                <label class="form-label">T�i kho?n</label>
+                <label class="form-label">Tài khoản</label>
                 <input class="form-control" @bind="username" />
             </div>
             <div class="mb-3">
-                <label class="form-label">M?t kh?u</label>
+                <label class="form-label">Mật khẩu</label>
                 <input type="password" class="form-control" @bind="password" />
             </div>
             <button class="btn btn-primary w-100" disabled="@isSubmitting" @onclick="LoginAsync">
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" hidden="@(!isSubmitting)"></span>
-                ??ng nh?p
+                Đăng nhập
             </button>
         </div>
     </div>
@@ -40,7 +40,7 @@
         error = null;
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            error = "Vui l�ng nh?p ??y ?? t�i kho?n v� m?t kh?u.";
+            error = "Vui lòng nhap day du tài khoản và mật khẩu.";
             return;
         }
 
@@ -50,7 +50,7 @@
             var (success, err) = await Auth.LoginAsync(username!, password!);
             if (!success)
             {
-                error = string.IsNullOrWhiteSpace(err) ? "??ng nh?p th?t b?i." : err;
+                error = string.IsNullOrWhiteSpace(err) ? "Đăng nhập thất bại." : err;
                 return;
             }
 

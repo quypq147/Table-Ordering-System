@@ -1,4 +1,4 @@
-@page "/tables/{tableId:guid}"
+﻿@page "/tables/{tableId:guid}"
 @using System.Net.Http.Json
 @using WaiterApp.Models
 @inject WaiterApp.Services.ApiClient ApiClient
@@ -8,14 +8,14 @@
     <div class="d-flex align-items-center mb-3">
         <button class="btn btn-outline-secondary me-3" @onclick="BackToTables">?</button>
         <div>
-            <h4 class="mb-0">Chi ti?t b�n</h4>
-            <small class="text-muted">Theo d�i m�n ?ang ph?c v? cho b�n l?a ch?n</small>
+            <h4 class="mb-0">Chi tiết bàn</h4>
+            <small class="text-muted">Theo dõi món đang phục vụ cho bàn l?a ch?n</small>
         </div>
     </div>
 
     @if (loading)
     {
-        <div class="alert alert-info">?ang t?i d? li?u...</div>
+        <div class="alert alert-info">Đang tải dữ liệu...</div>
     }
     else if (!string.IsNullOrEmpty(error))
     {
@@ -23,7 +23,7 @@
     }
     else if (table is null)
     {
-        <div class="alert alert-warning">Kh�ng t�m th?y th�ng tin b�n.</div>
+        <div class="alert alert-warning">Không tìm thấy thông tin bàn.</div>
     }
     else
     {
@@ -46,10 +46,10 @@
 
         <div class="card shadow-sm">
             <div class="card-body">
-                <h5 class="mb-3">M�n ?ang ph?c v?</h5>
+                <h5 class="mb-3">Món ?ang ph?c v?</h5>
                 @if (items.Count == 0)
                 {
-                    <div class="alert alert-secondary">Kh�ng c� m�n n�o trong ??n hi?n t?i.</div>
+                    <div class="alert alert-secondary">Không có món nào trong đơn hiện tại.</div>
                 }
                 else
                 {

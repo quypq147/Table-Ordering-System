@@ -1,38 +1,51 @@
-﻿<div class="d-flex flex-column h-100">
-    <!-- Brand -->
-    <div class="mb-3">
-        <a class="navbar-brand text-dark fw-bold" href="/">
-            <span class="me-2">🍽️</span> WaiterApp
-        </a>
+﻿<div class="lezato-menu d-flex flex-column h-100 text-white">
+    <div class="px-3 pb-3 mb-3 border-bottom border-white border-opacity-25">
+        <div class="text-uppercase small text-white-50">Lezato</div>
+        <div class="fs-5 fw-bold">WaiterApp</div>
+        <span class="text-white-50 small">Modern Dashboard</span>
     </div>
 
-    <!-- Navigation -->
-    <ul class="nav nav-pills flex-column gap-1">
+    <ul class="nav flex-column gap-2 px-2 flex-grow-1">
         <li class="nav-item">
-            <NavLink class="nav-link d-flex align-items-center" href="/tables" Match="NavLinkMatch.Prefix">
-                <span class="me-2 bi bi-grid-3x3-gap"></span>
-                <span>Danh sách bàn</span>
+            <NavLink class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-white-50" ActiveClass="active" href="/tables" Match="NavLinkMatch.Prefix">
+                <span class="bi bi-grid-3x3-gap-fill fs-5"></span>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold text-white">Bàn ăn</div>
+                    <small class="text-white-50">Theo dõi trạng thái</small>
+                </div>
             </NavLink>
         </li>
         <li class="nav-item">
-            <NavLink class="nav-link d-flex align-items-center" href="/orders" Match="NavLinkMatch.Prefix">
-                <span class="me-2 bi bi-receipt"></span>
-                <span>Đơn hàng</span>
+            <NavLink class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-white-50" ActiveClass="active" href="/orders" Match="NavLinkMatch.Prefix">
+                <span class="bi bi-receipt-cutoff fs-5"></span>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold text-white">Đơn hàng</div>
+                    <small class="text-white-50">Xử lý phiếu order</small>
+                </div>
             </NavLink>
         </li>
         <li class="nav-item">
-            <NavLink class="nav-link d-flex align-items-center" href="/settings" Match="NavLinkMatch.Prefix">
-                <span class="me-2 bi bi-gear"></span>
-                <span>Cài đặt</span>
+            <NavLink class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-white-50" ActiveClass="active" href="/chat" Match="NavLinkMatch.Prefix">
+                <span class="bi bi-chat-dots fs-5"></span>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold text-white">Chat</div>
+                    <small class="text-white-50">Trao đổi nội bộ</small>
+                </div>
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-white-50" ActiveClass="active" href="/settings" Match="NavLinkMatch.Prefix">
+                <span class="bi bi-gear fs-5"></span>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold text-white">Cài đặt</div>
+                    <small class="text-white-50">Tùy chỉnh ứng dụng</small>
+                </div>
             </NavLink>
         </li>
     </ul>
 
-    <!-- Footer / helper -->
-    <div class="mt-auto pt-3 small text-muted">
-        <div class="d-flex align-items-center justify-content-between">
-            <span>Lezato Dashboard</span>
-            <span class="badge bg-light text-dark">v1.0</span>
-        </div>
+    <div class="mt-auto px-3 py-4 border-top border-white border-opacity-25 small text-white-50">
+        <div class="fw-semibold text-white">Lezato Dashboard</div>
+        <span>Phiên bản v1.0</span>
     </div>
 </div>
