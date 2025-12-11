@@ -1,0 +1,64 @@
+@page "/login"
+@using WaiterApp.Services
+@inject AuthService Auth
+@inject NavigationManager Navigation
+
+<div class="container py-5 d-flex justify-content-center">
+    <div class="card shadow" style="max-width: 420px; width: 100%;">
+        <div class="card-body p-4">
+            <h4 class="text-center mb-4">Waiter App</h4>
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger" role="alert">@error</div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">Tài kho?n</label>
+                <input class="form-control" @bind="username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">M?t kh?u</label>
+                <input type="password" class="form-control" @bind="password" />
+            </div>
+            <button class="btn btn-primary w-100" disabled="@isSubmitting" @onclick="LoginAsync">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" hidden="@(!isSubmitting)"></span>
+                ??ng nh?p
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? username;
+    private string? password;
+    private string? error;
+    private bool isSubmitting;
+
+    private async Task LoginAsync()
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            error = "Vui lòng nh?p ??y ?? tài kho?n và m?t kh?u.";
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var (success, err) = await Auth.LoginAsync(username!, password!);
+            if (!success)
+            {
+                error = string.IsNullOrWhiteSpace(err) ? "??ng nh?p th?t b?i." : err;
+                return;
+            }
+
+            Navigation.NavigateTo("/orders", forceLoad: true);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

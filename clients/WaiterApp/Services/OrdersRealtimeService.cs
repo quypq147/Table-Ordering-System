@@ -4,6 +4,8 @@ namespace WaiterApp.Services;
 
 public sealed class OrdersRealtimeService
 {
+    private const string MissingBaseUrlMessage = "API base URL is missing. Update it in Settings.";
+
     private readonly AuthService _authService;
     private readonly ApiClient _apiClient;
     private readonly SemaphoreSlim _startStopLock = new(1, 1);
@@ -28,7 +30,7 @@ public sealed class OrdersRealtimeService
             if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting }) return;
             if (_apiClient.Http.BaseAddress is null)
             {
-                ConfigurationError?.Invoke("Api base URL ch?a ???c c?u hình. Vui lòng ki?m tra c?u hình và th? l?i.");
+                ConfigurationError?.Invoke(MissingBaseUrlMessage);
                 return;
             }
 

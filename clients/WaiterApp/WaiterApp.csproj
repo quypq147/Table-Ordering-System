@@ -72,19 +72,4 @@
         <ProjectReference Include="..\TableOrdering.Contracts\TableOrdering.Contracts.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <MauiXaml Update="AppShell.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-      <MauiXaml Update="Pages\ChatPage.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-      <MauiXaml Update="Pages\OrdersPage.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-      <MauiXaml Update="Pages\SettingsPage.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-    </ItemGroup>
-
 </Project>

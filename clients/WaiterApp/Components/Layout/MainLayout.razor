@@ -1,17 +1,49 @@
 ﻿@inherits LayoutComponentBase
+@inject WaiterApp.Services.NavigationBridge NavigationBridge
+@inject Microsoft.AspNetCore.Components.NavigationManager NavManager
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="d-flex flex-column min-vh-100 bg-light">
+    <!-- Header -->
+    <header class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-controls="#sidebar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand fw-semibold" href="/">WaiterApp</a>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-white-50 small">Đăng nhập: <strong class="text-white">@EmployeeName</strong></span>
+                <img src="/lib/bootstrap-icons/person-circle.svg" alt="avatar" width="28" height="28" class="rounded-circle border border-secondary" />
+            </div>
         </div>
+    </header>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    <div class="container-fluid flex-grow-1">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-12 col-md-3 col-lg-2 collapse show bg-white border-end">
+                <div class="p-3">
+                    <NavMenu />
+                </div>
+            </nav>
+
+            <!-- Content -->
+            <main class="col-12 col-md-9 col-lg-10">
+                <div class="p-4">
+                    @Body
+                </div>
+            </main>
+        </div>
+    </div>
 </div>
+
+@code {
+    [Parameter]
+    public string? EmployeeName { get; set; } = "Nhân viên";
+
+    protected override void OnInitialized()
+    {
+        NavigationBridge.Register(NavManager);
+        base.OnInitialized();
+    }
+}

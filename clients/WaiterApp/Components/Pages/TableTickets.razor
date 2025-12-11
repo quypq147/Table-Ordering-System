@@ -1,0 +1,172 @@
+@page "/tables/{tableId:guid}/tickets"
+@using System.Net.Http.Json
+@using WaiterApp.Models
+@inject WaiterApp.Services.ApiClient ApiClient
+@inject WaiterApp.Services.KdsRealtimeService Realtime
+@inject Microsoft.AspNetCore.Components.NavigationManager Navigation
+@implements IAsyncDisposable
+
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-3">
+        <button class="btn btn-outline-secondary me-3" @onclick="BackToTable">?</button>
+        <div>
+            <h4 class="mb-0">Phi?u b?p - Bàn @tableCode</h4>
+            <small class="text-muted">C?p nh?t th?i gian th?c t? KDS</small>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(alert))
+    {
+        <div class="alert alert-warning">@alert</div>
+    }
+
+    @if (loading && tickets.Count == 0)
+    {
+        <div class="alert alert-info">?ang t?i phi?u b?p...</div>
+    }
+    else if (tickets.Count == 0)
+    {
+        <div class="alert alert-secondary">Không có phi?u nào cho bàn này.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var ticket in tickets)
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100 border-start border-4 @GetStatusBorder(ticket)">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="fw-bold">@ticket.ItemName</div>
+                                    <div class="text-muted small">SL: @ticket.Qty</div>
+                                </div>
+                                <span class="badge text-bg-light text-uppercase">@ticket.Status</span>
+                            </div>
+                            <div class="text-muted small">T?o lúc: @ticket.CreatedAt.ToLocalTime():HH:mm:ss</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid tableId { get; set; }
+
+    private string? tableCode;
+    private List<KitchenTicketDto> tickets = new();
+    private bool loading;
+    private string? alert;
+    private bool eventsHooked;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+        await EnsureRealtimeAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (eventsHooked)
+        {
+            Realtime.TicketsCreated -= OnTicketsCreated;
+            Realtime.TicketChanged -= OnTicketChanged;
+        }
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        alert = null;
+        try
+        {
+            tableCode = (await ApiClient.Http.GetFromJsonAsync<TableDto>(WaiterApiEndpoints.Tables.Get(tableId)))?.Code;
+            var all = await ApiClient.Http.GetFromJsonAsync<List<KitchenTicketDto>>("api/kds/tickets") ?? new List<KitchenTicketDto>();
+            tickets = FilterTickets(all);
+        }
+        catch (Exception ex)
+        {
+            alert = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task EnsureRealtimeAsync()
+    {
+        if (eventsHooked)
+            return;
+
+        eventsHooked = true;
+        Realtime.TicketsCreated += OnTicketsCreated;
+        Realtime.TicketChanged += OnTicketChanged;
+        if (!Realtime.IsConnected)
+        {
+            try
+            {
+                await Realtime.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                alert = ex.Message;
+            }
+        }
+    }
+
+    private List<KitchenTicketDto> FilterTickets(IEnumerable<KitchenTicketDto> source)
+    {
+        if (string.IsNullOrWhiteSpace(tableCode)) return new();
+        return source
+            .Where(MatchesTable)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToList();
+    }
+
+    private bool MatchesTable(KitchenTicketDto ticket)
+    {
+        if (string.IsNullOrWhiteSpace(tableCode)) return false;
+        var code = ticket.TableCode ?? ticket.TableName;
+        return string.Equals(code, tableCode, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnTicketsCreated(KitchenTicketDto[] payload)
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (payload == null || payload.Length == 0) return;
+            var relevant = payload.Where(MatchesTable).ToList();
+            if (relevant.Count == 0) return;
+            tickets = FilterTickets(relevant.Concat(tickets));
+            StateHasChanged();
+        });
+    }
+
+    private void OnTicketChanged(KitchenTicketDto ticket)
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (!MatchesTable(ticket)) return;
+            var index = tickets.FindIndex(t => t.Id == ticket.Id);
+            if (index >= 0)
+                tickets[index] = ticket;
+            else
+                tickets.Insert(0, ticket);
+            tickets = FilterTickets(tickets);
+            StateHasChanged();
+        });
+    }
+
+    private string GetStatusBorder(KitchenTicketDto ticket) => ticket.Status switch
+    {
+        "Ready" => "border-success",
+        "InProgress" => "border-warning",
+        _ => "border-secondary"
+    };
+
+    private void BackToTable() => Navigation.NavigateTo($"/tables/{tableId}");
+}

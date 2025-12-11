@@ -5,8 +5,11 @@ namespace WaiterApp.Services;
 
 public class KdsRealtimeService
 {
+    private const string MissingBaseUrlMessage = "API base URL is missing. Update it in Settings.";
+
     private readonly AuthService _authService;
     private readonly ApiClient _apiClient;
+    private readonly SemaphoreSlim _startStopLock = new(1, 1);
     private HubConnection? _connection;
 
     public event Action<KitchenTicketDto[]>? TicketsCreated;
@@ -23,41 +26,93 @@ public class KdsRealtimeService
         _connection is { State: HubConnectionState.Connected };
 
     /// <summary>
-    /// K?t n?i t?i KDS Hub (/hubs/kds) ?? nh?n ticket realtime
+    /// Connect to the KDS Hub (/hubs/kds) to receive realtime kitchen tickets.
     /// </summary>
     public async Task StartAsync()
     {
-        // N?u ?ã k?t n?i r?i thì thôi, tránh t?o nhi?u connection
-        if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting })
-            return;
-
-        // Xây URL hub d?a trên BaseAddress c?a ApiClient
-        if (_apiClient.Http.BaseAddress is null)
+        await _startStopLock.WaitAsync();
+        try
         {
-            ConfigurationError?.Invoke("Api base URL ch?a ???c c?u hình. Vui lòng ki?m tra c?u hình và th? l?i.");
-            return;
+            if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting })
+                return;
+
+            if (_apiClient.Http.BaseAddress is null)
+            {
+                ConfigurationError?.Invoke(MissingBaseUrlMessage);
+                return;
+            }
+
+            var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/kds").ToString();
+
+            var conn = new HubConnectionBuilder()
+                .WithUrl(hubUrl, options => { options.AccessTokenProvider = () => Task.FromResult(_authService.Token); })
+                .WithAutomaticReconnect()
+                .Build();
+
+            conn.On<KitchenTicketDto[]>("ticketsCreated", tickets => TicketsCreated?.Invoke(tickets));
+            conn.On<KitchenTicketDto>("ticketChanged", ticket => TicketChanged?.Invoke(ticket));
+
+            try
+            {
+                await conn.StartAsync();
+            }
+            catch
+            {
+                try
+                {
+                    await conn.DisposeAsync();
+                }
+                catch
+                {
+                    // ignore disposal failures
+                }
+
+                throw;
+            }
+
+            var previous = Interlocked.Exchange(ref _connection, conn);
+            if (previous != null)
+            {
+                try
+                {
+                    await previous.StopAsync();
+                }
+                catch
+                {
+                    // ignore stop failures
+                }
+
+                try
+                {
+                    await previous.DisposeAsync();
+                }
+                catch
+                {
+                    // ignore dispose failures
+                }
+            }
         }
-
-        var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/kds").ToString();
-
-        _connection = new HubConnectionBuilder()
-            .WithUrl(hubUrl, options => { options.AccessTokenProvider = () => Task.FromResult(_authService.Token); })
-            .WithAutomaticReconnect()
-            .Build();
-
-        _connection.On<KitchenTicketDto[]>("ticketsCreated", tickets => TicketsCreated?.Invoke(tickets));
-        _connection.On<KitchenTicketDto>("ticketChanged", ticket => TicketChanged?.Invoke(ticket));
-
-        await _connection.StartAsync();
+        finally
+        {
+            _startStopLock.Release();
+        }
     }
 
     public async Task StopAsync()
     {
-        if (_connection != null)
+        await _startStopLock.WaitAsync();
+        try
         {
-            await _connection.StopAsync();
-            await _connection.DisposeAsync();
-            _connection = null;
+            var conn = Interlocked.Exchange(ref _connection, null);
+            if (conn != null)
+            {
+                await conn.StopAsync();
+                await conn.DisposeAsync();
+            }
+        }
+        finally
+        {
+            _startStopLock.Release();
         }
     }
 }

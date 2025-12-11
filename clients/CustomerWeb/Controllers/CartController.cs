@@ -57,15 +57,14 @@ public class CartController(IBackendApiClient backend) : Controller
         });
     }
 
-    // RESTful DELETE: remove by cartItemId -> return JSON
+    // RESTful DELETE: remove by cartItemId -> return JSON (no full page reload)
     [HttpDelete("/client/cart/{orderId:guid}/items/{cartItemId:int}")]
     public async Task<IActionResult> RemoveItem(Guid orderId, int cartItemId, CancellationToken ct)
     {
         if (orderId == Guid.Empty || cartItemId <= 0) return BadRequest("Thiếu tham số.");
         await backend.RemoveCartItemByIdAsync(orderId, cartItemId, ct);
-
-        var cart = await backend.GetCartAsync(orderId, ct);
-        return Ok(new { success = true, total = cart.Total, itemsCount = cart.Items?.Count ?? 0, removedItemId = cartItemId });
+        // Return success only; client will optimistically update DOM and recalc totals
+        return Ok(new { success = true, removedItemId = cartItemId });
     }
 
     // Legacy remove by menuItemId (still available if needed elsewhere)

@@ -1,16 +1,19 @@
 ﻿using System;
 using Microsoft.Maui;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Xaml;
 using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using WaiterApp.Services;
+using Microsoft.AspNetCore.Components.WebView.Maui;
 
 namespace WaiterApp
 {
     public partial class App : Application
     {
         private const string PrefKeyApiBaseUrl = "ApiBaseUrl";
+        private readonly NavigationBridge _navigationBridge;
 
         // Create ApiClient using a platform-aware base address so emulators/devices can reach the backend
         public static ApiClient ApiClient { get; } =
@@ -48,21 +51,44 @@ namespace WaiterApp
             return $"http://localhost:{port}";
         }
 
-        public App()
+        public App(NavigationBridge navigationBridge)
         {
+            _navigationBridge = navigationBridge ?? throw new ArgumentNullException(nameof(navigationBridge));
+
             InitializeComponent();
 
             // Subscribe friendly configuration errors to navigate to settings
             OrdersRealtimeService.ConfigurationError += OnConfigurationError;
             KdsRealtimeService.ConfigurationError += OnConfigurationError;
 
-            MainPage = new NavigationPage(new Pages.LoginPage());
+            // Hybrid Blazor: host the app entirely in a BlazorWebView
+            var blazor = new BlazorWebView
+            {
+                HostPage = "wwwroot/index.html"
+            };
+            blazor.RootComponents.Add(new RootComponent
+            {
+                Selector = "#app",
+                ComponentType = typeof(WaiterApp.Components.Routes)
+            });
+
+            MainPage = new ContentPage
+            {
+                Content = blazor
+            };
         }
 
-        private async void OnConfigurationError(string message)
+        private void OnConfigurationError(string message)
         {
-            await MainPage.DisplayAlert("Cấu hình thiếu", message, "Thiết lập");
-            await MainPage.Navigation.PushAsync(new Pages.SettingsPage());
+            if (MainPage is not null)
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await MainPage.DisplayAlert("Cấu hình thiếu", message, "Thiết lập");
+                });
+            }
+
+            _navigationBridge.TryNavigate("/settings");
         }
 
         public static void UpdateApiBaseUrl(string url)

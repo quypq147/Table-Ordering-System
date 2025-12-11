@@ -1,0 +1,119 @@
+@page "/tables/{tableId:guid}"
+@using System.Net.Http.Json
+@using WaiterApp.Models
+@inject WaiterApp.Services.ApiClient ApiClient
+@inject Microsoft.AspNetCore.Components.NavigationManager Navigation
+
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-3">
+        <button class="btn btn-outline-secondary me-3" @onclick="BackToTables">?</button>
+        <div>
+            <h4 class="mb-0">Chi ti?t bàn</h4>
+            <small class="text-muted">Theo dõi món ?ang ph?c v? cho bàn l?a ch?n</small>
+        </div>
+    </div>
+
+    @if (loading)
+    {
+        <div class="alert alert-info">?ang t?i d? li?u...</div>
+    }
+    else if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+    else if (table is null)
+    {
+        <div class="alert alert-warning">Không tìm th?y thông tin bàn.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <div class="text-uppercase fw-bold fs-5">@table.Code</div>
+                        <div class="text-muted">@table.Seats gh?</div>
+                    </div>
+                    <span class="badge text-bg-primary">@table.Status</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-3">
+            <button class="btn btn-outline-secondary" @onclick="BackToTables">Quay l?i</button>
+            <button class="btn btn-primary" @onclick="NavigateToTickets">Xem phi?u b?p</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Món ?ang ph?c v?</h5>
+                @if (items.Count == 0)
+                {
+                    <div class="alert alert-secondary">Không có món nào trong ??n hi?n t?i.</div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var item in items)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="fw-semibold">@item.ItemName</div>
+                                        @if (!string.IsNullOrWhiteSpace(item.Note))
+                                        {
+                                            <div class="text-muted small">@item.Note</div>
+                                        }
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold">x @item.Quantity</div>
+                                        <span class="badge text-bg-light text-uppercase">@item.Status</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid tableId { get; set; }
+
+    private TableDto? table;
+    private List<OrderItemDto> items = new();
+    private bool loading;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var tableTask = ApiClient.Http.GetFromJsonAsync<TableDto>(WaiterApiEndpoints.Tables.Get(tableId));
+            var itemsTask = ApiClient.Http.GetFromJsonAsync<List<OrderItemDto>>(WaiterApiEndpoints.Orders.ItemsByTable(tableId));
+            table = await tableTask;
+            items = (await itemsTask) ?? new List<OrderItemDto>();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void BackToTables() => Navigation.NavigateTo("/tables");
+
+    private void NavigateToTickets() => Navigation.NavigateTo($"/tables/{tableId}/tickets");
+}

@@ -20,6 +20,13 @@ public class ClientOrderController : Controller
         return View("~/Views/Client/OrderDetails.cshtml");
     }
 
+    [HttpGet("/client/order/{id:guid}/payment")]
+    public IActionResult Payment(Guid id)
+    {
+        ViewBag.OrderId = id;
+        return View("~/Views/Client/Payment.cshtml");
+    }
+
     [HttpGet("/client/order/{id:guid}/payment-success")]
     public IActionResult PaymentSuccess(Guid id)
     {

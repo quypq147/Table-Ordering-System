@@ -1,0 +1,216 @@
+﻿@page "/orders"
+@using WaiterApp.Services
+@inject ApiClient ApiClient
+@inject OrdersRealtimeService Realtime
+
+<div class="container py-3 bg-light min-vh-100">
+    <div class="d-flex gap-2 mb-2">
+        <button class="btn @GetFilterBtnClass(OrderFilter.New)" @onclick="(() => SetFilter(OrderFilter.New))">Mới</button>
+        <button class="btn @GetFilterBtnClass(OrderFilter.InProgress)" @onclick="(() => SetFilter(OrderFilter.InProgress))">Đang làm</button>
+        <button class="btn @GetFilterBtnClass(OrderFilter.Completed)" @onclick="(() => SetFilter(OrderFilter.Completed))">Hoàn tất</button>
+    </div>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text"><i class="fa fa-search"></i></span>
+        <input class="form-control" placeholder="Tìm bàn / mã đơn" @bind="searchTerm" @bind:event="oninput" />
+        <button class="btn btn-outline-primary" disabled="@isRefreshing" @onclick="RefreshAsync">
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" hidden="@(!isRefreshing)"></span>
+            Tải lại
+        </button>
+    </div>
+
+    <div class="row g-3">
+        @if (filteredOrders.Count == 0)
+        {
+            <div class="col-12">
+                <div class="alert alert-secondary">Không có đơn phù hợp</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var order in filteredOrders)
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-bold fs-6">@order.TableCode</div>
+                                    <div class="text-muted small">Lúc @order.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</div>
+                                </div>
+                                <span class="badge @GetStatusBadgeClass(order.Status)">@GetStatusText(order.Status)</span>
+                            </div>
+                            <div class="text-muted small mt-2">Món đang chờ: @order.PendingItems</div>
+                            <div class="mt-3 d-flex justify-content-end">
+                                <a class="btn btn-sm btn-primary" href="orderdetail?orderId=@order.Id">Chi tiết</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private enum OrderFilter { New, InProgress, Completed }
+
+    private List<OrderSummaryVm> orders = new();
+    private List<OrderSummaryVm> filteredOrders = new();
+    private OrderFilter activeFilter = OrderFilter.New;
+    private string? searchTerm;
+    private bool isRefreshing;
+    private CancellationTokenSource? cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        cts = new CancellationTokenSource();
+        Realtime.OrderStatusChanged += OnOrderStatusChanged;
+        await Realtime.StartAsync();
+        await LoadAsync();
+        ApplyFilters();
+        _ = AutoRefreshAsync(cts.Token);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.OrderStatusChanged -= OnOrderStatusChanged;
+        cts?.Cancel();
+        await Realtime.StopAsync();
+        cts?.Dispose();
+    }
+
+    private async Task RefreshAsync()
+    {
+        isRefreshing = true;
+        try
+        {
+            await LoadAsync();
+            ApplyFilters();
+        }
+        finally
+        {
+            isRefreshing = false;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            isRefreshing = true;
+            var url = WaiterApiEndpoints.Orders.Summaries(page: 1, pageSize: 200);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await ApiClient.Http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                // In Blazor, prefer console/logging or UI toast; keep simple here
+                var _ = await response.Content.ReadAsStringAsync();
+                orders = new();
+                return;
+            }
+            var data = await response.Content.ReadFromJsonAsync<List<OrderSummaryVm>>();
+            orders = data ?? new();
+        }
+        finally
+        {
+            isRefreshing = false;
+        }
+    }
+
+    private Task AutoRefreshAsync(CancellationToken ct) => Task.Run(async () =>
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), ct);
+                if (ct.IsCancellationRequested) break;
+                await LoadAsync();
+                ApplyFilters();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (TaskCanceledException) { }
+    }, ct);
+
+    private void OnOrderStatusChanged(Guid orderId, string status)
+    {
+        _ = InvokeAsync(async () => { await LoadAsync(); ApplyFilters(); StateHasChanged(); });
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<OrderSummaryVm> query = orders;
+        var term = searchTerm?.Trim();
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            query = query.Where(o =>
+                (!string.IsNullOrEmpty(o.TableCode) && o.TableCode.Contains(term!, StringComparison.OrdinalIgnoreCase)) ||
+                (o.GetType().GetProperty("OrderNumber")?.GetValue(o) is string on && on.Contains(term!, StringComparison.OrdinalIgnoreCase))
+            );
+        }
+
+        string[] statusFilter = Array.Empty<string>();
+        switch (activeFilter)
+        {
+            case OrderFilter.New:
+                statusFilter = new[] { "Submitted" };
+                break;
+            case OrderFilter.InProgress:
+                statusFilter = new[] { "InProgress", "Ready", "WaitingForPayment" };
+                break;
+            case OrderFilter.Completed:
+                statusFilter = new[] { "Paid", "Cancelled" };
+                break;
+        }
+        if (statusFilter.Length > 0)
+            query = query.Where(o => statusFilter.Contains(o.Status));
+
+        filteredOrders = query.ToList();
+    }
+
+    private void SetFilter(OrderFilter filter)
+    {
+        activeFilter = filter;
+        ApplyFilters();
+    }
+
+    private string GetFilterBtnClass(OrderFilter filter)
+    {
+        var isActive = activeFilter == filter;
+        return isActive ? "btn-primary" : "btn-outline-secondary";
+    }
+
+    private string GetStatusText(string status) => status switch
+    {
+        "Submitted" => "Mới",
+        "InProgress" => "Đang làm",
+        "Ready" => "Sẵn sàng",
+        "WaitingForPayment" => "Chờ thanh toán",
+        "Paid" => "Đã thanh toán",
+        "Cancelled" => "Đã hủy",
+        _ => status
+    };
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Submitted" => "text-bg-danger",
+        "InProgress" => "text-bg-warning",
+        "Ready" => "text-bg-info",
+        "WaitingForPayment" => "text-bg-orange",
+        "Paid" => "text-bg-success",
+        "Cancelled" => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    public sealed class OrderSummaryVm
+    {
+        public Guid Id { get; set; }
+        public Guid TableId { get; set; }
+        public string TableCode { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public int PendingItems { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
+    }
+}

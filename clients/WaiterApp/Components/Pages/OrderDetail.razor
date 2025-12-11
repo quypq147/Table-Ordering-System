@@ -1,0 +1,171 @@
+@page "/orderdetail"
+@using WaiterApp.Services
+@inject ApiClient ApiClient
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+
+@code {
+    [Parameter] public Guid orderId { get; set; }
+
+    private OrderDtoVm? order;
+    private bool loading;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null; loading = true;
+        try
+        {
+            var dto = await ApiClient.Http.GetFromJsonAsync<OrderDtoVm>(WaiterApiEndpoints.Orders.Get(orderId));
+            order = dto;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task StartOrderAsync()
+    {
+        if (order == null) return;
+        try
+        {
+            var body = new { OrderId = order.Id, TableId = order.TableId };
+            var resp = await ApiClient.Http.PostAsJsonAsync(WaiterApiEndpoints.Orders.Start, body);
+            if (resp.IsSuccessStatusCode)
+            {
+                await LoadAsync();
+            }
+            else
+            {
+                error = await resp.Content.ReadAsStringAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task PostAsync(string path)
+    {
+        try
+        {
+            var resp = await ApiClient.Http.PostAsync(path, null);
+            if (resp.IsSuccessStatusCode)
+                await LoadAsync();
+            else
+                error = await resp.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private string StatusText(int status) => status switch
+    {
+        0 => "New",
+        1 => "Submitted",
+        2 => "In Progress",
+        3 => "Ready",
+        4 => "Served",
+        5 => "Cancelled",
+        _ => "Unknown"
+    };
+}
+
+<div class="container py-3 bg-light min-vh-100">
+    <h5 class="mb-3">??N HÀNG</h5>
+
+    @if (loading)
+    {
+        <div class="alert alert-info">?ang t?i...</div>
+    }
+    else if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+    else if (order == null)
+    {
+        <div class="alert alert-warning">Không tìm th?y ??n.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-bold">??n #@order.Id.ToString().Substring(0,8)</div>
+                        <div class="text-muted small">Tr?ng thái: @StatusText(order.Status)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="list-group mb-3">
+            @foreach (var it in order.Items)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-bold">@it.Name</div>
+                        @if (!string.IsNullOrWhiteSpace(it.Note))
+                        {
+                            <div class="text-muted small">@it.Note</div>
+                        }
+                    </div>
+                    <div class="text-end">
+                        <div>@it.Quantity x</div>
+                        <div class="text-muted small">@it.LineTotal</div>
+                    </div>
+                </li>
+            }
+        </ul>
+
+        <div class="d-flex gap-2">
+            @if (order.Status == 1)
+            {
+                <button class="btn btn-primary" @onclick="StartOrderAsync">B?t ??u n?u</button>
+            }
+            @if (order.Status == 2)
+            {
+                <button class="btn btn-warning" @onclick="(() => PostAsync(WaiterApiEndpoints.Orders.InProgress(order.Id)))">?ánh d?u ?ã s?n sàng</button>
+            }
+            @if (order.Status == 3)
+            {
+                <button class="btn btn-success" @onclick="(() => PostAsync(WaiterApiEndpoints.Orders.Served(order.Id)))">?ánh d?u ?ã ph?c v?</button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    public sealed class OrderDtoVm
+    {
+        public Guid Id { get; set; }
+        public Guid TableId { get; set; }
+        public int Status { get; set; }
+        public List<OrderItemVm> Items { get; set; } = new();
+        public decimal Total { get; set; }
+        public string Currency { get; set; } = string.Empty;
+    }
+
+    public sealed class OrderItemVm
+    {
+        public int OrderItemId { get; set; }
+        public Guid MenuItemId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
+        public decimal LineTotal { get; set; }
+        public string? Note { get; set; }
+    }
+}

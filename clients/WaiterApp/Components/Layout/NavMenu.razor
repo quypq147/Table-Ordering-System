@@ -1,27 +1,38 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">WaiterApp</a>
+﻿<div class="d-flex flex-column h-100">
+    <!-- Brand -->
+    <div class="mb-3">
+        <a class="navbar-brand text-dark fw-bold" href="/">
+            <span class="me-2">🍽️</span> WaiterApp
+        </a>
     </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <!-- Navigation -->
+    <ul class="nav nav-pills flex-column gap-1">
+        <li class="nav-item">
+            <NavLink class="nav-link d-flex align-items-center" href="/tables" Match="NavLinkMatch.Prefix">
+                <span class="me-2 bi bi-grid-3x3-gap"></span>
+                <span>Danh sách bàn</span>
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link d-flex align-items-center" href="/orders" Match="NavLinkMatch.Prefix">
+                <span class="me-2 bi bi-receipt"></span>
+                <span>Đơn hàng</span>
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link d-flex align-items-center" href="/settings" Match="NavLinkMatch.Prefix">
+                <span class="me-2 bi bi-gear"></span>
+                <span>Cài đặt</span>
+            </NavLink>
+        </li>
+    </ul>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
+    <!-- Footer / helper -->
+    <div class="mt-auto pt-3 small text-muted">
+        <div class="d-flex align-items-center justify-content-between">
+            <span>Lezato Dashboard</span>
+            <span class="badge bg-light text-dark">v1.0</span>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
+    </div>
 </div>

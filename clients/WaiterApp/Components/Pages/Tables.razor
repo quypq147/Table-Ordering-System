@@ -1,0 +1,115 @@
+@page "/tables"
+@using System.Net.Http.Json
+@using TableOrdering.Contracts
+@using WaiterApp.Models
+@inject WaiterApp.Services.ApiClient ApiClient
+@inject Microsoft.AspNetCore.Components.NavigationManager Navigation
+
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <h4 class="mb-0">Danh sách bàn</h4>
+            <small class="text-muted">Theo dõi tr?ng thái ph?c v? trong nhà hàng</small>
+        </div>
+        <button class="btn btn-outline-secondary ms-auto" @onclick="LoadAsync" disabled="@loading">
+            <span class="spinner-border spinner-border-sm me-2" role="status" hidden="@(!loading)"></span>
+            T?i l?i
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+
+    <div class="row g-3">
+        @if (loading && tables.Count == 0)
+        {
+            <div class="col-12">
+                <div class="alert alert-info">?ang t?i d? li?u bàn...</div>
+            </div>
+        }
+        else if (tables.Count == 0)
+        {
+            <div class="col-12">
+                <div class="alert alert-secondary">Ch?a có bàn nào.</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var table in tables)
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="fw-bold text-uppercase">@table.Code</div>
+                                    <div class="text-muted small">@table.Seats gh?</div>
+                                </div>
+                                <span class="badge @GetStatusBadgeClass(table)">@GetStatusText(table)</span>
+                            </div>
+
+                            <div class="mt-auto d-flex gap-2">
+                                <button class="btn btn-outline-primary flex-fill" @onclick="() => NavigateToDetail(table.Id)">Chi ti?t</button>
+                                <button class="btn btn-outline-secondary flex-fill" @onclick="() => NavigateToTickets(table.Id)">Phi?u b?p</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private readonly List<TableDto> tables = new();
+    private bool loading;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var data = await ApiClient.Http.GetFromJsonAsync<List<TableDto>>(WaiterApiEndpoints.Tables.List);
+            tables.Clear();
+            if (data != null)
+            {
+                tables.AddRange(data.OrderBy(t => t.Code));
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private static string GetStatusBadgeClass(TableDto table) => table.Status switch
+    {
+        TableStatus.Available => "text-bg-success",
+        TableStatus.InUse => "text-bg-warning text-dark",
+        _ => "text-bg-secondary"
+    };
+
+    private static string GetStatusText(TableDto table) => table.Status switch
+    {
+        TableStatus.Available => "Tr?ng",
+        TableStatus.InUse => "?ang ph?c v?",
+        _ => table.Status.ToString()
+    };
+
+    private void NavigateToDetail(Guid id) => Navigation.NavigateTo($"/tables/{id}");
+
+    private void NavigateToTickets(Guid id) => Navigation.NavigateTo($"/tables/{id}/tickets");
+}
