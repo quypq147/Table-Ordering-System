@@ -111,138 +111,125 @@
         </div>
     </div>
 
-    <div class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
-        <div class="grid grid-cols-2 gap-4">
-            <a href="/client/menu" class="flex items-center justify-center gap-2 py-4 rounded-2xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-all">
-                <i class="fas fa-plus"></i> Gọi thêm
-            </a>
-            <button onclick="requestPayment()" class="flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#FE724C] text-white font-bold shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all">
-                <i class="fas fa-receipt"></i> Thanh toán
-            </button>
+    <!-- Floating Chat Button -->
+    <button id="chatFab" onclick="openChatPopup()" class="fixed bottom-6 right-6 w-14 h-14 bg-[#FE724C] text-white rounded-full shadow-lg flex items-center justify-center z-50">
+        <i class="fas fa-comment-dots"></i>
+    </button>
+
+    <!-- Chat Popup Modal -->
+    <div id="chatPopup" class="fixed inset-0 flex items-end justify-end p-6 pointer-events-none">
+        <div class="w-96 bg-white rounded-2xl shadow-xl pointer-events-auto p-4 hidden" id="chatWindow">
+            <div class="flex items-center justify-between mb-3">
+                <div class="fw-semibold">Chat với nhân viên</div>
+                <button class="btn btn-sm btn-light" onclick="closeChatPopup()">✕</button>
+            </div>
+            <div id="chatMessages" style="height:300px; overflow:auto;" class="mb-3">
+                <!-- messages loaded by JS -->
+            </div>
+            <div class="d-flex gap-2">
+                <input id="chatInput" class="form-control" placeholder="Nhập tin nhắn..." />
+                <button class="btn btn-primary" onclick="sendChat()">Gửi</button>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
-
     <script>
-        (function() {
-            const orderId = "@(orderId == Guid.Empty ? "" : orderId.ToString())";
-            if (!orderId) return;
+        const orderId = "@orderId";
+        let order = null;
+        let currency = "VND";
+        let isPaying = false;
+        let pollTimer = null;
 
-            const statusMap = {
-                "Draft": 0,
-                "Submitted": 1,
-                "InProgress": 2,
-                "Ready": 3,
-                "Served": 4,
-                "Paid": 5,
-                "Cancelled": -1
-            };
+        const statusMap = {
+            Draft: 'Đang chọn món',
+            Submitted: 'Đã gửi bếp',
+            InProgress: 'Đang chế biến',
+            Ready: 'Món đã sẵn sàng',
+            Served: 'Đã phục vụ',
+            Cancelled: 'Đã hủy',
+            WaitingForPayment: 'Đang chờ thanh toán',
+            Paid: 'Đã thanh toán'
+        };
 
-            // trạng thái hiện tại của đơn
-            let currentStatus = "@initialStatus";
-
-            function updateStepper(statusStr) {
-                currentStatus = statusStr || "Draft"; // luôn cập nhật biến trạng thái
-
-                let currentStep = statusMap[currentStatus] || 0;
-
-                if (currentStatus === 'Cancelled') {
-                    if (window.toast) toast.error('Đơn hàng đã bị hủy!');
-                    else alert('Đơn hàng đã bị hủy!');
-                    return;
-                }
-
-                $('.step-item').each(function () {
-                    const stepIndex = parseInt($(this).data('step'));
-                    const $dot = $(this).find('.absolute');
-                    const $title = $(this).find('h4');
-
-                    $dot.removeClass('bg-[#FE724C] bg-gray-200 bg-green-500 ring-orange-100 border-orange-500 text-white');
-                    $title.removeClass('text-[#FE724C] text-gray-300 text-gray-800');
-                    $dot.html('');
-
-                    if (stepIndex < currentStep) {
-                        $dot.addClass('bg-green-500 border-green-500');
-                        $title.addClass('text-gray-800');
-                        $dot.html('<i class="fas fa-check text-xs md:text-sm"></i>');
-                    } else if (stepIndex === currentStep) {
-                        $dot.addClass('bg-[#FE724C] border-[#FE724C] ring-4 ring-orange-100 text-white');
-                        $title.addClass('text-[#FE724C]');
-                        $dot.html('<i class="fas fa-circle text-[6px] md:text-[8px] animate-pulse"></i>');
-                    } else {
-                        $dot.addClass('bg-gray-200 border-gray-200');
-                        $title.addClass('text-gray-300');
-                    }
-                });
+        function requestPayment(){
+            // If order already served -> redirect to payment page
+            const current = document.querySelector('#tracking-steps .step-item[data-step="4"]');
+            // We check server-side initialStatus and fallback to DOM state not robust; prefer to call API to get order status
+            if(!orderId || orderId === '00000000-0000-0000-0000-000000000000'){
+                alert('Không xác định đơn hàng'); return;
             }
 
-            async function startSignalR() {
-                if (typeof signalR === 'undefined') {
-                    console.error("SignalR chưa được load. Kiểm tra lại kết nối mạng hoặc đường dẫn CDN.");
-                    return;
-                }
-
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl("/hubs/customer")
-                    .withAutomaticReconnect()
-                    .build();
-
-                connection.on("OrderStatusChanged", (payload) => {
-                    const status = (payload && payload.status) || 'Draft';
-                    updateStepper(status);
-
-                    const msgMap = {
-                        "InProgress": "Bếp đang nấu món của bạn!",
-                        "Ready": "Món ăn đã sẵn sàng!",
-                        "Served": "Chúc quý khách ngon miệng!",
-                        "Paid": "Thanh toán thành công!",
-                        "Cancelled": "Đơn hàng đã hủy."
-                    };
-
-                    if (msgMap[status]) {
-                        if (window.toast) toast.info(msgMap[status]);
+            // Call backend to fetch latest order status
+            fetch(`/proxy/public/cart/${orderId}`)
+                .then(r => {
+                    if(!r.ok) throw new Error('Không thể lấy trạng thái đơn');
+                    return r.json();
+                })
+                .then(st => {
+                    const status = st?.status || st?.Status || '@initialStatus';
+                    if(status === 'Served'){
+                        // Redirect to payment page
+                        window.location.href = `/Client/Payment?orderId=${orderId}`;
+                        return;
                     }
-                });
-
-                connection.on("OrderPaid", () => {
-                    updateStepper("Paid");
-                    if (window.toast) toast.success("Thanh toán thành công. Cảm ơn quý khách!");
-                });
-
-                try {
-                    await connection.start();
-                    await connection.invoke("JoinOrderGroup", orderId);
-                    console.log("Connected to OrderHub via SignalR");
-                } catch (err) {
-                    console.error("SignalR Error:", err);
-                }
-            }
-
-            $(document).ready(function () {
-                const initial = "@initialStatus";
-                updateStepper(initial);
-                startSignalR();
-            });
-
-            window.requestPayment = function () {
-                // chỉ cho thanh toán khi đã phục vụ
-                if (currentStatus !== "Served") {
-                    if (window.toast) {
-                        toast.warning("Món ăn chưa phục vụ, vui lòng đợi nhân viên mang món ra trước khi thanh toán.");
-                    } else {
-                        alert("Món ăn chưa phục vụ, vui lòng đợi nhân viên mang món ra trước khi thanh toán.");
+                    // Otherwise show confirm modal to request cash payment
+                    if(confirm('Bạn muốn gọi nhân viên thu tiền tại quầy?')){
+                        // Post to API to request cash payment
+                        fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
+                            .then(r => {
+                                if(!r.ok) throw new Error('Gửi yêu cầu thất bại');
+                                toast('Đã thông báo nhân viên. Vui lòng chờ.', 'success');
+                            }).catch(e => {
+                                toast(e.message || 'Lỗi', 'error');
+                            });
                     }
-                    return;
-                }
+                }).catch(e => {
+                    toast(e.message || 'Lỗi kết nối', 'error');
+                });
+        }
 
-                if (!confirm('Bạn muốn gọi nhân viên thanh toán?')) return;
-                if (window.toast) toast.success('Đã gửi yêu cầu thanh toán!');
-                else alert('Đã gửi yêu cầu thanh toán!');
-            }
+        function toast(msg, type){
+            const el = document.getElementById('toast');
+            if(!el) return;
+            const body = document.getElementById('toastMsg');
+            if(body){ body.textContent = msg || ''; }
+            bootstrap.Toast.getOrCreateInstance(el).show();
+        }
 
-        })();
+        // Chat popup behaviors
+        function openChatPopup(){
+            document.getElementById('chatWindow').classList.remove('hidden');
+        }
+        function closeChatPopup(){
+            document.getElementById('chatWindow').classList.add('hidden');
+        }
+        function sendChat(){
+            const input = document.getElementById('chatInput');
+            const text = input.value && input.value.trim();
+            if(!text) return;
+
+            // Lấy TableCode từ model (render sẵn server-side)
+            const tableCode = '@(Model?.TableCode ?? "")';
+
+            fetch('/proxy/public/chat', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ tableCode: tableCode, sender: 'customer', message: text })
+            })
+            .then(r => { if(!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
+            .then((payload) => {
+                const box = document.getElementById('chatMessages');
+                const el = document.createElement('div');
+                el.className = 'mb-2';
+                el.innerHTML = `<div class="small text-muted">Bạn</div>
+                                <div class="bg-gray-100 p-2 rounded">${payload.message || text}</div>`;
+                box.appendChild(el);
+                box.scrollTop = box.scrollHeight;
+                input.value = '';
+            })
+            .catch(e => { toast(e.message || 'Lỗi gửi', 'error'); });
+        }
     </script>
 }

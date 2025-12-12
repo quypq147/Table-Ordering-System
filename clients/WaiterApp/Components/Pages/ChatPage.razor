@@ -1,6 +1,7 @@
 ﻿@page "/chat"
 @using WaiterApp.Services
 @inject OrdersRealtimeService Realtime
+@inject ApiClient ApiClient
 
 <div class="container py-3">
     <h4 class="mb-3">Chat với khách</h4>
@@ -13,24 +14,34 @@
     }
 
     <div class="card shadow-sm">
-        <div class="card-body" style="max-height: 400px; overflow-y: auto;" @ref="messagesContainer">
-            @if (messages.Count == 0)
-            {
-                <div class="text-muted small">Chưa có tin nhắn nào.</div>
-            }
-            else
-            {
-                @foreach (var m in messages.OrderBy(m => m.SentAtUtc))
+        <div class="card-body d-flex flex-column" style="max-height: 60vh;">
+            <div class="messages overflow-auto mb-3" style="flex:1 1 auto;" @ref="messagesContainer">
+                @if (messages.Count == 0)
                 {
-                    <div class="mb-2">
-                        <div class="small text-muted">
-                            Bàn @m.TableId - @m.Sender (@m.SentAtLocal.ToString("HH:mm:ss"))
-                        </div>
-                        <div>@m.Message</div>
-                        <hr class="my-1" />
-                    </div>
+                    <div class="text-muted small">Chưa có tin nhắn nào.</div>
                 }
-            }
+                else
+                {
+                    @foreach (var m in messages.OrderBy(m => m.SentAtUtc))
+                    {
+                        var isStaff = string.Equals(m.Sender, "staff", StringComparison.OrdinalIgnoreCase) || m.Sender == "Tôi";
+                        <div class="d-flex mb-2 @(isStaff ? "justify-content-end" : "justify-content-start")">
+                            <div class="chat-bubble @(isStaff ? "chat-bubble-right" : "chat-bubble-left")">
+                                <div class="small text-muted mb-1">
+                                    @(isStaff ? "Bạn" : $"Bàn {m.TableId} - {m.Sender}")
+                                    <span class="ms-1">@m.SentAtLocal.ToString("HH:mm")</span>
+                                </div>
+                                <div>@m.Message</div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="d-flex gap-2 mt-2" style="flex:0 0 auto;">
+                <input class="form-control" placeholder="Nhập tin nhắn..." @bind="outgoing" @bind:event="oninput" @onkeydown="OnKeyDown" />
+                <button class="btn btn-primary" @onclick="SendAsync" disabled="@string.IsNullOrWhiteSpace(outgoing)">Gửi</button>
+            </div>
         </div>
     </div>
 </div>
@@ -39,6 +50,8 @@
     private readonly List<ChatMessageViewModel> messages = new();
     private bool connected;
     private ElementReference messagesContainer;
+    private string outgoing = string.Empty;
+    private string? currentTableId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -51,9 +64,10 @@
                 await Realtime.StartAsync();
                 connected = Realtime.IsConnected;
             }
-            catch
+            catch (Exception ex)
             {
                 connected = false;
+                Console.Error.WriteLine(ex.ToString());
             }
         }
         else
@@ -72,13 +86,76 @@
             SentAtUtc = payload.SentAtUtc
         };
 
+        currentTableId = payload.TableId; // set last active table for reply
         messages.Add(vm);
-        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await Task.Delay(30);
+            await ScrollToBottomAsync();
+        });
     }
 
     public void Dispose()
     {
         Realtime.ChatMessageReceived -= OnChatMessageReceived;
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(outgoing)) return;
+        if (string.IsNullOrWhiteSpace(currentTableId))
+        {
+            Console.Error.WriteLine("No table selected to send chat.");
+            return;
+        }
+
+        try
+        {
+            var body = new { TableCode = currentTableId, Sender = "staff", Message = outgoing };
+            var resp = await ApiClient.Http.PostAsJsonAsync("api/chat", body);
+            if (!resp.IsSuccessStatusCode)
+            {
+                Console.Error.WriteLine("Chat send failed: " + resp.ReasonPhrase);
+            }
+            else
+            {
+                messages.Add(new ChatMessageViewModel
+                {
+                    TableId = currentTableId,
+                    Sender = "Tôi",
+                    Message = outgoing,
+                    SentAtUtc = DateTime.UtcNow
+                });
+                outgoing = string.Empty;
+                await InvokeAsync(StateHasChanged);
+                await ScrollToBottomAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex.ToString());
+        }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await Task.Yield();
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", messagesContainer);
+        }
+        catch { }
+    }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendAsync();
+        }
     }
 
     private sealed class ChatMessageViewModel

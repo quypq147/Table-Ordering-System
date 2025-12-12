@@ -2,8 +2,9 @@
 @using WaiterApp.Services
 @inject ApiClient ApiClient
 @inject OrdersRealtimeService Realtime
+@inject ToastService Toast
 
-<div class="container py-3 bg-light min-vh-100">
+<div class="container py-3">
     <div class="d-flex gap-2 mb-2">
         <button class="btn @GetFilterBtnClass(OrderFilter.New)" @onclick="(() => SetFilter(OrderFilter.New))">Mới</button>
         <button class="btn @GetFilterBtnClass(OrderFilter.InProgress)" @onclick="(() => SetFilter(OrderFilter.InProgress))">Đang làm</button>
@@ -13,11 +14,16 @@
     <div class="input-group mb-3">
         <span class="input-group-text"><i class="fa fa-search"></i></span>
         <input class="form-control" placeholder="Tìm bàn / mã đơn" @bind="searchTerm" @bind:event="oninput" />
-        <button class="btn btn-outline-primary" disabled="@isRefreshing" @onclick="RefreshAsync">
-            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" hidden="@(!isRefreshing)"></span>
+        <button class="btn btn-outline-secondary" disabled="@isRefreshing" @onclick="RefreshAsync">
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" hidden="@( !isRefreshing )"></span>
             Tải lại
         </button>
     </div>
+
+    @if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
 
     <div class="row g-3">
         @if (filteredOrders.Count == 0)
@@ -31,20 +37,29 @@
             @foreach (var order in filteredOrders)
             {
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card shadow-sm">
+                    <div class="order-card">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
+                            <div class="order-card-header">
                                 <div>
                                     <div class="fw-bold fs-6">@order.TableCode</div>
-                                    <div class="text-muted small">Lúc @order.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</div>
+                                    <div class="text-muted small">
+                                        Lúc @order.CreatedAtUtc.ToLocalTime().ToString("HH:mm")
+                                    </div>
                                 </div>
-                                <span class="badge @GetStatusBadgeClass(order.Status)">@GetStatusText(order.Status)</span>
+                                <span class="badge pill @GetStatusBadgeClass(order.Status)">
+                                    @GetStatusText(order.Status)
+                                </span>
                             </div>
-                            <div class="text-muted small mt-2">Món đang chờ: @order.PendingItems</div>
+                            <div class="text-muted small mt-2">
+                                Món đang chờ: @order.PendingItems
+                            </div>
                             <div class="mt-3 d-flex justify-content-end">
-                                <a class="btn btn-sm btn-primary" href="orderdetail?orderId=@order.Id">Chi tiết</a>
+                                <a class="btn btn-sm btn-outline-primary" href="orderdetail?orderId=@order.Id">
+                                    Chi tiết
+                                </a>
                             </div>
                         </div>
+                        <div class="order-card-accent"></div>
                     </div>
                 </div>
             }
@@ -60,6 +75,7 @@
     private OrderFilter activeFilter = OrderFilter.New;
     private string? searchTerm;
     private bool isRefreshing;
+    private string? loadError;
     private CancellationTokenSource? cts;
 
     protected override async Task OnInitializedAsync()
@@ -96,21 +112,36 @@
 
     private async Task LoadAsync()
     {
+        isRefreshing = true;
+        loadError = null;
         try
         {
-            isRefreshing = true;
             var url = WaiterApiEndpoints.Orders.Summaries(page: 1, pageSize: 200);
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await ApiClient.Http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                // In Blazor, prefer console/logging or UI toast; keep simple here
-                var _ = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync();
+                loadError = $"Lỗi khi tải đơn: {response.StatusCode} - {content}";
+                Toast.ShowError(loadError);
                 orders = new();
                 return;
             }
+
             var data = await response.Content.ReadFromJsonAsync<List<OrderSummaryVm>>();
             orders = data ?? new();
+        }
+        catch (HttpRequestException hre)
+        {
+            loadError = "Không thể kết nối tới server. Vui lòng kiểm tra mạng.";
+            Toast.ShowError(loadError);
+            Console.Error.WriteLine(hre.ToString());
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+            Toast.ShowError(loadError);
+            Console.Error.WriteLine(ex.ToString());
         }
         finally
         {
@@ -195,13 +226,13 @@
 
     private string GetStatusBadgeClass(string status) => status switch
     {
-        "Submitted" => "text-bg-danger",
-        "InProgress" => "text-bg-warning",
-        "Ready" => "text-bg-info",
-        "WaitingForPayment" => "text-bg-orange",
-        "Paid" => "text-bg-success",
-        "Cancelled" => "text-bg-danger",
-        _ => "text-bg-secondary"
+        "Submitted" => "badge-status-submitted",
+        "InProgress" => "badge-status-inprogress",
+        "Ready" => "badge-status-ready",
+        "WaitingForPayment" => "badge-status-waiting",
+        "Paid" => "badge-status-paid",
+        "Cancelled" => "badge-status-cancelled",
+        _ => "badge bg-secondary"
     };
 
     public sealed class OrderSummaryVm

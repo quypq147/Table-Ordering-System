@@ -22,6 +22,7 @@ namespace WaiterApp
             builder.Services.AddSingleton(App.OrdersRealtimeService);
             builder.Services.AddSingleton(App.KdsRealtimeService);
             builder.Services.AddSingleton<NavigationBridge>();
+            builder.Services.AddSingleton<ToastService>();
 
 #if DEBUG
             builder.Logging.AddDebug();

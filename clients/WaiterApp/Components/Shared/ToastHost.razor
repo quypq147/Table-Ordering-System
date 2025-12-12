@@ -1,0 +1,55 @@
+@using WaiterApp.Services
+@inject ToastService Toast
+
+@if (visible)
+{
+    <div class="waiter-toast @CssByLevel(level)">
+        @message
+    </div>
+}
+
+@code {
+    private bool visible;
+    private string message = string.Empty;
+    private string level = "info";
+    private System.Timers.Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        Toast.OnShow += HandleShow;
+    }
+
+    private void HandleShow(string msg, string lvl)
+    {
+        message = msg;
+        level = lvl;
+        visible = true;
+
+        _timer?.Stop();
+        _timer ??= new System.Timers.Timer(3000) { AutoReset = false };
+        _timer.Elapsed -= Hide;
+        _timer.Elapsed += Hide;
+        _timer.Start();
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Hide(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        visible = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Toast.OnShow -= HandleShow;
+        _timer?.Dispose();
+    }
+
+    private string CssByLevel(string lvl) => lvl switch
+    {
+        "error" => "waiter-toast-error",
+        "success" => "waiter-toast-success",
+        _ => "waiter-toast-info"
+    };
+}
