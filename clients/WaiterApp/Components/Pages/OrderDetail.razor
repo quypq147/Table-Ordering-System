@@ -4,7 +4,9 @@
 @inject Microsoft.AspNetCore.Components.NavigationManager Nav
 
 @code {
-    [Parameter] public Guid orderId { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public Guid orderId { get; set; }
 
     private OrderDtoVm? order;
     private bool loading;
@@ -84,7 +86,7 @@
 }
 
 <div class="container py-3 bg-light min-vh-100">
-    <h5 class="mb-3">??N HÀNG</h5>
+    <h5 class="mb-3">ĐƠN HÀNG</h5>
 
     @if (loading)
     {

@@ -67,7 +67,7 @@ public sealed class OrdersRealtimeService
             {
                 await conn.StartAsync();
                 // Nhóm staff để nhận mọi chat của khách và yêu cầu thanh toán
-                await conn.InvokeAsync("JoinStaffGroup", _authService.Token);
+                await conn.InvokeAsync("JoinStaffGroup");
             }
             catch
             {
