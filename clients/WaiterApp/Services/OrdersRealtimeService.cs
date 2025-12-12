@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.SignalR.Client;
 
 namespace WaiterApp.Services;
 
@@ -13,6 +13,12 @@ public sealed class OrdersRealtimeService
 
     public event Action<Guid, string>? OrderStatusChanged;
     public event Action<string>? ConfigurationError;
+
+    // Chat message từ khách -> nhân viên
+    public event Action<ChatMessagePayload>? ChatMessageReceived;
+
+    // Payment request từ khách (Thanh toán tiền mặt)
+    public event Action<PaymentRequestPayload>? PaymentRequestReceived;
 
     public OrdersRealtimeService(AuthService authService, ApiClient apiClient)
     {
@@ -44,11 +50,24 @@ public sealed class OrdersRealtimeService
 
             conn.On<Guid, string>("orderStatusChanged", (orderId, status) => OrderStatusChanged?.Invoke(orderId, status));
 
+            // Lắng nghe chatMessage: payload ẩn danh { tableId, sender, message, sentAtUtc }
+            conn.On<ChatMessagePayload>("chatMessage", payload =>
+            {
+                ChatMessageReceived?.Invoke(payload);
+            });
+
+            // Lắng nghe yêu cầu thanh toán tiền mặt từ khách
+            conn.On<PaymentRequestPayload>("ReceivePaymentRequest", payload =>
+             {
+                 PaymentRequestReceived?.Invoke(payload);
+             });
+
             // Ensure we clean up the local connection if startup fails
             try
             {
                 await conn.StartAsync();
-                await conn.InvokeAsync("JoinStaffGroup");
+                // Nhóm staff để nhận mọi chat của khách và yêu cầu thanh toán
+                await conn.InvokeAsync("JoinStaffGroup", _authService.Token);
             }
             catch
             {
@@ -113,4 +132,31 @@ public sealed class OrdersRealtimeService
             _startStopLock.Release();
         }
     }
+
+    // Add this method to OrdersRealtimeService if it is missing
+    public void On<T>(string eventName, Action<T> handler)
+    {
+        // Implementation depends on your realtime infrastructure (e.g., SignalR, WebSocket, etc.)
+        // For example, if using SignalR:
+        // _hubConnection.On<T>(eventName, handler);
+
+        // Placeholder: throw if not implemented
+        throw new NotImplementedException("On<T> method must be implemented to subscribe to realtime events.");
+    }
+}
+
+// DTO đơn giản để nhận payload chat từ Hub
+public sealed class ChatMessagePayload
+{
+    public string TableId { get; set; } = string.Empty;
+    public string Sender { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public DateTime SentAtUtc { get; set; }
+}
+
+// DTO cho yêu cầu thanh toán tiền mặt từ khách
+public sealed class PaymentRequestPayload
+{
+    public Guid OrderId { get; set; }
+    public string TableCode { get; set; } = string.Empty;
 }

@@ -141,16 +141,21 @@
                 "Cancelled": -1
             };
 
-            function updateStepper(statusStr) {
-                let currentStep = statusMap[statusStr] || 0;
+            // trạng thái hiện tại của đơn
+            let currentStatus = "@initialStatus";
 
-                if (statusStr === 'Cancelled') {
-                    if(window.toast) toast.error('Đơn hàng đã bị hủy!');
+            function updateStepper(statusStr) {
+                currentStatus = statusStr || "Draft"; // luôn cập nhật biến trạng thái
+
+                let currentStep = statusMap[currentStatus] || 0;
+
+                if (currentStatus === 'Cancelled') {
+                    if (window.toast) toast.error('Đơn hàng đã bị hủy!');
                     else alert('Đơn hàng đã bị hủy!');
                     return;
                 }
 
-                $('.step-item').each(function() {
+                $('.step-item').each(function () {
                     const stepIndex = parseInt($(this).data('step'));
                     const $dot = $(this).find('.absolute');
                     const $title = $(this).find('h4');
@@ -197,14 +202,14 @@
                         "Cancelled": "Đơn hàng đã hủy."
                     };
 
-                    if(msgMap[status]) {
-                         if(window.toast) toast.info(msgMap[status]);
+                    if (msgMap[status]) {
+                        if (window.toast) toast.info(msgMap[status]);
                     }
                 });
 
                 connection.on("OrderPaid", () => {
                     updateStepper("Paid");
-                    if(window.toast) toast.success("Thanh toán thành công. Cảm ơn quý khách!");
+                    if (window.toast) toast.success("Thanh toán thành công. Cảm ơn quý khách!");
                 });
 
                 try {
@@ -216,16 +221,26 @@
                 }
             }
 
-            $(document).ready(function() {
+            $(document).ready(function () {
                 const initial = "@initialStatus";
                 updateStepper(initial);
                 startSignalR();
             });
 
-            window.requestPayment = function() {
-                 if(!confirm('Bạn muốn gọi nhân viên thanh toán?')) return;
-                 if(window.toast) toast.success('Đã gửi yêu cầu thanh toán!');
-                 else alert('Đã gửi yêu cầu thanh toán!');
+            window.requestPayment = function () {
+                // chỉ cho thanh toán khi đã phục vụ
+                if (currentStatus !== "Served") {
+                    if (window.toast) {
+                        toast.warning("Món ăn chưa phục vụ, vui lòng đợi nhân viên mang món ra trước khi thanh toán.");
+                    } else {
+                        alert("Món ăn chưa phục vụ, vui lòng đợi nhân viên mang món ra trước khi thanh toán.");
+                    }
+                    return;
+                }
+
+                if (!confirm('Bạn muốn gọi nhân viên thanh toán?')) return;
+                if (window.toast) toast.success('Đã gửi yêu cầu thanh toán!');
+                else alert('Đã gửi yêu cầu thanh toán!');
             }
 
         })();

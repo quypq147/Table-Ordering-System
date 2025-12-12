@@ -22,6 +22,7 @@ public sealed class ChangeTicketStatusHandlerTests
     {
         public Task OrderStatusChangedAsync(Guid orderId, string status, CancellationToken ct = default) => Task.CompletedTask;
         public Task OrderPaidAsync(Guid orderId, decimal amount, string currency, string method, DateTime paidAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task CashPaymentRequestedAsync(Guid orderId, string tableCode, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     [Fact]

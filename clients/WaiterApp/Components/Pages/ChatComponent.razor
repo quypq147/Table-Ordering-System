@@ -1,0 +1,99 @@
+﻿@using WaiterApp.Services
+@inject OrdersRealtimeService Realtime
+
+<div class="container py-3">
+    <h4 class="mb-3">Tin nhắn từ khách</h4>
+
+    @if (!string.IsNullOrEmpty(configurationError))
+    {
+        <div class="alert alert-warning">@configurationError</div>
+    }
+
+    @if (messages.Count == 0)
+    {
+        <div class="alert alert-secondary">Chưa có tin nhắn nào từ khách.</div>
+    }
+    else
+    {
+        <div class="list-group mb-3" style="max-height: 400px; overflow-y: auto;">
+            @foreach (var m in messages.OrderByDescending(x => x.SentAtUtc))
+            {
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="fw-bold">Bàn @m.TableId</div>
+                            <div>@m.Message</div>
+                        </div>
+                        <small class="text-muted ms-2">
+                            @m.SentAtUtc.ToLocalTime().ToString("HH:mm:ss")
+                        </small>
+                    </div>
+                    <span class="badge bg-light text-dark mt-1">Từ: @m.Sender</span>
+                </div>
+            }
+        </div>
+    }
+
+    <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshConnectionAsync">
+        Kết nối lại SignalR
+    </button>
+</div>
+
+@code {
+    private readonly List<ChatMessagePayload> messages = new();
+    private string? configurationError;
+    private bool eventsHooked;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!eventsHooked)
+        {
+            eventsHooked = true;
+            Realtime.ChatMessageReceived += OnChatMessageReceived;
+            Realtime.ConfigurationError += OnConfigurationError;
+        }
+
+        if (!Realtime.IsConnected)
+        {
+            await SafeStartRealtimeAsync();
+        }
+    }
+
+    private async Task SafeStartRealtimeAsync()
+    {
+        configurationError = null;
+        try
+        {
+            await Realtime.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            configurationError = ex.Message;
+        }
+    }
+
+    private void OnChatMessageReceived(ChatMessagePayload payload)
+    {
+        _ = InvokeAsync(() =>
+        {
+            messages.Add(payload);
+            StateHasChanged();
+        });
+    }
+
+    private void OnConfigurationError(string message)
+    {
+        _ = InvokeAsync(() =>
+        {
+            configurationError = message;
+            StateHasChanged();
+        });
+    }
+
+    private async Task RefreshConnectionAsync()
+    {
+        await Realtime.StopAsync();
+        messages.Clear();
+        await SafeStartRealtimeAsync();
+    }
+}

@@ -1,0 +1,92 @@
+﻿@page "/chat"
+@using WaiterApp.Services
+@inject OrdersRealtimeService Realtime
+
+<div class="container py-3">
+    <h4 class="mb-3">Chat với khách</h4>
+
+    @if (!connected)
+    {
+        <div class="alert alert-warning">
+            Đang kết nối đến server chat...
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;" @ref="messagesContainer">
+            @if (messages.Count == 0)
+            {
+                <div class="text-muted small">Chưa có tin nhắn nào.</div>
+            }
+            else
+            {
+                @foreach (var m in messages.OrderBy(m => m.SentAtUtc))
+                {
+                    <div class="mb-2">
+                        <div class="small text-muted">
+                            Bàn @m.TableId - @m.Sender (@m.SentAtLocal.ToString("HH:mm:ss"))
+                        </div>
+                        <div>@m.Message</div>
+                        <hr class="my-1" />
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly List<ChatMessageViewModel> messages = new();
+    private bool connected;
+    private ElementReference messagesContainer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Realtime.ChatMessageReceived += OnChatMessageReceived;
+
+        if (!Realtime.IsConnected)
+        {
+            try
+            {
+                await Realtime.StartAsync();
+                connected = Realtime.IsConnected;
+            }
+            catch
+            {
+                connected = false;
+            }
+        }
+        else
+        {
+            connected = true;
+        }
+    }
+
+    private async void OnChatMessageReceived(ChatMessagePayload payload)
+    {
+        var vm = new ChatMessageViewModel
+        {
+            TableId = payload.TableId,
+            Sender = string.IsNullOrWhiteSpace(payload.Sender) ? "Khách" : payload.Sender,
+            Message = payload.Message,
+            SentAtUtc = payload.SentAtUtc
+        };
+
+        messages.Add(vm);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Realtime.ChatMessageReceived -= OnChatMessageReceived;
+    }
+
+    private sealed class ChatMessageViewModel
+    {
+        public string TableId { get; set; } = string.Empty;
+        public string Sender { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public DateTime SentAtUtc { get; set; }
+        public DateTime SentAtLocal => SentAtUtc.ToLocalTime();
+    }
+}

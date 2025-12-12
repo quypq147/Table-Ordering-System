@@ -78,5 +78,12 @@ public static class WaiterApiEndpoints
         // Nếu sau này WaiterApp cần REST cho bếp:
         // ví dụ: GET /api/kds/tickets ...
     }
+
+    public static class Payments
+    {
+        // POST: /api/payments/confirm-cash
+        // Body: { orderId, amount }
+        public const string ConfirmCash = "api/payments/confirm-cash";
+    }
 }
 

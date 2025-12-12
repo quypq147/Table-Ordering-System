@@ -1,17 +1,27 @@
 ﻿@page "/tables/{tableId:guid}"
 @using System.Net.Http.Json
 @using WaiterApp.Models
-@inject WaiterApp.Services.ApiClient ApiClient
+@using WaiterApp.Services
+@inject ApiClient ApiClient
+@inject OrdersRealtimeService Realtime
 @inject Microsoft.AspNetCore.Components.NavigationManager Navigation
 
 <div class="container py-4">
     <div class="d-flex align-items-center mb-3">
-        <button class="btn btn-outline-secondary me-3" @onclick="BackToTables">?</button>
+        <button class="btn btn-outline-secondary me-3" @onclick="BackToTables">←</button>
         <div>
             <h4 class="mb-0">Chi tiết bàn</h4>
-            <small class="text-muted">Theo dõi món đang phục vụ cho bàn l?a ch?n</small>
+            <small class="text-muted">Theo dõi món đang phục vụ và yêu cầu thanh toán</small>
         </div>
     </div>
+
+    @if (!string.IsNullOrEmpty(paymentRequestMessage))
+    {
+        <div class="alert alert-warning d-flex justify-content-between align-items-center">
+            <span>@paymentRequestMessage</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="() => paymentRequestMessage = null">Đã hiểu</button>
+        </div>
+    }
 
     @if (loading)
     {
@@ -32,21 +42,34 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <div class="text-uppercase fw-bold fs-5">@table.Code</div>
-                        <div class="text-muted">@table.Seats gh?</div>
+                        <div class="text-muted">@table.Seats ghế</div>
                     </div>
                     <span class="badge text-bg-primary">@table.Status</span>
                 </div>
             </div>
         </div>
 
-        <div class="d-flex justify-content-end gap-2 mb-3">
-            <button class="btn btn-outline-secondary" @onclick="BackToTables">Quay l?i</button>
-            <button class="btn btn-primary" @onclick="NavigateToTickets">Xem phi?u b?p</button>
+        <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" @onclick="BackToTables">Quay lại</button>
+                <button class="btn btn-primary" @onclick="NavigateToTickets">Xem phiếu bếp</button>
+            </div>
+
+            @if (canConfirmCash && currentOrderId.HasValue)
+            {
+                <button class="btn btn-success" disabled="@confirming" @onclick="ConfirmCashAsync">
+                    @if (confirming)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    <span>Xác nhận đã thu tiền</span>
+                </button>
+            }
         </div>
 
         <div class="card shadow-sm">
             <div class="card-body">
-                <h5 class="mb-3">Món ?ang ph?c v?</h5>
+                <h5 class="mb-3">Món đang phục vụ</h5>
                 @if (items.Count == 0)
                 {
                     <div class="alert alert-secondary">Không có món nào trong đơn hiện tại.</div>
@@ -87,9 +110,16 @@
     private bool loading;
     private string? error;
 
+    private Guid? currentOrderId;
+    private bool canConfirmCash;
+    private bool confirming;
+    private string? paymentRequestMessage;
+    private bool eventsHooked;
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadAsync();
+        await EnsureRealtimeAsync();
     }
 
     private async Task LoadAsync()
@@ -102,6 +132,9 @@
             var itemsTask = ApiClient.Http.GetFromJsonAsync<List<OrderItemDto>>(WaiterApiEndpoints.Orders.ItemsByTable(tableId));
             table = await tableTask;
             items = (await itemsTask) ?? new List<OrderItemDto>();
+
+            // Lấy active order cho bàn để phục vụ nút xác nhận thanh toán
+            await LoadActiveOrderAsync();
         }
         catch (Exception ex)
         {
@@ -110,6 +143,107 @@
         finally
         {
             loading = false;
+        }
+    }
+
+    private async Task LoadActiveOrderAsync()
+    {
+        try
+        {
+            var url = WaiterApiEndpoints.Orders.ByTable(tableId, 1, 1);
+            var orders = await ApiClient.Http.GetFromJsonAsync<List<BackendOrderSnapshot>>(url) ?? new();
+            var active = orders
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefault(o => !string.Equals(o.Status, "Paid", StringComparison.OrdinalIgnoreCase)
+                                     && !string.Equals(o.Status, "Cancelled", StringComparison.OrdinalIgnoreCase));
+
+            if (active != null)
+            {
+                currentOrderId = active.Id;
+                canConfirmCash = string.Equals(active.Status, "WaitingForPayment", StringComparison.OrdinalIgnoreCase);
+            }
+            else
+            {
+                currentOrderId = null;
+                canConfirmCash = false;
+            }
+        }
+        catch
+        {
+            currentOrderId = null;
+            canConfirmCash = false;
+        }
+    }
+
+    private async Task EnsureRealtimeAsync()
+    {
+        if (eventsHooked) return;
+        eventsHooked = true;
+        Realtime.PaymentRequestReceived += OnPaymentRequestReceived;
+        if (!Realtime.IsConnected)
+            await Realtime.StartAsync();
+    }
+
+    private void OnPaymentRequestReceived(PaymentRequestPayload payload)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (table != null &&
+                !string.IsNullOrWhiteSpace(payload.TableCode) &&
+                string.Equals(table.Code, payload.TableCode, StringComparison.OrdinalIgnoreCase))
+            {
+                paymentRequestMessage = $"Bàn {payload.TableCode} vừa yêu cầu thanh toán tiền mặt.";
+                await LoadActiveOrderAsync();
+                StateHasChanged();
+            }
+        });
+    }
+
+    private sealed class BackendOrderSnapshot
+    {
+        public Guid Id { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private sealed class BackendOrderDetail
+    {
+        public Guid Id { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+        public string Currency { get; set; } = "VND";
+    }
+
+    private async Task ConfirmCashAsync()
+    {
+        if (!currentOrderId.HasValue) return;
+        confirming = true;
+        error = null;
+        try
+        {
+            var order = await ApiClient.Http
+                .GetFromJsonAsync<BackendOrderDetail>(WaiterApiEndpoints.Orders.Get(currentOrderId.Value));
+            if (order == null)
+            {
+                error = "Không tìm thấy đơn để thanh toán.";
+                return;
+            }
+
+            var payload = new { amount = order.Total, currency = order.Currency };
+            var resp = await ApiClient.Http.PostAsJsonAsync(
+                WaiterApiEndpoints.Orders.Pay(currentOrderId.Value), payload);
+            resp.EnsureSuccessStatusCode();
+
+            await LoadAsync();          // refresh table + items + active order
+            paymentRequestMessage = null;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            confirming = false;
         }
     }
 
