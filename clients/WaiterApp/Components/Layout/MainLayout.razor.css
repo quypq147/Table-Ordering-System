@@ -182,3 +182,20 @@ main {
     background: #10b981;
     color: #ffffff;
 }
+
+.table-tile {
+    border-radius: 1rem;
+    border: 0;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .05);
+    color: #fff;
+}
+
+.table-tile--available { background: #16a34a; }
+.table-tile--occupied  { background: #f97316; }
+.table-tile--reserved  { background: #6b7280; }
+
+.table-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,.15);
+}

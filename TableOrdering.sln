@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11304.174 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}"
 EndProject
@@ -149,6 +149,7 @@ Global
 		{2DEB96A6-DCDD-4F88-AD7F-DFD1E0DC36A4}.Release|x86.Build.0 = Release|Any CPU
 		{20710520-26FF-4979-AAF5-FEFF4D2A36B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{20710520-26FF-4979-AAF5-FEFF4D2A36B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20710520-26FF-4979-AAF5-FEFF4D2A36B0}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{20710520-26FF-4979-AAF5-FEFF4D2A36B0}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{20710520-26FF-4979-AAF5-FEFF4D2A36B0}.Debug|x64.Build.0 = Debug|Any CPU
 		{20710520-26FF-4979-AAF5-FEFF4D2A36B0}.Debug|x86.ActiveCfg = Debug|Any CPU

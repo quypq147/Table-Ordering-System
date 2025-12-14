@@ -1,65 +1,73 @@
 ﻿@inherits LayoutComponentBase
-@inject WaiterApp.Services.NavigationBridge NavigationBridge
-@inject Microsoft.AspNetCore.Components.NavigationManager NavManager
+@inject NavigationManager Navigation
+@using WaiterApp.Services
+@inject AuthService AuthService
 
-<div class="d-flex flex-column min-vh-100 waiter-page">
-    <header class="app-header">
-        <div class="container-fluid d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-                <button class="btn btn-outline-secondary me-3 d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+<div class="main-layout bg-background-light dark:bg-background-dark min-h-screen relative pb-24 font-display transition-colors duration-300">
+    
+    <main class="h-full">
+        @Body
+    </main>
+
+    <Components.Shared.ToastHost />
+
+    @if (!string.IsNullOrEmpty(AuthService.Token))
+    {
+        <nav class="fixed bottom-0 w-full bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 flex justify-around items-center py-3 pb-6 z-40 rounded-t-3xl shadow-[0_-4px_20px_-2px_rgba(0,0,0,0.05)]">
+            
+            <button class="@GetNavClass("/tables") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/tables")'>
+                <span class="material-icons-round text-2xl">table_restaurant</span>
+                <span class="text-[10px] font-medium">Bàn</span>
+            </button>
+
+            <button class="@GetNavClass("/orders") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/orders")'>
+                <span class="material-icons-round text-2xl">receipt_long</span>
+                <span class="text-[10px] font-medium">Đơn</span>
+            </button>
+
+            <div class="relative -top-6">
+                <button class="w-14 h-14 rounded-full bg-gray-800 dark:bg-white text-white dark:text-gray-800 flex items-center justify-center shadow-lg border-4 border-gray-50 dark:border-gray-900 active:scale-95 transition-transform">
+                    <span class="material-icons-round text-2xl">qr_code_scanner</span>
                 </button>
-                <a class="navbar-brand fw-semibold text-uppercase tracking-wide text-dark" href="/">Lezato</a>
             </div>
 
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-none d-md-block text-muted small">Đăng nhập bởi</div>
-                <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-white shadow-sm staff-info">
-                    <img src="/lib/bootstrap-icons/person-circle.svg" alt="avatar" width="36" height="36" class="rounded-circle border" />
-                    <div class="d-flex flex-column">
-                        <span class="fw-semibold text-dark">@EmployeeName</span>
-                        <small class="text-muted">Nhân viên phục vụ</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
+            <button class="@GetNavClass("/chat") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/chat")'>
+                <span class="material-icons-round text-2xl">chat_bubble</span>
+                <span class="text-[10px] font-medium">Chat</span>
+            </button>
 
-    <div class="flex-grow-1 d-flex">
-        <aside class="d-none d-lg-flex flex-column site-sidebar p-3">
-            <div class="flex-grow-1 overflow-auto">
-                <NavMenu />
-            </div>
-        </aside>
-
-        <main class="flex-grow-1 app-main">
-            <div class="container-fluid py-4">
-                @Body
-            </div>
-            <Components.Shared.ToastHost />
-        </main>
-    </div>
+            <button class="@GetNavClass("/settings") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/settings")'>
+                <span class="material-icons-round text-2xl">settings</span>
+                <span class="text-[10px] font-medium">Cài đặt</span>
+            </button>
+        </nav>
+    }
 </div>
-
-<div class="offcanvas offcanvas-start text-bg-light" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title" id="mobileSidebarLabel">Lezato</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body p-0">
-        <NavMenu />
-    </div>
-</div>
-
-<script src="/js/scrollHelpers.js"></script>
 
 @code {
-    [Parameter]
-    public string? EmployeeName { get; set; } = "Nhân viên";
+    // Hàm kiểm tra URL để đổi màu nút đang Active
+    private string GetNavClass(string url)
+    {
+        var currentUrl = Navigation.Uri.Replace(Navigation.BaseUri, "/");
+        // Xử lý trường hợp trang chủ "/" tương đương "/tables"
+        if (url == "/tables" && (currentUrl == "" || currentUrl == "/")) return "text-primary";
+        
+        return currentUrl.Contains(url) 
+            ? "text-primary" // Màu cam chủ đạo khi Active
+            : "text-gray-400 dark:text-gray-500 hover:text-gray-600"; // Màu xám khi Inactive
+    }
+
+    private void Navigate(string url)
+    {
+        Navigation.NavigateTo(url);
+    }
 
     protected override void OnInitialized()
     {
-        NavigationBridge.Register(NavManager);
-        base.OnInitialized();
+        // Kiểm tra lại token mỗi khi Layout load
+        if (string.IsNullOrEmpty(AuthService.Token))
+        {
+             Navigation.NavigateTo("/login");
+        }
     }
 }

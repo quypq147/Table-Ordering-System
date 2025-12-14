@@ -8,10 +8,12 @@
 
 <div class="container py-4">
     <div class="d-flex align-items-center mb-3">
-        <button class="btn btn-outline-secondary me-3" @onclick="BackToTables">←</button>
+        <button class="btn btn-outline-secondary me-3" @onclick="BackToTables">
+            <i class="bi bi-arrow-left"></i>
+        </button>
         <div>
             <h4 class="mb-0">Chi tiết bàn</h4>
-            <small class="text-muted">Theo dõi món đang phục vụ và yêu cầu thanh toán</small>
+            <small class="text-muted">Theo dõi món đang phục vụ và thao tác thanh toán</small>
         </div>
     </div>
 
@@ -38,65 +40,101 @@
     else
     {
         <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <div class="text-uppercase fw-bold fs-5">@table.Code</div>
-                        <div class="text-muted">@table.Seats ghế</div>
-                    </div>
-                    <span class="badge text-bg-primary">@table.Status</span>
+            <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="text-uppercase fw-bold fs-5">@table.Code</div>
+                    <div class="text-muted">@table.Seats ghế</div>
                 </div>
+                <span class="badge text-bg-primary text-uppercase">@table.Status</span>
             </div>
         </div>
 
-        <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary" @onclick="BackToTables">Quay lại</button>
-                <button class="btn btn-primary" @onclick="NavigateToTickets">Xem phiếu bếp</button>
-            </div>
-
-            @if (canConfirmCash && currentOrderId.HasValue)
-            {
-                <button class="btn btn-success" disabled="@confirming" @onclick="ConfirmCashAsync">
-                    @if (confirming)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                    }
-                    <span>Xác nhận đã thu tiền</span>
-                </button>
-            }
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="mb-3">Món đang phục vụ</h5>
-                @if (items.Count == 0)
-                {
-                    <div class="alert alert-secondary">Không có món nào trong đơn hiện tại.</div>
-                }
-                else
-                {
-                    <div class="list-group list-group-flush">
-                        @foreach (var item in items)
+        <div class="row g-3">
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="mb-3">Món đang phục vụ</h5>
+                        @if (items.Count == 0)
                         {
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <div class="fw-semibold">@item.ItemName</div>
-                                        @if (!string.IsNullOrWhiteSpace(item.Note))
-                                        {
-                                            <div class="text-muted small">@item.Note</div>
-                                        }
+                            <div class="alert alert-secondary mb-0">Không có món nào trong đơn hiện tại.</div>
+                        }
+                        else
+                        {
+                            <div class="list-group list-group-flush flex-grow-1">
+                                @foreach (var item in items)
+                                {
+                                    <div class="list-group-item py-3 py-lg-4">
+                                        <div class="d-flex justify-content-between align-items-center gap-3">
+                                            <div class="flex-fill">
+                                                <div class="fw-semibold fs-6">@item.ItemName</div>
+                                                @if (!string.IsNullOrWhiteSpace(item.Note))
+                                                {
+                                                    <div class="text-muted small">@item.Note</div>
+                                                }
+                                                <span class="badge text-bg-light text-uppercase mt-1">@item.Status</span>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                <button type="button" class="btn btn-outline-secondary btn-lg rounded-circle px-3" @onclick="() => DecreaseQuantity(item)">
+                                                    -
+                                                </button>
+                                                <div class="fs-5 fw-bold text-center" style="min-width: 3rem;">@item.Quantity</div>
+                                                <button type="button" class="btn btn-outline-secondary btn-lg rounded-circle px-3" @onclick="() => IncreaseQuantity(item)">
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="text-end">
-                                        <div class="fw-bold">x @item.Quantity</div>
-                                        <span class="badge text-bg-light text-uppercase">@item.Status</span>
-                                    </div>
-                                </div>
+                                }
                             </div>
                         }
+
+                        <div class="mt-3">
+                            <label class="form-label fw-semibold">Ghi chú cho đơn</label>
+                            <textarea class="form-control" rows="3" @bind="orderNote" placeholder="Ví dụ: Không cay, mang ra cùng lúc..."></textarea>
+                        </div>
                     </div>
-                }
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div>
+                            <div class="text-muted text-uppercase small">Tổng tiền</div>
+                            <div class="fw-bold" style="font-size: 2.2rem;">
+                                @FormatTotalAmount()
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-2">
+                            <button class="btn btn-primary btn-lg" type="button" @onclick="SendToKitchenAsync">
+                                Gửi bếp
+                            </button>
+                            <button class="btn btn-danger btn-lg" type="button" disabled="@confirming" @onclick="ConfirmCashAsync">
+                                @if (confirming)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                Thanh toán
+                            </button>
+                            <button class="btn btn-info btn-lg text-white" type="button" @onclick="PrintBillAsync">
+                                In hóa đơn
+                            </button>
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between align-items-center small text-muted">
+                            <span>Mã đơn hiện tại</span>
+                            <span>@(currentOrderId?.ToString() ?? "Không có")</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between flex-wrap gap-2 mt-3">
+                            <button class="btn btn-outline-secondary" type="button" @onclick="BackToTables">Quay lại danh sách bàn</button>
+                            <button class="btn btn-outline-primary" type="button" @onclick="NavigateToTickets">Xem phiếu bếp</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -115,6 +153,7 @@
     private bool confirming;
     private string? paymentRequestMessage;
     private bool eventsHooked;
+    private string? orderNote;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -216,7 +255,7 @@
 
     private async Task ConfirmCashAsync()
     {
-        if (!currentOrderId.HasValue) return;
+        if (!currentOrderId.HasValue || !canConfirmCash) return;
         confirming = true;
         error = null;
         try
@@ -229,12 +268,12 @@
                 return;
             }
 
-            var payload = new { amount = order.Total, currency = order.Currency };
+            var payload = new { amount = order.Total, currency = order.Currency, note = orderNote };
             var resp = await ApiClient.Http.PostAsJsonAsync(
                 WaiterApiEndpoints.Orders.Pay(currentOrderId.Value), payload);
             resp.EnsureSuccessStatusCode();
 
-            await LoadAsync();          // refresh table + items + active order
+            await LoadAsync();          // làm mới bàn + món + đơn active
             paymentRequestMessage = null;
         }
         catch (Exception ex)
@@ -245,6 +284,37 @@
         {
             confirming = false;
         }
+    }
+
+    private void IncreaseQuantity(OrderItemDto item)
+    {
+        item.Quantity++;
+        // TODO: Gửi cập nhật số lượng lên server nếu cần
+    }
+
+    private void DecreaseQuantity(OrderItemDto item)
+    {
+        if (item.Quantity <= 1) return;
+        item.Quantity--;
+        // TODO: Gửi cập nhật số lượng lên server nếu cần
+    }
+
+    private string FormatTotalAmount()
+    {
+        // TODO: Tính tổng tiền từ danh sách món nếu có đơn giá; tạm thời hiển thị "Đang cập nhật"
+        return "Đang cập nhật";
+    }
+
+    private async Task SendToKitchenAsync()
+    {
+        // TODO: Gửi món mới hoặc thay đổi số lượng lên bếp
+        await Task.CompletedTask;
+    }
+
+    private async Task PrintBillAsync()
+    {
+        // TODO: Gọi API in hóa đơn hoặc mở màn hình in
+        await Task.CompletedTask;
     }
 
     private void BackToTables() => Navigation.NavigateTo("/tables");
