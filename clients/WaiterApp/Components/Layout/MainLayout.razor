@@ -3,7 +3,7 @@
 @using WaiterApp.Services
 @inject AuthService AuthService
 
-<div class="main-layout bg-background-light dark:bg-background-dark min-h-screen relative pb-24 font-display transition-colors duration-300">
+<div class="main-layout bg-background-light dark:bg-background-dark min-h-screen relative pb-28 font-display transition-colors duration-300">
     
     <main class="h-full">
         @Body
@@ -13,31 +13,31 @@
 
     @if (!string.IsNullOrEmpty(AuthService.Token))
     {
-        <nav class="fixed bottom-0 w-full bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 flex justify-around items-center py-3 pb-6 z-40 rounded-t-3xl shadow-[0_-4px_20px_-2px_rgba(0,0,0,0.05)]">
+        <nav class="fixed bottom-0 w-full bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-800 flex justify-around items-end py-3 pb-6 z-50 rounded-t-3xl shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.05)]">
             
-            <button class="@GetNavClass("/tables") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/tables")'>
-                <span class="material-icons-round text-2xl">table_restaurant</span>
+            <button class="flex flex-col items-center gap-1 w-16 transition-all duration-300 @GetNavClass("tables")" @onclick='() => Navigate("/")'>
+                <span class="material-icons-round text-2xl mb-0.5">table_restaurant</span>
                 <span class="text-[10px] font-medium">Bàn</span>
             </button>
 
-            <button class="@GetNavClass("/orders") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/orders")'>
-                <span class="material-icons-round text-2xl">receipt_long</span>
+            <button class="flex flex-col items-center gap-1 w-16 transition-all duration-300 @GetNavClass("orders")" @onclick='() => Navigate("/orders")'>
+                <span class="material-icons-round text-2xl mb-0.5">receipt_long</span>
                 <span class="text-[10px] font-medium">Đơn</span>
             </button>
 
-            <div class="relative -top-6">
-                <button class="w-14 h-14 rounded-full bg-gray-800 dark:bg-white text-white dark:text-gray-800 flex items-center justify-center shadow-lg border-4 border-gray-50 dark:border-gray-900 active:scale-95 transition-transform">
-                    <span class="material-icons-round text-2xl">qr_code_scanner</span>
+            <div class="relative -top-8 group">
+                <button class="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center shadow-glow border-4 border-background-light dark:border-background-dark active:scale-95 transition-transform duration-200" @onclick='() => Navigate("/scan")'>
+                    <span class="material-icons-round text-3xl">qr_code_scanner</span>
                 </button>
             </div>
 
-            <button class="@GetNavClass("/chat") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/chat")'>
-                <span class="material-icons-round text-2xl">chat_bubble</span>
+            <button class="flex flex-col items-center gap-1 w-16 transition-all duration-300 @GetNavClass("chat")" @onclick='() => Navigate("/chat")'>
+                <span class="material-icons-round text-2xl mb-0.5">chat_bubble_outline</span>
                 <span class="text-[10px] font-medium">Chat</span>
             </button>
 
-            <button class="@GetNavClass("/settings") flex flex-col items-center gap-1 transition-colors" @onclick='() => Navigate("/settings")'>
-                <span class="material-icons-round text-2xl">settings</span>
+            <button class="flex flex-col items-center gap-1 w-16 transition-all duration-300 @GetNavClass("settings")" @onclick='() => Navigate("/settings")'>
+                <span class="material-icons-round text-2xl mb-0.5">settings</span>
                 <span class="text-[10px] font-medium">Cài đặt</span>
             </button>
         </nav>
@@ -45,26 +45,30 @@
 </div>
 
 @code {
-    // Hàm kiểm tra URL để đổi màu nút đang Active
-    private string GetNavClass(string url)
-    {
-        var currentUrl = Navigation.Uri.Replace(Navigation.BaseUri, "/");
-        // Xử lý trường hợp trang chủ "/" tương đương "/tables"
-        if (url == "/tables" && (currentUrl == "" || currentUrl == "/")) return "text-primary";
-        
-        return currentUrl.Contains(url) 
-            ? "text-primary" // Màu cam chủ đạo khi Active
-            : "text-gray-400 dark:text-gray-500 hover:text-gray-600"; // Màu xám khi Inactive
-    }
-
     private void Navigate(string url)
     {
         Navigation.NavigateTo(url);
     }
 
+    private string GetNavClass(string pageName)
+    {
+        var uri = Navigation.Uri.TrimEnd('/');
+        var isMatch = false;
+
+        // Logic highlight tab đang chọn
+        if (pageName == "tables") 
+            isMatch = uri.EndsWith(Navigation.BaseUri.TrimEnd('/')) || uri.Contains("/tables");
+        else 
+            isMatch = uri.Contains("/" + pageName);
+
+        // Active: Màu cam + Icon đậm lên / Inactive: Màu xám
+        return isMatch 
+            ? "text-primary -translate-y-1" 
+            : "text-gray-400 dark:text-gray-500 hover:text-gray-600";
+    }
+
     protected override void OnInitialized()
     {
-        // Kiểm tra lại token mỗi khi Layout load
         if (string.IsNullOrEmpty(AuthService.Token))
         {
              Navigation.NavigateTo("/login");

@@ -3,6 +3,112 @@
 @inject ApiClient ApiClient
 @inject Microsoft.AspNetCore.Components.NavigationManager Nav
 
+<div class="flex flex-col h-screen bg-background-light dark:bg-background-dark pb-24">
+    <div class="px-6 pt-8 pb-4 flex items-center gap-3 bg-white dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
+        <button class="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:text-primary transition-colors" @onclick="GoBack">
+            <span class="material-icons-round">arrow_back</span>
+        </button>
+        <h1 class="text-xl font-bold text-gray-800 dark:text-white flex-1">Chi tiết đơn hàng</h1>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4 no-scrollbar">
+        @if (error != null)
+        {
+            <div class="p-4 rounded-xl bg-red-50 text-red-600 text-sm border border-red-100 flex items-center gap-2">
+                <span class="material-icons-round">error</span> @error
+            </div>
+        }
+
+        @if (loading)
+        {
+            <div class="flex justify-center py-10">
+                <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        }
+        else if (order != null)
+        {
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-soft">
+                <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Mã đơn</p>
+                        <p class="text-lg font-bold text-gray-800 dark:text-white">#@order.Id.ToString().Substring(0, 8)</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Tổng tiền</p>
+                        <p class="text-lg font-bold text-primary">@order.Total.ToString("N0") @order.Currency</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-500">Trạng thái</span>
+                    <span class="px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wide @GetStatusColor(order.Status)">
+                        @GetStatusText(order.Status)
+                    </span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide ml-1">Danh sách món (@order.Items.Count)</h3>
+
+                @foreach (var item in order.Items)
+                {
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-soft flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-orange-50 dark:bg-gray-700 flex items-center justify-center text-primary font-bold">
+                                @item.Quantity
+                                <span class="text-[10px] ml-0.5">x</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800 dark:text-white text-sm">@item.Name</h4>
+                                <p class="text-xs text-gray-400">@item.Price.ToString("N0") @order.Currency</p>
+                            </div>
+                        </div>
+                        <p class="font-bold text-gray-700 dark:text-gray-300 text-sm">
+                            @((item.Price * item.Quantity).ToString("N0"))
+                        </p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (order != null)
+    {
+        <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 fixed bottom-0 left-0 right-0 z-20 pb-8">
+            <div class="max-w-md mx-auto">
+                @if (order.Status == 1) // Submitted
+                {
+                    <button class="w-full py-3.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            @onclick="StartOrderAsync">
+                        <span class="material-icons-round">soup_kitchen</span>
+                        Bắt đầu nấu
+                    </button>
+                }
+                else if (order.Status == 2) // InProgress
+                {
+                    <button class="w-full py-3.5 bg-yellow-500 text-white rounded-xl font-bold shadow-lg shadow-yellow-500/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            @onclick="() => PostAsync(WaiterApiEndpoints.Orders.InProgress(order.Id))">
+                        <span class="material-icons-round">dinner_dining</span>
+                        Báo món đã xong
+                    </button>
+                }
+                else if (order.Status == 3) // Ready
+                {
+                    <button class="w-full py-3.5 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            @onclick="() => PostAsync(WaiterApiEndpoints.Orders.Served(order.Id))">
+                        <span class="material-icons-round">room_service</span>
+                        Đã phục vụ
+                    </button>
+                }
+                else
+                {
+                    <div class="text-center text-sm text-gray-400 py-2">Đơn hàng đã hoàn tất</div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
 @code {
     [Parameter]
     [SupplyParameterFromQuery]
@@ -12,22 +118,22 @@
     private bool loading;
     private string? error;
 
-    protected override async Task OnParametersSetAsync()
-    {
-        await LoadAsync();
-    }
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private void GoBack() => Nav.NavigateTo("/orders");
 
     private async Task LoadAsync()
     {
         error = null; loading = true;
         try
         {
-            var dto = await ApiClient.Http.GetFromJsonAsync<OrderDtoVm>(WaiterApiEndpoints.Orders.Get(orderId));
+            // Sử dụng endpoint Get Order Detail
+            var dto = await ApiClient.Http.GetFromJsonAsync<OrderDtoVm>($"api/orders/{orderId}");
             order = dto;
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            error = "Không thể tải đơn hàng: " + ex.Message;
         }
         finally
         {
@@ -38,118 +144,40 @@
     private async Task StartOrderAsync()
     {
         if (order == null) return;
+        var body = new { OrderId = order.Id, TableId = order.TableId };
+        await PostAsync("api/orders/start", body);
+    }
+
+    private async Task PostAsync(string url, object? body = null)
+    {
         try
         {
-            var body = new { OrderId = order.Id, TableId = order.TableId };
-            var resp = await ApiClient.Http.PostAsJsonAsync(WaiterApiEndpoints.Orders.Start, body);
+            var resp = body == null
+                ? await ApiClient.Http.PostAsync(url, null)
+                : await ApiClient.Http.PostAsJsonAsync(url, body);
+
             if (resp.IsSuccessStatusCode)
             {
                 await LoadAsync();
             }
             else
             {
-                error = await resp.Content.ReadAsStringAsync();
+                error = "Lỗi: " + await resp.Content.ReadAsStringAsync();
             }
         }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-        }
+        catch (Exception ex) { error = ex.Message; }
     }
 
-    private async Task PostAsync(string path)
+    // --- Helpers ---
+    private string GetStatusText(int s) => s switch { 1 => "Mới", 2 => "Đang nấu", 3 => "Sẵn sàng", 4 => "Đã phục vụ", 5 => "Đã thanh toán", _ => "Khác" };
+    private string GetStatusColor(int s) => s switch
     {
-        try
-        {
-            var resp = await ApiClient.Http.PostAsync(path, null);
-            if (resp.IsSuccessStatusCode)
-                await LoadAsync();
-            else
-                error = await resp.Content.ReadAsStringAsync();
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-        }
-    }
-
-    private string StatusText(int status) => status switch
-    {
-        0 => "New",
-        1 => "Submitted",
-        2 => "In Progress",
-        3 => "Ready",
-        4 => "Served",
-        5 => "Cancelled",
-        _ => "Unknown"
+        1 => "bg-blue-100 text-blue-600",
+        2 => "bg-orange-100 text-orange-600",
+        3 => "bg-green-100 text-green-600",
+        _ => "bg-gray-100 text-gray-500"
     };
-}
 
-<div class="container py-3 bg-light min-vh-100">
-    <h5 class="mb-3">ĐƠN HÀNG</h5>
-
-    @if (loading)
-    {
-        <div class="alert alert-info">Đang tải...</div>
-    }
-    else if (!string.IsNullOrEmpty(error))
-    {
-        <div class="alert alert-danger">@error</div>
-    }
-    else if (order == null)
-    {
-        <div class="alert alert-warning">Không tìm thấy đơn.</div>
-    }
-    else
-    {
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="fw-bold">??n #@order.Id.ToString().Substring(0,8)</div>
-                        <div class="text-muted small">Tr?ng thái: @StatusText(order.Status)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <ul class="list-group mb-3">
-            @foreach (var it in order.Items)
-            {
-                <li class="list-group-item d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="fw-bold">@it.Name</div>
-                        @if (!string.IsNullOrWhiteSpace(it.Note))
-                        {
-                            <div class="text-muted small">@it.Note</div>
-                        }
-                    </div>
-                    <div class="text-end">
-                        <div>@it.Quantity x</div>
-                        <div class="text-muted small">@it.LineTotal</div>
-                    </div>
-                </li>
-            }
-        </ul>
-
-        <div class="d-flex gap-2">
-            @if (order.Status == 1)
-            {
-                <button class="btn btn-primary" @onclick="StartOrderAsync">Bất đầu nấu</button>
-            }
-            @if (order.Status == 2)
-            {
-                <button class="btn btn-warning" @onclick="(() => PostAsync(WaiterApiEndpoints.Orders.InProgress(order.Id)))">Đánh dấu đã sẵn sàng</button>
-            }
-            @if (order.Status == 3)
-            {
-                <button class="btn btn-success" @onclick="(() => PostAsync(WaiterApiEndpoints.Orders.Served(order.Id)))">Đánh dấu đã phục vụ</button>
-            }
-        </div>
-    }
-</div>
-
-@code {
     public sealed class OrderDtoVm
     {
         public Guid Id { get; set; }
@@ -157,17 +185,15 @@
         public int Status { get; set; }
         public List<OrderItemVm> Items { get; set; } = new();
         public decimal Total { get; set; }
-        public string Currency { get; set; } = string.Empty;
+        public string Currency { get; set; } = "VND";
     }
 
     public sealed class OrderItemVm
     {
         public int OrderItemId { get; set; }
         public Guid MenuItemId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public decimal UnitPrice { get; set; }
+        public string Name { get; set; } = "";
         public int Quantity { get; set; }
-        public decimal LineTotal { get; set; }
-        public string? Note { get; set; }
+        public decimal Price { get; set; }
     }
 }

@@ -1,109 +1,92 @@
 ﻿@page "/settings"
-@using Microsoft.Maui.Storage
-@using System.Net.Http.Json
 @inject WaiterApp.Services.AuthService Auth
-@inject Microsoft.AspNetCore.Components.NavigationManager Navigation
+@inject NavigationManager Navigation
+@using Microsoft.Maui.Storage
 
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-12 col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h4 class="mb-3">Thiết lập hệ thống</h4>
+<div class="px-6 pt-8 pb-20">
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Cài đặt</h1>
 
-                    @if (!string.IsNullOrEmpty(statusMessage))
-                    {
-                        <div class="alert @statusCss">@statusMessage</div>
-                    }
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-soft p-5 mb-4">
+        <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">Kết nối</h2>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">API Base URL</label>
-                        <input class="form-control" placeholder="http://10.0.2.2:5075" @bind="apiUrl" />
-                        <div class="form-text">S? d?ng 10.0.2.2 cho Android emulator, localhost cho Windows/iOS.</div>
-                    </div>
-
-                    <div class="d-flex gap-2 mb-4">
-                        <button class="btn btn-primary flex-fill" @onclick="Save" disabled="@string.IsNullOrWhiteSpace(apiUrl)">L?u</button>
-                        <button class="btn btn-outline-secondary flex-fill" @onclick="TestAsync" disabled="@isTesting">
-                            <span class="spinner-border spinner-border-sm me-1" role="status" hidden="@(!isTesting)"></span>
-                            Kiểm tra
-                        </button>
-                    </div>
-
-                    <div class="border-top pt-3">
-                        <button class="btn btn-outline-danger w-100" @onclick="Logout">??ng xu?t</button>
-                    </div>
-                </div>
-            </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API Base URL</label>
+            <input type="text" @bind="apiUrl"
+                   class="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 border-none focus:ring-2 focus:ring-primary/50 text-sm transition-all"
+                   placeholder="VD: http://10.0.2.2:5075" />
+            <p class="text-xs text-gray-400 mt-2">Dùng 10.0.2.2 cho Android Emulator</p>
         </div>
+
+        <div class="flex gap-3">
+            <button @onclick="Save" class="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/30 active:scale-95 transition-all">
+                Lưu
+            </button>
+            <button @onclick="TestAsync" class="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold text-sm active:scale-95 transition-all">
+                Test
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <div class="mt-4 p-3 rounded-xl text-xs @(isError ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600")">
+                @statusMessage
+            </div>
+        }
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-soft overflow-hidden">
+        <button class="w-full flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <div class="flex items-center gap-3">
+                <span class="material-icons-round text-gray-400">person</span>
+                <span class="text-sm font-medium">Tài khoản của tôi</span>
+            </div>
+            <span class="material-icons-round text-gray-300">chevron_right</span>
+        </button>
+        <button class="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-colors group" @onclick="Logout">
+            <div class="flex items-center gap-3 text-red-500">
+                <span class="material-icons-round group-hover:rotate-180 transition-transform">logout</span>
+                <span class="text-sm font-medium">Đăng xuất</span>
+            </div>
+        </button>
     </div>
 </div>
 
 @code {
-    private const string PrefKeyApiBaseUrl = "ApiBaseUrl";
-    private string? apiUrl;
-    private string? statusMessage;
-    private string statusCss = "alert-info";
-    private bool isTesting;
+    private string apiUrl = "";
+    private string statusMessage = "";
+    private bool isError;
+    const string PrefKeyApiBaseUrl = "api_base_url";
 
     protected override void OnInitialized()
     {
-        apiUrl = Preferences.Get(PrefKeyApiBaseUrl, string.Empty);
-        if (string.IsNullOrWhiteSpace(apiUrl))
-        {
-            apiUrl = App.ApiClient.Http.BaseAddress?.ToString();
-        }
+        apiUrl = Preferences.Get(PrefKeyApiBaseUrl, "http://10.0.2.2:5075");
     }
 
     private void Save()
     {
-        if (string.IsNullOrWhiteSpace(apiUrl))
-        {
-            ShowStatus("URL không h?p l?.", isError: true);
-            return;
-        }
-
+        if (string.IsNullOrWhiteSpace(apiUrl)) { statusMessage = "URL trống"; isError = true; return; }
         Preferences.Set(PrefKeyApiBaseUrl, apiUrl);
-        App.UpdateApiBaseUrl(apiUrl);
-        ShowStatus("?ã l?u c?u hình.", isError: false);
+        // App.UpdateApiBaseUrl(apiUrl); // Uncomment if needed
+        statusMessage = "Đã lưu"; isError = false;
     }
 
     private async Task TestAsync()
     {
-        if (string.IsNullOrWhiteSpace(apiUrl))
-        {
-            ShowStatus("Vui lòng nh?p API URL.", isError: true);
-            return;
-        }
-
         try
         {
-            isTesting = true;
             using var client = new HttpClient { BaseAddress = new Uri(apiUrl) };
-            var resp = await client.GetAsync("api/auth/login");
-            ShowStatus(resp.IsSuccessStatusCode
-                ? "K?t n?i thành công (endpoint yêu c?u POST)."
-                : $"Ph?n h?i: {(int)resp.StatusCode} {resp.ReasonPhrase}", !resp.IsSuccessStatusCode);
+            var resp = await client.GetAsync("api/auth/login"); // Just checking connectivity
+            statusMessage = "Kết nối thành công"; isError = false;
         }
         catch (Exception ex)
         {
-            ShowStatus("L?i k?t n?i: " + ex.Message, isError: true);
-        }
-        finally
-        {
-            isTesting = false;
+            statusMessage = "Lỗi: " + ex.Message; isError = true;
         }
     }
 
     private void Logout()
     {
         Auth.Logout();
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
-
-    private void ShowStatus(string message, bool isError)
-    {
-        statusMessage = message;
-        statusCss = isError ? "alert-danger" : "alert-success";
+        Navigation.NavigateTo("/login", true);
     }
 }
