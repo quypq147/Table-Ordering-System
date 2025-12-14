@@ -10,9 +10,9 @@
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">Đơn hàng</h1>
         <div class="relative">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 material-icons-round">search</span>
-            <input type="text" 
+            <input type="text"
                    class="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-primary/50 text-sm"
-                   placeholder="Tìm theo bàn hoặc mã..." 
+                   placeholder="Tìm theo bàn hoặc mã..."
                    @bind="searchTerm" @bind:event="oninput" />
         </div>
     </div>
@@ -37,7 +37,7 @@
             {
                 <div @onclick="NaviagateToOrderDetail"
                      class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-soft border border-gray-50 dark:border-gray-700 active:scale-95 transition-transform cursor-pointer">
-                    
+
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
@@ -69,14 +69,15 @@
     // Chỉ thay đổi phần Render HTML ở trên.
 
     // Helper Styles
-    private string GetTabClass(OrderFilter f) 
-        => activeFilter == f 
-            ? "flex-1 py-2 rounded-lg bg-white dark:bg-gray-700 text-primary shadow-sm text-sm font-medium transition-all" 
+    private string GetTabClass(OrderFilter f)
+        => activeFilter == f
+            ? "flex-1 py-2 rounded-lg bg-white dark:bg-gray-700 text-primary shadow-sm text-sm font-medium transition-all"
             : "flex-1 py-2 text-gray-500 dark:text-gray-400 text-sm font-medium hover:text-gray-700";
 
     private string GetShortCode(string code) => code.Replace("Table", "").Replace("T-", "");
 
-    private string GetStatusClass(string s) => s switch {
+    private string GetStatusClass(string s) => s switch
+    {
         "Submitted" => "bg-blue-50 text-blue-600",
         "InProgress" => "bg-orange-50 text-orange-600",
         "Ready" => "bg-green-50 text-green-600",
@@ -124,7 +125,7 @@
         try
         {
             // Update namespace WaiterApiEndpoints properly if needed
-            var url = $"api/orders?page=1&pageSize=200"; 
+            var url = $"api/orders?page=1&pageSize=200";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await ApiClient.Http.SendAsync(request);
             if (!response.IsSuccessStatusCode) { orders = new(); return; }
@@ -134,16 +135,20 @@
         finally { isRefreshing = false; }
     }
 
-    private Task AutoRefreshAsync(CancellationToken ct) => Task.Run(async () => {
-        try {
-            while (!ct.IsCancellationRequested) {
+    private Task AutoRefreshAsync(CancellationToken ct) => Task.Run(async () =>
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
                 await Task.Delay(TimeSpan.FromSeconds(30), ct);
                 await LoadAsync(); ApplyFilters(); await InvokeAsync(StateHasChanged);
             }
-        } catch {}
+        }
+        catch { }
     });
 
-    private void OnOrderStatusChanged(Guid id, string status) 
+    private void OnOrderStatusChanged(Guid id, string status)
         => _ = InvokeAsync(async () => { await LoadAsync(); ApplyFilters(); StateHasChanged(); });
 
     private void ApplyFilters()
@@ -152,7 +157,8 @@
         if (!string.IsNullOrWhiteSpace(searchTerm))
             query = query.Where(o => o.TableCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
 
-        string[] statusFilter = activeFilter switch {
+        string[] statusFilter = activeFilter switch
+        {
             OrderFilter.New => new[] { "Submitted" },
             OrderFilter.InProgress => new[] { "InProgress", "Ready", "WaitingForPayment" },
             _ => new[] { "Paid", "Cancelled" }
@@ -167,11 +173,17 @@
     }
     private void SetFilter(OrderFilter f) { activeFilter = f; ApplyFilters(); }
 
-    private string GetStatusText(string s) => s switch {
-        "Submitted" => "Mới", "InProgress" => "Đang làm", "Ready" => "Sẵn sàng", "Paid" => "Xong", _ => s
+    private string GetStatusText(string s) => s switch
+    {
+        "Submitted" => "Mới",
+        "InProgress" => "Đang làm",
+        "Ready" => "Sẵn sàng",
+        "Paid" => "Xong",
+        _ => s
     };
 
-    public class OrderSummaryVm {
+    public class OrderSummaryVm
+    {
         public Guid Id { get; set; }
         public string TableCode { get; set; } = "";
         public string Status { get; set; } = "";
