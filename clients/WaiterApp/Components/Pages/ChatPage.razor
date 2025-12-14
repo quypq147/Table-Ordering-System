@@ -1,101 +1,111 @@
 ﻿@page "/chat"
 @using WaiterApp.Services
 @inject OrdersRealtimeService Realtime
-@inject ApiClient ApiClient
-@inject IJSRuntime JSRuntime
+@inject NavigationManager Nav
 
-<div class="flex flex-col h-[calc(100vh-6rem)] bg-white dark:bg-gray-900">
-    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10">
-        <h1 class="text-xl font-bold text-gray-800 dark:text-white">Chat với khách</h1>
-        <div class="flex items-center gap-2 mt-1">
-            <span class="w-2 h-2 rounded-full @(connected ? "bg-green-500" : "bg-red-500")"></span>
-            <span class="text-xs text-gray-500">@(connected ? "Trực tuyến" : "Mất kết nối")</span>
-        </div>
+<div class="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="px-6 py-6 bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Tin nhắn</h1>
+        <p class="text-sm text-gray-500">Danh sách hội thoại từ các bàn</p>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-black/20" @ref="messagesContainer">
-        @if (messages.Count == 0)
+    <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        @if (conversations.Count == 0)
         {
-            <div class="flex justify-center mt-10">
-                <span class="px-4 py-2 bg-gray-200 rounded-full text-xs text-gray-500">Chưa có tin nhắn</span>
+            <div class="text-center py-10 text-gray-400">
+                <span class="material-icons-round text-4xl mb-2">chat_bubble_outline</span>
+                <p>Chưa có tin nhắn nào</p>
             </div>
         }
-
-        @foreach (var m in messages.OrderBy(m => m.SentAtUtc))
+        else
         {
-            var isMe = m.Sender == "Tôi" || m.Sender == "staff";
-            <div class="flex w-full @(isMe ? "justify-end" : "justify-start")">
-                <div class="max-w-[75%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm
-                                @(isMe ? "bg-primary text-white rounded-tr-none" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-none")">
-                    @if (!isMe)
-                    {
-                        <p class="text-[10px] font-bold text-primary mb-1">Bàn @m.TableId</p>
-                    }
-                    @m.Message
-                    <p class="text-[10px] mt-1 opacity-70 text-right">@m.SentAtUtc.ToLocalTime().ToString("HH:mm")</p>
+            @foreach (var conv in conversations.Values.OrderByDescending(c => c.LastMessageTime))
+            {
+                <div @onclick="() => OpenDetail(conv.TableId)"
+                     class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-soft flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all">
+
+                    <div class="relative w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                        @GetShortCode(conv.TableId)
+                        @if (conv.UnreadCount > 0)
+                        {
+                            <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                                @conv.UnreadCount
+                            </span>
+                        }
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-bold text-gray-800 dark:text-white truncate">@conv.TableId</h3>
+                            <span class="text-xs text-gray-400">@conv.LastMessageTime.ToLocalTime().ToString("HH:mm")</span>
+                        </div>
+                        <p class="text-sm text-gray-500 truncate @(conv.UnreadCount > 0 ? "font-semibold text-gray-800 dark:text-gray-200" : "")">
+                            @conv.LastMessage
+                        </p>
+                    </div>
                 </div>
-            </div>
+            }
         }
-    </div>
-
-    <div class="p-4 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 pb-24">
-        <div class="flex gap-2">
-            <input type="text" @bind="outgoing" @bind:event="oninput" @onkeydown="OnKeyDown"
-                   placeholder="Nhập tin nhắn..."
-                   class="flex-1 bg-gray-100 dark:bg-gray-800 border-none rounded-full px-5 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none" />
-            <button @onclick="SendAsync" disabled="@string.IsNullOrWhiteSpace(outgoing)"
-                    class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 disabled:opacity-50 transition-transform active:scale-90">
-                <span class="material-icons-round">send</span>
-            </button>
-        </div>
     </div>
 </div>
 
-@code {
-    // Copy logic C# từ ChatPage.razor cũ: messages list, SendAsync, Realtime events...
-    // Nhớ giữ nguyên phần inject IJSRuntime và ElementReference messagesContainer để scroll hoạt động.
-
-    private List<ChatMessageViewModel> messages = new();
-    private string outgoing = "";
-    private bool connected = false;
-    private ElementReference messagesContainer;
+@code{
+    private readonly Dictionary<string, ConversationVm> conversations = new(StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
-        Realtime.ChatMessageReceived += OnMsg;
+        Realtime.ChatMessageReceived += OnMessageReceived;
         await Realtime.StartAsync();
-        connected = true;
     }
 
-    private void OnMsg(ChatMessagePayload p)
+    public async ValueTask DisposeAsync()
     {
-        messages.Add(new ChatMessageViewModel { TableId = p.TableId, Message = p.Message, Sender = p.Sender, SentAtUtc = p.SentAtUtc });
-        InvokeAsync(StateHasChanged);
-        ScrollToBottom();
+        Realtime.ChatMessageReceived -= OnMessageReceived;
     }
 
-    private async Task SendAsync()
+    private void OnMessageReceived(ChatMessagePayload p)
     {
-        // Logic gửi tin (giả lập hoặc API call)
-        if (string.IsNullOrWhiteSpace(outgoing)) return;
-        messages.Add(new ChatMessageViewModel { Sender = "Tôi", Message = outgoing, SentAtUtc = DateTime.UtcNow });
-        outgoing = "";
-        await ScrollToBottom();
+        InvokeAsync(() =>
+        {
+            if (!conversations.TryGetValue(p.TableId, out var conv))
+            {
+                conv = new ConversationVm { TableId = p.TableId };
+                conversations[p.TableId] = conv;
+            }
+
+            conv.LastMessage = p.Message;
+            conv.LastMessageTime = p.SentAtUtc == default ? DateTime.UtcNow : p.SentAtUtc;
+
+            if (!IsOwnMessage(p))
+            {
+                conv.UnreadCount++;
+            }
+
+            StateHasChanged();
+        });
     }
 
-    private async Task ScrollToBottom()
+    private void OpenDetail(string tableId)
     {
-        await Task.Yield();
-        try { await JSRuntime.InvokeVoidAsync("scrollToBottom", messagesContainer); } catch { }
+        // Reset biến đếm khi mở xem
+        if (conversations.TryGetValue(tableId, out var conv))
+        {
+            conv.UnreadCount = 0;
+        }
+        StateHasChanged();
+        Nav.NavigateTo($"/chat/{tableId}");
     }
 
-    private async Task OnKeyDown(KeyboardEventArgs e) { if (e.Key == "Enter") await SendAsync(); }
+    private string GetShortCode(string code) => code.Replace("Table", "").Replace("T-", "").Trim();
 
-    class ChatMessageViewModel
+    private static bool IsOwnMessage(ChatMessagePayload payload)
+        => payload.Sender is "Staff" or "Tôi";
+
+    class ConversationVm
     {
         public string TableId { get; set; } = "";
-        public string Sender { get; set; } = "";
-        public string Message { get; set; } = "";
-        public DateTime SentAtUtc { get; set; }
+        public string LastMessage { get; set; } = "";
+        public DateTime LastMessageTime { get; set; }
+        public int UnreadCount { get; set; }
     }
 }

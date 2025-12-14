@@ -151,6 +151,8 @@ public sealed class ChatMessagePayload
     public string TableId { get; set; } = string.Empty;
     public string Sender { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
+
+    public string ReceiverId { get; set; } = string.Empty;
     public DateTime SentAtUtc { get; set; }
 }
 

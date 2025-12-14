@@ -1,0 +1,133 @@
+﻿@page "/chat/{tableId}"
+@using WaiterApp.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject OrdersRealtimeService Realtime
+@inject ApiClient ApiClient
+@inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="flex flex-col h-screen bg-white dark:bg-gray-900 pb-20">
+    <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10 flex items-center gap-3">
+        <button class="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500" @onclick="GoBack">
+            <span class="material-icons-round">arrow_back</span>
+        </button>
+        <div>
+            <h1 class="text-lg font-bold text-gray-800 dark:text-white">@tableId</h1>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                <span class="text-xs text-gray-500">Đang online</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-black/20" @ref="messagesContainer">
+        @foreach (var m in messages)
+        {
+            var isMe = m.Sender == "Staff" || m.Sender == "Tôi";
+            <div class="flex w-full @(isMe ? "justify-end" : "justify-start")">
+                <div class="max-w-[75%] p-3 rounded-2xl text-sm shadow-sm @(isMe ? "bg-primary text-white rounded-tr-none" : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-none")">
+                    @m.Message
+                    <p class="text-[10px] mt-1 opacity-70 text-right">@m.SentAtUtc.ToLocalTime().ToString("HH:mm")</p>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="p-3 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
+        <div class="flex gap-2">
+            <input type="text" @bind="outgoing" @bind:event="oninput" @onkeydown="OnKeyDown"
+                   class="flex-1 bg-gray-100 dark:bg-gray-800 border-none rounded-full px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                   placeholder="Nhập tin nhắn..." />
+            <button @onclick="SendAsync" disabled="@string.IsNullOrWhiteSpace(outgoing)"
+                    class="w-12 h-12 rounded-full bg-primary text-white shadow-lg flex items-center justify-center active:scale-90 transition-transform">
+                <span class="material-icons-round">send</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string tableId { get; set; } = string.Empty;
+
+    private readonly List<ChatMessagePayload> messages = new();
+    private string outgoing = string.Empty;
+    private ElementReference messagesContainer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Realtime.ChatMessageReceived += OnMessageReceived;
+        await Realtime.StartAsync();
+    }
+
+    private void OnMessageReceived(ChatMessagePayload payload)
+    {
+        if (payload.TableId == tableId || (payload.Sender == "Tôi" && payload.ReceiverId == tableId))
+        {
+            messages.Add(payload);
+            InvokeAsync(async () =>
+            {
+                StateHasChanged();
+                await ScrollToBottomAsync();
+            });
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(outgoing)) return;
+
+        var request = new { Message = outgoing, TableId = tableId, ReceiverId = tableId, Sender = "Staff" };
+        try
+        {
+            var resp = await ApiClient.Http.PostAsJsonAsync("api/chat/send", request);
+            if (!resp.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            messages.Add(new ChatMessagePayload
+            {
+                Message = outgoing,
+                Sender = "Tôi",
+                ReceiverId = tableId,
+                TableId = tableId,
+                SentAtUtc = DateTime.UtcNow
+            });
+            outgoing = string.Empty;
+            await ScrollToBottomAsync();
+        }
+        catch
+        {
+            // Swallow network errors for now; UI can add toast when available
+        }
+    }
+
+    private void GoBack() => Nav.NavigateTo("/chat");
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", messagesContainer);
+        }
+        catch
+        {
+            // JS interop might not be available in unit tests; ignore failures
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await SendAsync();
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Realtime.ChatMessageReceived -= OnMessageReceived;
+        return ValueTask.CompletedTask;
+    }
+}
