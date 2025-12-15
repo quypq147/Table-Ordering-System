@@ -6,7 +6,7 @@
 
 <script>
     const TABLE_CODE = '@Model.TableCode';
-    const ORDER_ID = '@Model.CurrentCart?.OrderId';
+    // ORDER_ID is re-declared as let in the Scripts section for mutation
     const ORDER_CODE = '@Model.CurrentCart?.OrderCode';
 </script>
 
@@ -131,17 +131,29 @@
 
 @section Scripts {
     <script>
+        // Allow ORDER_ID to be updated after first cart creation
+        let ORDER_ID = '@Model.CurrentCart?.OrderId';
+
         function addToCart(menuItemId, qty) {
-            const orderId = ORDER_ID;
-            if(!orderId){ alert('Chưa có giỏ hàng'); return; }
-            $.post('/Client/AddToCart', { 
-                orderId: orderId,
-                menuItemId: menuItemId, 
-                quantity: qty, 
-                note: '' 
-            }).done(function(html) {
+            const currentOrderId = ORDER_ID || '';
+
+            $.post('/Client/AddToCart', {
+                orderId: currentOrderId,
+                menuItemId: menuItemId,
+                quantity: qty,
+                note: ''
+            }).done(function (html) {
                 $('#cart-container').html(html);
-            }).fail(function(xhr) {
+
+                // Read back new OrderId from rendered cart partial
+                const newOrderId = $('#cart-order-id-hidden').val();
+                if (newOrderId && !ORDER_ID) {
+                    ORDER_ID = newOrderId;
+                }
+
+                const cart = document.getElementById('cart-container');
+                if (cart.classList.contains('hidden')) toggleCart();
+            }).fail(function (xhr) {
                 alert('Lỗi: ' + xhr.responseText);
             });
         }
@@ -154,22 +166,22 @@
             cart.classList.toggle('bg-black/50');
         }
 
-        function openLeaveConfirm(){
+        function openLeaveConfirm() {
             const modal = document.getElementById('leave-confirm');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
-        function closeLeaveConfirm(){
+        function closeLeaveConfirm() {
             const modal = document.getElementById('leave-confirm');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
-        async function proceedLeave(){
-            try{
+        async function proceedLeave() {
+            try {
                 const resp = await fetch('/Client/LeaveTable', { method: 'POST' });
                 if (!resp.ok) throw new Error('Rời bàn thất bại.');
                 window.location.href = '/client/qr-help';
-            }catch(err){
+            } catch (err) {
                 alert(err.message || 'Có lỗi xảy ra khi rời bàn.');
             } finally {
                 closeLeaveConfirm();
@@ -177,7 +189,7 @@
         }
 
         // Keep old API for potential reuse
-        async function leaveTable(){
+        async function leaveTable() {
             openLeaveConfirm();
         }
     </script>

@@ -2,6 +2,9 @@
 @model CartDto
 
 <div class="flex flex-col h-full bg-white border-l border-gray-200 shadow-xl w-full md:w-80 lg:w-96" id="cart-root" data-order-id="@Model?.OrderId">
+    @* Expose OrderId for client-side JS (Menu addToCart) *@
+    <input type="hidden" id="cart-order-id-hidden" value="@Model?.OrderId" />
+
     <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
         <div>
             <h2 class="text-xl font-bold text-gray-800">Đơn gọi món</h2>

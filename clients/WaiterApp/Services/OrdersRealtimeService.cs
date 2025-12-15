@@ -42,7 +42,6 @@ public sealed class OrdersRealtimeService
 
             var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/customer").ToString();
 
-            // Build/start/join on a local instance first
             var conn = new HubConnectionBuilder()
                 .WithUrl(hubUrl, o => o.AccessTokenProvider = () => Task.FromResult(_authService.Token))
                 .WithAutomaticReconnect()
@@ -61,6 +60,20 @@ public sealed class OrdersRealtimeService
              {
                  PaymentRequestReceived?.Invoke(payload);
              });
+
+            // Rejoin staff group whenever SignalR auto-reconnects
+            conn.Reconnected += async _ =>
+            {
+                try
+                {
+                    await conn.InvokeAsync("JoinStaffGroup");
+                    System.Diagnostics.Debug.WriteLine("Rejoined Staff group after reconnect.");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error rejoining staff group: {ex.Message}");
+                }
+            };
 
             // Ensure we clean up the local connection if startup fails
             try

@@ -307,5 +307,10 @@
             input.value = message;
             sendChat();
         }
+         $(document).ready(function() {
+            startSignalR();
+            loadChatHistory(); // Load lịch sử chat ngay lập tức từ Database
+            updateTrackingUI(initialStatus);
+        });
     </script>
 }
