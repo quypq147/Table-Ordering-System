@@ -133,15 +133,18 @@ public sealed class OrdersRealtimeService
         }
     }
 
-    // Add this method to OrdersRealtimeService if it is missing
+    // Helper to subscribe to hub events in a safe way
     public void On<T>(string eventName, Action<T> handler)
     {
-        // Implementation depends on your realtime infrastructure (e.g., SignalR, WebSocket, etc.)
-        // For example, if using SignalR:
-        // _hubConnection.On<T>(eventName, handler);
+        var conn = _connection;
+        if (conn == null)
+        {
+            // No active connection yet; nothing to wire
+            return;
+        }
 
-        // Placeholder: throw if not implemented
-        throw new NotImplementedException("On<T> method must be implemented to subscribe to realtime events.");
+        // Register handler on the underlying SignalR connection
+        conn.On(eventName, handler);
     }
 }
 

@@ -44,12 +44,13 @@
             </div>
 
             <div class="hidden md:grid grid-cols-2 gap-4">
-                <a href="/client/menu" class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-white border border-gray-100 text-gray-600 font-bold hover:border-[#FE724C] hover:text-[#FE724C] hover:shadow-lg transition-all group">
-                    <div class="w-12 h-12 rounded-full bg-gray-50 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
+                @* Remove add-more-items button to encourage chat-based ordering *@
+                <div class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-white border border-gray-100 text-gray-600 font-bold opacity-60 cursor-not-allowed">
+                    <div class="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center">
                         <i class="fas fa-plus text-xl"></i>
                     </div>
-                    <span>Gọi thêm món</span>
-                </a>
+                    <span>Gọi thêm món qua chat</span>
+                </div>
                 <button onclick="requestPayment()" class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-[#FE724C] text-white font-bold shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all transform active:scale-95">
                     <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
                         <i class="fas fa-receipt text-xl"></i>
@@ -126,6 +127,11 @@
             <div id="chatMessages" style="height:300px; overflow:auto;" class="mb-3">
                 <!-- messages loaded by JS -->
             </div>
+            <div class="d-flex flex-wrap gap-1 mb-2" id="chatSuggestions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickChat('Cho em xin thêm menu ạ')">Cho em xin thêm menu ạ</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickChat('Cho em gọi thêm đồ uống')">Cho em gọi thêm đồ uống</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickChat('Bàn em cần hỗ trợ thêm')">Bàn em cần hỗ trợ thêm</button>
+            </div>
             <div class="d-flex gap-2">
                 <input id="chatInput" class="form-control" placeholder="Nhập tin nhắn..." />
                 <button class="btn btn-primary" onclick="sendChat()">Gửi</button>
@@ -140,10 +146,7 @@
         const orderId = "@orderId";
         const initialStatus = "@initialStatus";
         const normalizedOrderId = orderId ? orderId.toLowerCase() : "";
-        let order = null;
-        let currency = "VND";
-        let isPaying = false;
-        let pollTimer = null;
+        const tableCode = "@(Model?.TableCode ?? "")";
 
         const statusMap = {
             Draft: 'Đang chọn món',
@@ -168,16 +171,23 @@
             }
 
             console.log("Realtime Update:", newStatus);
-            toast(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`, 'success');
+            toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
             updateTrackingUI(newStatus);
+        });
+
+        connection.on("chatMessage", payload => {
+            if (!payload) return;
+            appendChatMessage(payload.sender === 'customer' ? 'Bạn' : 'Nhân viên', payload.message, payload.sender === 'customer');
         });
 
         async function startSignalR() {
             try {
                 await connection.start();
-                console.log("SignalR Connected.");
                 if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
                     await connection.invoke("JoinOrderGroup", orderId);
+                }
+                if (tableCode) {
+                    await connection.invoke("JoinTableGroup", tableCode);
                 }
             } catch (err) {
                 console.error("SignalR Error:", err);
@@ -186,12 +196,15 @@
         }
 
         connection.onreconnected(async () => {
-            if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
-                try {
+            try {
+                if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
                     await connection.invoke("JoinOrderGroup", orderId);
-                } catch (err) {
-                    console.error("SignalR Rejoin Error:", err);
                 }
+                if (tableCode) {
+                    await connection.invoke("JoinTableGroup", tableCode);
+                }
+            } catch (err) {
+                console.error("SignalR Rejoin Error:", err);
             }
         });
 
@@ -220,10 +233,6 @@
                         dot.classList.add('bg-gray-200');
                     }
                 });
-
-                if(status === 'Served') {
-                    setTimeout(() => location.reload(), 2000);
-                }
             }
         }
 
@@ -231,64 +240,54 @@
         startSignalR();
 
         function requestPayment(){
-            // If order already served -> redirect to payment page
-            const current = document.querySelector('#tracking-steps .step-item[data-step="4"]');
-            // We check server-side initialStatus and fallback to DOM state not robust; prefer to call API to get order status
             if(!orderId || orderId === '00000000-0000-0000-0000-000000000000'){
-                alert('Không xác định đơn hàng'); return;
+                toast.error('Không xác định đơn hàng'); return;
             }
 
-            // Call backend to fetch latest order status
-            fetch(`/proxy/public/cart/${orderId}`)
+            fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
                 .then(r => {
-                    if(!r.ok) throw new Error('Không thể lấy trạng thái đơn');
-                    return r.json();
-                })
-                .then(st => {
-                    const status = st?.status || st?.Status || '@initialStatus';
-                    if(status === 'Served'){
-                        // Redirect to payment page
-                        window.location.href = `/Client/Payment?orderId=${orderId}`;
-                        return;
-                    }
-                    // Otherwise show confirm modal to request cash payment
-                    if(confirm('Bạn muốn gọi nhân viên thu tiền tại quầy?')){
-                        // Post to API to request cash payment
-                        fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
-                            .then(r => {
-                                if(!r.ok) throw new Error('Gửi yêu cầu thất bại');
-                                toast('Đã thông báo nhân viên. Vui lòng chờ.', 'success');
-                            }).catch(e => {
-                                toast(e.message || 'Lỗi', 'error');
-                            });
-                    }
+                    if(!r.ok) throw new Error('Gửi yêu cầu thất bại');
+                    toast.success('Đã gọi nhân viên thanh toán. Vui lòng chờ.');
                 }).catch(e => {
-                    toast(e.message || 'Lỗi kết nối', 'error');
+                    toast.error(e.message || 'Lỗi kết nối');
                 });
         }
 
-        function toast(msg, type){
-            const el = document.getElementById('toast');
-            if(!el) return;
-            const body = document.getElementById('toastMsg');
-            if(body){ body.textContent = msg || ''; }
-            bootstrap.Toast.getOrCreateInstance(el).show();
-        }
-
-        // Chat popup behaviors
         function openChatPopup(){
             document.getElementById('chatWindow').classList.remove('hidden');
+            loadChatHistory();
         }
         function closeChatPopup(){
             document.getElementById('chatWindow').classList.add('hidden');
         }
+
+        function appendChatMessage(senderLabel, message, isSelf){
+            const box = document.getElementById('chatMessages');
+            const el = document.createElement('div');
+            el.className = 'mb-2 ' + (isSelf ? 'text-right' : 'text-left');
+            el.innerHTML = `<div class="small text-muted">${senderLabel}</div>
+                            <div class="inline-block px-3 py-2 rounded-xl ${isSelf ? 'bg-blue-500 text-white' : 'bg-gray-100'}">${message}</div>`;
+            box.appendChild(el);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function loadChatHistory(){
+            if(!tableCode) return;
+            fetch(`/proxy/public/chat/history?tableCode=${encodeURIComponent(tableCode)}`)
+                .then(r => r.json())
+                .then(list => {
+                    const box = document.getElementById('chatMessages');
+                    box.innerHTML = '';
+                    (list || []).forEach(m => {
+                        appendChatMessage(m.sender === 'customer' ? 'Bạn' : 'Nhân viên', m.message, m.sender === 'customer');
+                    });
+                }).catch(() => {});
+        }
+
         function sendChat(){
             const input = document.getElementById('chatInput');
             const text = input.value && input.value.trim();
             if(!text) return;
-
-            // Lấy TableCode từ model (render sẵn server-side)
-            const tableCode = '@(Model?.TableCode ?? "")';
 
             fetch('/proxy/public/chat', {
                 method: 'POST',
@@ -297,16 +296,16 @@
             })
             .then(r => { if(!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
             .then((payload) => {
-                const box = document.getElementById('chatMessages');
-                const el = document.createElement('div');
-                el.className = 'mb-2';
-                el.innerHTML = `<div class="small text-muted">Bạn</div>
-                                <div class="bg-gray-100 p-2 rounded">${payload.message || text}</div>`;
-                box.appendChild(el);
-                box.scrollTop = box.scrollHeight;
+                appendChatMessage('Bạn', payload.message || text, true);
                 input.value = '';
             })
-            .catch(e => { toast(e.message || 'Lỗi gửi', 'error'); });
+            .catch(e => { toast.error(e.message || 'Lỗi gửi'); });
+        }
+
+        function quickChat(message){
+            const input = document.getElementById('chatInput');
+            input.value = message;
+            sendChat();
         }
     </script>
 }
