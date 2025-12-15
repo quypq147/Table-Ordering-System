@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
@@ -14,11 +16,6 @@
     <header class="kds-header">
         <div class="d-flex align-items-center">
             <h4 class="m-0 me-4 fw-bold">Lezato<span class="text-warning">.</span> KDS</h4>
-
-            <select class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;">
-                <option>Bếp Chính</option>
-                <option>Quầy Bar</option>
-            </select>
         </div>
 
         <div class="d-none d-md-block text-success fw-bold" style="font-size: 12px;">
@@ -35,8 +32,8 @@
 
     <script>
         window.__cfg = {
-            kdsHub: '@Context.RequestServices.GetService<IConfiguration>()["SignalR:KdsHub"]',
-            bearer: '@Context.RequestServices.GetService<IConfiguration>()["Backend:StaticBearer"]'
+            kdsHub: '@Configuration["SignalR:KdsHub"]',
+            bearer: '@Configuration["Backend:StaticBearer"]'
         };
     </script>
 

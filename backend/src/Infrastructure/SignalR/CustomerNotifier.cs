@@ -1,11 +1,12 @@
-﻿using Application.Abstractions;
+﻿using Api.Hubs;
+using Application.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Infrastructure.SignalR;
 
-public sealed class CustomerNotifier(IHubContext<Hub> hub) : ICustomerNotifier
+public sealed class CustomerNotifier(IHubContext<CustomerHub> hub) : ICustomerNotifier
 {
-    private readonly IHubContext<Hub> _hub = hub;
+    private readonly IHubContext<CustomerHub> _hub = hub;
 
     public Task OrderStatusChangedAsync(Guid orderId, string status, CancellationToken ct = default)
     {

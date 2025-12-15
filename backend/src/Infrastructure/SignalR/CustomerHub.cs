@@ -17,7 +17,7 @@ public sealed class CustomerHub : Hub
     public Task JoinTableGroup(string tableId) => Groups.AddToGroupAsync(Context.ConnectionId, $"table-{tableId}");
     public Task LeaveTableGroup(string tableId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, $"table-{tableId}");
 
-    // Nhóm nhân viên (phuc v\u / bep)
+    // Nhóm nhân viên (phuc vu / bep)
     public Task JoinStaffGroup() => Groups.AddToGroupAsync(Context.ConnectionId, "staff");
     public Task LeaveStaffGroup() => Groups.RemoveFromGroupAsync(Context.ConnectionId, "staff");
 

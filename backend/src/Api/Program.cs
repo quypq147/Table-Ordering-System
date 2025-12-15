@@ -65,14 +65,14 @@ builder.Services.AddApplication();
 
 
 // Đăng ký notifier cho KDS  <<< PATCH MỚI
-builder.Services.AddScoped<IKitchenTicketNotifier, KitchenTicketNotifier>();
+builder.Services.AddScoped<IKitchenTicketNotifier, Api.SignalR.ApiKitchenTicketNotifier>();
 
 builder.Services.AddApiIdentity();
 builder.Services.AddApiJwtAuth(builder.Configuration);
 
 builder.Services.AddKdsServices();
 // customer notifier
-builder.Services.AddSingleton<ICustomerNotifier, CustomerNotifier>();
+builder.Services.AddSingleton<ICustomerNotifier, Api.SignalR.ApiCustomerNotifier>();
 
 // Health checks (DB)
 builder.Services.AddHealthChecks()
