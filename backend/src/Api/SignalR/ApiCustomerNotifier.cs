@@ -10,13 +10,10 @@ public sealed class ApiCustomerNotifier(IHubContext<CustomerHub> hub) : ICustome
 
     public Task OrderStatusChangedAsync(Guid orderId, string status, CancellationToken ct = default)
     {
-        var payload = new { orderId, status };
-        // Gửi đồng thời cho:
-        // 1. Khách hàng đang theo dõi đơn hàng này (CustomerWeb)
-        // 2. Toàn bộ nhân viên (Waiter App)
+        // Send separate parameters to align with clients listening for Guid + string arguments
         return Task.WhenAll(
-            _hub.Clients.Group($"order-{orderId}").SendAsync("orderStatusChanged", payload, ct),
-            _hub.Clients.Group("staff").SendAsync("orderStatusChanged", payload, ct)
+            _hub.Clients.Group($"order-{orderId}").SendAsync("orderStatusChanged", orderId, status, ct),
+            _hub.Clients.Group("staff").SendAsync("orderStatusChanged", orderId, status, ct)
         );
     }
 

@@ -135,8 +135,11 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
         const orderId = "@orderId";
+        const initialStatus = "@initialStatus";
+        const normalizedOrderId = orderId ? orderId.toLowerCase() : "";
         let order = null;
         let currency = "VND";
         let isPaying = false;
@@ -152,6 +155,80 @@
             WaitingForPayment: 'Đang chờ thanh toán',
             Paid: 'Đã thanh toán'
         };
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/customer")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("orderStatusChanged", (id, newStatus) => {
+            const incoming = (typeof id === "string" ? id : id?.toString?.())?.toLowerCase();
+            if (incoming && normalizedOrderId && incoming !== normalizedOrderId) {
+                return;
+            }
+
+            console.log("Realtime Update:", newStatus);
+            toast(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`, 'success');
+            updateTrackingUI(newStatus);
+        });
+
+        async function startSignalR() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected.");
+                if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
+                    await connection.invoke("JoinOrderGroup", orderId);
+                }
+            } catch (err) {
+                console.error("SignalR Error:", err);
+                setTimeout(startSignalR, 5000);
+            }
+        }
+
+        connection.onreconnected(async () => {
+            if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
+                try {
+                    await connection.invoke("JoinOrderGroup", orderId);
+                } catch (err) {
+                    console.error("SignalR Rejoin Error:", err);
+                }
+            }
+        });
+
+        function updateTrackingUI(status) {
+            let stepIndex = 0;
+            switch(status) {
+                case 'Submitted': stepIndex = 1; break;
+                case 'InProgress': stepIndex = 2; break;
+                case 'Ready': stepIndex = 3; break;
+                case 'Served': stepIndex = 4; break;
+                case 'Paid': stepIndex = 5; break;
+                default: stepIndex = 0; break;
+            }
+
+            if(stepIndex > 0) {
+                document.querySelectorAll('.step-item').forEach(el => {
+                    const step = parseInt(el.getAttribute('data-step'));
+                    const dot = el.querySelector('.rounded-full');
+                    if(!dot) { return; }
+
+                    dot.className = "absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center z-10";
+
+                    if (step <= stepIndex) {
+                        dot.classList.add('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
+                    } else {
+                        dot.classList.add('bg-gray-200');
+                    }
+                });
+
+                if(status === 'Served') {
+                    setTimeout(() => location.reload(), 2000);
+                }
+            }
+        }
+
+        updateTrackingUI(initialStatus);
+        startSignalR();
 
         function requestPayment(){
             // If order already served -> redirect to payment page
