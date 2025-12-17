@@ -62,7 +62,6 @@ app.UseRouting();
 
 // ✅ Sử dụng Session (phải SAU UseRouting và TRƯỚC MapControllerRoute)
 app.UseSession();
-app.MapReverseProxy();
 
 // MVC routes
 app.MapControllerRoute(

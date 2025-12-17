@@ -5,7 +5,7 @@
 
     var orderId = ViewBag.OrderId is Guid g ? g : Model?.OrderId ?? Guid.Empty;
     var initialStatus = Model?.Status ?? "Draft";
-    
+
 }
 
 <div class="min-h-screen bg-[#F9F9F9] pb-24">
@@ -138,214 +138,212 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
-        console.log("TrackOrder page loaded");
-        console.log("Order ID:", "@orderId");
-        console.log("Order Code: appendChatMessage", "@(Model?.OrderCode ?? "")");");
-        console.log("Table Code:", "@(Model?.TableCode ?? "")");
-    </script>
-    <script>
-        const orderId = "@orderId";
-        const initialStatus = "@initialStatus";
-        const normalizedOrderId = orderId ? orderId.toLowerCase() : "";
-        const tableCode = "@(Model?.TableCode ?? "")";
+            const orderId = "@orderId";
+            const initialStatus = "@initialStatus";
+            const normalizedOrderId = orderId ? orderId.toLowerCase() : "";
+            const tableCode = "@(Model?.TableCode ?? "")";
 
-        const statusMap = {
-            Draft: 'Đang chọn món',
-            Submitted: 'Đã gửi bếp',
-            InProgress: 'Đang chế biến',
-            Ready: 'Món đã sẵn sàng',
-            Served: 'Đã phục vụ',
-            Cancelled: 'Đơn đã bị hủy',
-            WaitingForPayment: 'Đang chờ thanh toán',
-            Paid: 'Đã thanh toán'
-        };
+            const statusMap = {
+                Draft: 'Đang chọn món',
+                Submitted: 'Đã gửi bếp',
+                InProgress: 'Đang chế biến',
+                Ready: 'Món đã sẵn sàng',
+                Served: 'Đã phục vụ',
+                Cancelled: 'Đơn đã bị hủy',
+                WaitingForPayment: 'Đang chờ thanh toán',
+                Paid: 'Đã thanh toán'
+            };
 
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/hubs/customer")
-            .withAutomaticReconnect()
-            .build();
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/customer")
+                .withAutomaticReconnect()
+                .build();
 
-        connection.on("orderStatusChanged", (id, newStatus) => {
-            const incoming = (typeof id === "string" ? id : id?.toString?.())?.toLowerCase();
-            if (incoming && normalizedOrderId && incoming !== normalizedOrderId) {
-                return;
-            }
+            connection.on("orderStatusChanged", (id, newStatus) => {
+                const incoming = (typeof id === "string" ? id : id?.toString?.())?.toLowerCase();
+                if (incoming && normalizedOrderId && incoming !== normalizedOrderId) {
+                    return;
+                }
 
-            console.log("Realtime Update:", newStatus);
-            if (window.toast && window.toast.success) {
-                window.toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
-            }
-            updateTrackingUI(newStatus);
-        });
+                console.log("Realtime Update:", newStatus);
+                if (window.toast && window.toast.success) {
+                    window.toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
+                }
+                updateTrackingUI(newStatus);
+            });
 
-        connection.on("chatMessage", payload => {
-            if (!payload) return;
-            appendChatMessage(payload.sender === 'customer' ? 'Bạn' : 'Nhân viên', payload.message, payload.sender === 'customer');
-        });
+            connection.on("chatMessage", payload => {
+                if (!payload) return;
+                appendChatMessage(payload.sender === 'customer' ? 'Bạn' : 'Nhân viên', payload.message, payload.sender === 'customer');
+            });
 
-        async function startSignalR() {
-            try {
+            async function startSignalR() {
+                try {
+            if (connection.state === signalR.HubConnectionState.Disconnected) {
                 await connection.start();
-                if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
-                    await connection.invoke("JoinOrderGroup", orderId);
+                console.log("SignalR Connected.");
+
+                // Join nhóm sau khi connect thành công
+                if (orderId) {
+                    // Lưu ý: chuyển orderId về chữ thường như đã nhắc ở bài trước
+                    await connection.invoke("JoinOrderGroup", orderId.toLowerCase());
                 }
-                if (tableCode) {
-                    await connection.invoke("JoinTableGroup", tableCode);
-                }
-            } catch (err) {
-                console.error("SignalR Error:", err);
-                setTimeout(startSignalR, 5000);
             }
+        } catch (err) {
+            console.error("SignalR Connection Error: ", err);
+            // Thử lại sau 5 giây nếu lỗi
+            setTimeout(startSignalR, 5000);
         }
-
-        connection.onreconnected(async () => {
-            try {
-                if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
-                    await connection.invoke("JoinOrderGroup", orderId);
-                }
-                if (tableCode) {
-                    await connection.invoke("JoinTableGroup", tableCode);
-                }
-            } catch (err) {
-                console.error("SignalR Rejoin Error:", err);
-            }
-        });
-
-        function updateTrackingUI(status) {
-            // Nếu đơn đã bị hủy: highlight đặc biệt và dừng
-            if (status === 'Cancelled') {
-                const statusHeader = document.querySelector('h3.font-bold');
-                if (statusHeader) {
-                    statusHeader.innerText = 'Đơn hàng đã bị hủy';
-                    statusHeader.classList.add('text-red-600');
-                }
-
-                document.querySelectorAll('.step-item .rounded-full').forEach(dot => {
-                    dot.classList.remove('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
-                    dot.classList.add('bg-red-200');
-                });
-
-                if (window.toast && window.toast.error) {
-                    window.toast.error('Đơn hàng của bạn đã bị hủy. Vui lòng liên hệ nhân viên.');
-                }
-
-                return;
             }
 
-            let stepIndex = 0;
-            switch (status) {
-                case 'Submitted': stepIndex = 1; break;
-                case 'InProgress': stepIndex = 2; break;
-                case 'Ready': stepIndex = 3; break;
-                case 'Served': stepIndex = 4; break;
-                case 'Paid': stepIndex = 5; break;
-                default: stepIndex = 0; break;
-            }
-
-            if (stepIndex > 0) {
-                document.querySelectorAll('.step-item').forEach(el => {
-                    const step = parseInt(el.getAttribute('data-step'));
-                    const dot = el.querySelector('.rounded-full');
-                    if (!dot) { return; }
-
-                    dot.className = "absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center z-10";
-
-                    if (step <= stepIndex) {
-                        dot.classList.add('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
-                    } else {
-                        dot.classList.add('bg-gray-200');
+            connection.onreconnected(async () => {
+                try {
+                    if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
+                        await connection.invoke("JoinOrderGroup", orderId);
                     }
-                });
-            }
-        }
-
-        updateTrackingUI(initialStatus);
-        startSignalR();
-
-        function requestPayment() {
-            if (!orderId || orderId === '00000000-0000-0000-0000-000000000000') {
-                if (window.toast && window.toast.error) {
-                    window.toast.error('Không xác định đơn hàng');
+                    if (tableCode) {
+                        await connection.invoke("JoinTableGroup", tableCode);
+                    }
+                } catch (err) {
+                    console.error("SignalR Rejoin Error:", err);
                 }
-                return;
-            }
+            });
 
-            fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
-                .then(r => {
-                    if (!r.ok) throw new Error('Gửi yêu cầu thất bại');
-                    if (window.toast && window.toast.success) {
-                        window.toast.success('Đã gọi nhân viên thanh toán. Vui lòng chờ.');
+            function updateTrackingUI(status) {
+                // Nếu đơn đã bị hủy: highlight đặc biệt và dừng
+                if (status === 'Cancelled') {
+                    const statusHeader = document.querySelector('h3.font-bold');
+                    if (statusHeader) {
+                        statusHeader.innerText = 'Đơn hàng đã bị hủy';
+                        statusHeader.classList.add('text-red-600');
                     }
-                }).catch(e => {
-                    if (window.toast && window.toast.error) {
-                        window.toast.error(e.message || 'Lỗi kết nối');
-                    }
-                });
-        }
 
-        function openChatPopup() {
-            document.getElementById('chatWindow').classList.remove('hidden');
-            loadChatHistory();
-        }
-        function closeChatPopup() {
-            document.getElementById('chatWindow').classList.add('hidden');
-        }
-
-        function appendChatMessage(senderLabel, message, isSelf) {
-            const box = document.getElementById('chatMessages');
-            const el = document.createElement('div');
-            el.className = 'mb-2 ' + (isSelf ? 'text-right' : 'text-left');
-            el.innerHTML = `<div class="small text-muted">${senderLabel}</div>
-                            <div class="inline-block px-3 py-2 rounded-xl ${isSelf ? 'bg-blue-500 text-white' : 'bg-gray-100'}">${message}</div>`;
-            box.appendChild(el);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function loadChatHistory() {
-            if (!tableCode) return;
-            fetch(`/proxy/public/chat/history?tableCode=${encodeURIComponent(tableCode)}`)
-                .then(r => r.json())
-                .then(list => {
-                    const box = document.getElementById('chatMessages');
-                    box.innerHTML = '';
-                    (list || []).forEach(m => {
-                        appendChatMessage(m.sender === 'customer' ? 'Bạn' : 'Nhân viên', m.message, m.sender === 'customer');
+                    document.querySelectorAll('.step-item .rounded-full').forEach(dot => {
+                        dot.classList.remove('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
+                        dot.classList.add('bg-red-200');
                     });
-                }).catch(() => { });
-        }
 
-        function sendChat() {
-            const input = document.getElementById('chatInput');
-            const text = input.value && input.value.trim();
-            if (!text) return;
-
-            fetch('/proxy/public/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableCode: tableCode, sender: 'customer', message: text })
-            })
-                .then(r => { if (!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
-                .then((payload) => {
-                    appendChatMessage('Bạn', payload.message || text, true);
-                    input.value = '';
-                })
-                .catch(e => {
                     if (window.toast && window.toast.error) {
-                        window.toast.error(e.message || 'Lỗi gửi');
+                        window.toast.error('Đơn hàng của bạn đã bị hủy. Vui lòng liên hệ nhân viên.');
                     }
-                });
-        }
 
-        function quickChat(message) {
-            const input = document.getElementById('chatInput');
-            input.value = message;
-            sendChat();
-        }
+                    return;
+                }
 
-        $(document).ready(function () {
-            startSignalR();
-            loadChatHistory();
+                let stepIndex = 0;
+                switch (status) {
+                    case 'Submitted': stepIndex = 1; break;
+                    case 'InProgress': stepIndex = 2; break;
+                    case 'Ready': stepIndex = 3; break;
+                    case 'Served': stepIndex = 4; break;
+                    case 'Paid': stepIndex = 5; break;
+                    default: stepIndex = 0; break;
+                }
+
+                if (stepIndex > 0) {
+                    document.querySelectorAll('.step-item').forEach(el => {
+                        const step = parseInt(el.getAttribute('data-step'));
+                        const dot = el.querySelector('.rounded-full');
+                        if (!dot) { return; }
+
+                        dot.className = "absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center z-10";
+
+                        if (step <= stepIndex) {
+                            dot.classList.add('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
+                        } else {
+                            dot.classList.add('bg-gray-200');
+                        }
+                    });
+                }
+            }
+
             updateTrackingUI(initialStatus);
-        });
+            startSignalR();
+
+            function requestPayment() {
+                if (!orderId || orderId === '00000000-0000-0000-0000-000000000000') {
+                    if (window.toast && window.toast.error) {
+                        window.toast.error('Không xác định đơn hàng');
+                    }
+                    return;
+                }
+
+                fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Gửi yêu cầu thất bại');
+                        if (window.toast && window.toast.success) {
+                            window.toast.success('Đã gọi nhân viên thanh toán. Vui lòng chờ.');
+                        }
+                    }).catch(e => {
+                        if (window.toast && window.toast.error) {
+                            window.toast.error(e.message || 'Lỗi kết nối');
+                        }
+                    });
+            }
+
+            function openChatPopup() {
+                document.getElementById('chatWindow').classList.remove('hidden');
+                loadChatHistory();
+            }
+            function closeChatPopup() {
+                document.getElementById('chatWindow').classList.add('hidden');
+            }
+
+            function appendChatMessage(senderLabel, message, isSelf) {
+                const box = document.getElementById('chatMessages');
+                const el = document.createElement('div');
+                el.className = 'mb-2 ' + (isSelf ? 'text-right' : 'text-left');
+                el.innerHTML = `<div class="small text-muted">${senderLabel}</div>
+                                <div class="inline-block px-3 py-2 rounded-xl ${isSelf ? 'bg-blue-500 text-white' : 'bg-gray-100'}">${message}</div>`;
+                box.appendChild(el);
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function loadChatHistory() {
+                if (!tableCode) return;
+                fetch(`/proxy/public/chat/history?tableCode=${encodeURIComponent(tableCode)}`)
+                    .then(r => r.json())
+                    .then(list => {
+                        const box = document.getElementById('chatMessages');
+                        box.innerHTML = '';
+                        (list || []).forEach(m => {
+                            appendChatMessage(m.sender === 'customer' ? 'Bạn' : 'Nhân viên', m.message, m.sender === 'customer');
+                        });
+                    }).catch(() => { });
+            }
+
+            function sendChat() {
+                const input = document.getElementById('chatInput');
+                const text = input.value && input.value.trim();
+                if (!text) return;
+
+                fetch('/proxy/public/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tableCode: tableCode, sender: 'customer', message: text })
+                })
+                    .then(r => { if (!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
+                    .then((payload) => {
+                        appendChatMessage('Bạn', payload.message || text, true);
+                        input.value = '';
+                    })
+                    .catch(e => {
+                        if (window.toast && window.toast.error) {
+                            window.toast.error(e.message || 'Lỗi gửi');
+                        }
+                    });
+            }
+
+            function quickChat(message) {
+                const input = document.getElementById('chatInput');
+                input.value = message;
+                sendChat();
+            }
+
+            $(document).ready(function () {
+                startSignalR();
+                loadChatHistory();
+                updateTrackingUI(initialStatus);
+            });
     </script>
 }
