@@ -1,8 +1,10 @@
-﻿    using Application.Common.CQRS;
-using Application.Dtos;                         // OrderDto
-using Application.Orders.Commands;              // Start/Submit/Mark*/Pay/Cancel/AddItem/ChangeQty/RemoveItem
-using Application.Orders.Queries;               // Queries
+﻿using Application.Common.CQRS;
+using Application.Dtos;
+using Application.Orders.Commands;
+using Application.Orders.Queries;
+using Application.Public.Cart;
 using Microsoft.AspNetCore.Mvc;
+
 namespace Api.Controllers;
 
 [ApiController]
@@ -10,7 +12,10 @@ namespace Api.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly ISender _sender;
-    public OrdersController(ISender sender) => _sender = sender;
+    private readonly MediatR.ISender _mediator;
+
+    public OrdersController(ISender sender, MediatR.ISender mediator)
+    { _sender = sender; _mediator = mediator; }
 
     // ===== Queries =====
 
@@ -43,7 +48,7 @@ public class OrdersController : ControllerBase
         return Ok(items);
     }
 
-    // ===== Commands: Order lifecycle ===== (unchanged below)
+    // ===== Commands =====
     public sealed record StartDto(Guid OrderId, Guid TableId);
     [HttpPost("start")]
     public async Task<ActionResult<OrderDto>> Start([FromBody] StartDto body)
@@ -80,15 +85,13 @@ public class OrdersController : ControllerBase
         => Ok(await _sender.Send(
             new AddItemCommand(id, body.MenuItemId, body.Name, body.Price, body.Currency, body.Quantity)));
 
-    public sealed record ChangeQtyDto(int NewQuantity);
     [HttpPatch("{id}/items/{orderItemId:int}")]
-    public async Task<ActionResult<OrderDto>> ChangeItemQuantity(Guid id, int orderItemId, [FromBody] ChangeQtyDto body)
-        => Ok(await _sender.Send(new ChangeItemQuantityCommand(id, orderItemId, body.NewQuantity)));
+    public async Task<ActionResult<OrderDto>> PatchItemQuantity(Guid id, int orderItemId, [FromBody] UpdateCartItemQuantityRequest body, CancellationToken ct)
+        => Ok(await _mediator.Send(new ChangeItemQuantityCommand(id, orderItemId, body.Quantity), ct));
 
-    public sealed record RemoveItemDto(int OrderItemId);
     [HttpDelete("{id}/items")]
-    public async Task<ActionResult<OrderDto>> RemoveItem(Guid id, [FromBody] RemoveItemDto body)
-        => Ok(await _sender.Send(new RemoveItemCommand(id, body.OrderItemId)));
+    public async Task<ActionResult<OrderDto>> DeleteItem(Guid id, [FromBody] RemoveCartItemRequest body, CancellationToken ct)
+        => Ok(await _mediator.Send(new RemoveItemCommand(id, body.OrderItemId), ct));
 
     [HttpGet("all")]
     public async Task<ActionResult<IReadOnlyList<OrderDto>>> ListAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)

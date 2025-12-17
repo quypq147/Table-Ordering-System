@@ -1,0 +1,202 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    Guid orderId = Guid.Empty;
+    if (ViewBag.OrderId is Guid g) { orderId = g; }
+    else if (ViewBag.OrderId is string s && Guid.TryParse(s, out var gp)) { orderId = gp; }
+    ViewData["Title"] = "Thanh toán";
+}
+
+<div class="container my-4">
+    <h2 class="mb-3">Chọn phương thức thanh toán</h2>
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs" id="paymentTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active"
+                    id="tab-transfer"
+                    data-bs-toggle="tab"
+                    data-bs-target="#pane-transfer"
+                    type="button"
+                    role="tab"
+                    aria-controls="pane-transfer"
+                    aria-selected="true">
+                Chuyển khoản (QR)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link"
+                    id="tab-cash"
+                    data-bs-toggle="tab"
+                    data-bs-target="#pane-cash"
+                    type="button"
+                    role="tab"
+                    aria-controls="pane-cash"
+                    aria-selected="false">
+                Tiền mặt
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab panes -->
+    <div class="tab-content border border-top-0 rounded-bottom p-3">
+        <!-- QR / Transfer -->
+        <div class="tab-pane fade show active"
+             id="pane-transfer"
+             role="tabpanel"
+             aria-labelledby="tab-transfer">
+            <h5 class="mb-3">Thanh toán chuyển khoản qua QR</h5>
+            <p class="text-muted mb-2">
+                Quét mã QR dưới đây bằng ứng dụng ngân hàng để thực hiện chuyển khoản.
+                Sau khi chuyển xong, bấm nút <b>&quot;Tôi đã chuyển khoản&quot;</b> để hoàn tất (demo).
+            </p>
+            <div class="text-center my-3">
+                <img src="/images/mock-qr.png"
+                     alt="QR Code"
+                     style="max-width:260px;width:100%;height:auto;border:1px solid #eee;border-radius:8px;padding:8px;background:#fff;" />
+            </div>
+            <div class="d-grid gap-2">
+                <button id="btnTransfer" class="btn btn-success">
+                    Tôi đã chuyển khoản
+                </button>
+            </div>
+        </div>
+
+        <!-- Cash -->
+        <div class="tab-pane fade"
+             id="pane-cash"
+             role="tabpanel"
+             aria-labelledby="tab-cash">
+            <h5 class="mb-3">Thanh toán tiền mặt tại bàn</h5>
+            <p class="text-muted mb-2">
+                Bấm nút bên dưới để gọi nhân viên đến bàn và hỗ trợ thanh toán tiền mặt.
+            </p>
+            <div class="d-grid gap-2 mb-2">
+                <button id="btnCash" class="btn btn-warning">
+                    Gọi nhân viên thanh toán
+                </button>
+            </div>
+            <div class="alert alert-light d-flex align-items-center gap-2 mt-2 d-none" id="cashStatus">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+                <span>Đang chờ nhân viên xác nhận...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay chung (nếu cần dùng sau này) -->
+    <div class="alert alert-light d-flex align-items-center gap-2 mt-4 d-none" id="payingOverlay">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Đang xử lý thanh toán...</span>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        const orderId = "@(orderId == Guid.Empty ? "" : orderId.ToString())";
+
+        function setButtonsDisabled(disabled) {
+            const btnCash = document.getElementById('btnCash');
+            const btnTransfer = document.getElementById('btnTransfer');
+            if (btnCash) btnCash.disabled = disabled;
+            if (btnTransfer) btnTransfer.disabled = disabled;
+        }
+
+        function showCashWaiting(show) {
+            const el = document.getElementById('cashStatus');
+            if (el) el.classList.toggle('d-none', !show);
+        }
+
+        function showOverlay(show) {
+            const el = document.getElementById('payingOverlay');
+            if (el) el.classList.toggle('d-none', !show);
+        }
+
+        async function api(url, opt) {
+            const resp = await fetch(url, {
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                ...opt
+            });
+            if (!resp.ok) {
+                const t = await resp.text();
+                throw new Error(t || ('HTTP ' + resp.status));
+            }
+            const ct = resp.headers.get('content-type') || '';
+            if (ct.includes('application/json')) return await resp.json();
+            return await resp.text();
+        }
+
+        // --- Tiền mặt: gọi nhân viên thanh toán ---
+        async function requestCash() {
+            if (!orderId) {
+                alert('Không tìm thấy mã đơn hàng.');
+                return;
+            }
+            showCashWaiting(true);
+            setButtonsDisabled(true);
+            showOverlay(true);
+
+            try {
+                await api(`/proxy/public/orders/${orderId}/request-cash`, {
+                    method: 'POST',
+                    body: '{}'
+                });
+                // Backend sẽ bắn SignalR sang WaiterApp; client chỉ cần hiển thị trạng thái chờ
+            } catch (e) {
+                showCashWaiting(false);
+                showOverlay(false);
+                setButtonsDisabled(false);
+                alert(e.message || 'Không thể gửi yêu cầu thanh toán tiền mặt.');
+            }
+        }
+
+        // --- Chuyển khoản (demo): giả lập thành công và chuyển sang PaymentSuccess ---
+        async function mockTransfer() {
+            if (!orderId) {
+                alert('Không tìm thấy mã đơn hàng.');
+                return;
+            }
+            showOverlay(true);
+            setButtonsDisabled(true);
+            try {
+                await api(`/proxy/public/orders/${orderId}/mock-transfer`, {
+                    method: 'POST',
+                    body: '{}'
+                });
+                window.location.href = `/client/order/${orderId}/payment-success`;
+            } catch (e) {
+                showOverlay(false);
+                setButtonsDisabled(false);
+                alert(e.message || 'Không thể xác nhận chuyển khoản.');
+            }
+        }
+
+        // Optional: nếu muốn lắng nghe OrderPaid để auto-redirect sau khi thu tiền mặt xong
+        function startSignalR() {
+            if (!orderId || typeof signalR === 'undefined') return;
+            const conn = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/customer')
+                .withAutomaticReconnect()
+                .build();
+
+            conn.on('OrderPaid', () => {
+                showOverlay(false);
+                window.location.href = `/client/order/${orderId}/payment-success`;
+            });
+
+            conn.start().then(() => {
+                try { conn.invoke('JoinOrderGroup', orderId); } catch { /* ignore */ }
+            }).catch(() => { /* ignore */ });
+        }
+
+        document.getElementById('btnCash')?.addEventListener('click', () => {
+            requestCash().catch(e => alert(e.message || 'Lỗi gọi nhân viên thanh toán.'));
+        });
+
+        document.getElementById('btnTransfer')?.addEventListener('click', () => {
+            mockTransfer().catch(e => alert(e.message || 'Lỗi xử lý thanh toán chuyển khoản.'));
+        });
+
+        startSignalR();
+    </script>
+}

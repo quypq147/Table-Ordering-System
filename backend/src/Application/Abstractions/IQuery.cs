@@ -1,3 +1,7 @@
+using MediatR;
+
 namespace Application.Abstractions;
 
-public interface IQuery<TResponse> { }
+public interface IQuery<TResponse> : IRequest<TResponse>
+{
+}

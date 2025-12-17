@@ -56,6 +56,12 @@ public class AuthService
         }
     }
 
+    public void Logout()
+    {
+        _token = null;
+        _apiClient.SetBearerToken(null);
+    }
+
     private class LoginResponseDto
     {
         public string? Token { get; set; }

@@ -1,0 +1,68 @@
+﻿@using TableOrdering.Contracts
+@model CartDto
+
+<div class="flex flex-col h-full bg-white border-l border-gray-200 shadow-xl w-full md:w-80 lg:w-96" id="cart-root" data-order-id="@Model?.OrderId">
+    @* Expose OrderId for client-side JS (Menu addToCart) *@
+    <input type="hidden" id="cart-order-id-hidden" value="@Model?.OrderId" />
+
+    <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
+        <div>
+            <h2 class="text-xl font-bold text-gray-800">Đơn gọi món</h2>
+            <p class="text-xs text-gray-500">Mã đơn: @(Model?.OrderCode ?? "---")</p>
+        </div>
+        <div class="bg-orange-100 text-orange-500 px-3 py-1 rounded-full text-xs font-bold">
+            <span id="cart-items-count">@(Model?.Items?.Count ?? 0)</span> món
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar" id="cart-items">
+        @if (Model?.Items != null && Model.Items.Any())
+        {
+            foreach (var item in Model.Items)
+            {
+                <div class="flex bg-gray-50 p-3 rounded-2xl border border-transparent hover:border-orange-200 transition-all group cart-item" data-item-id="@item.Id" data-item-price="@item.UnitPrice" data-item-qty="@item.Quantity">
+                    <div class="w-16 h-16 rounded-xl bg-gray-200"></div>
+                    <div class="ml-3 flex-1 flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-sm font-bold text-gray-800 line-clamp-1" title="@item.Name">@item.Name</h4>
+                            <span class="text-sm font-bold text-orange-500 line-total">@item.LineTotal.ToString("N0") VNĐ</span>
+                        </div>
+                        <div class="flex justify-between items-end mt-2">
+                            <p class="text-xs text-gray-400 italic line-clamp-1 w-20">@item.Note</p>
+                            <div class="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm h-8">
+                                <button class="w-8 h-full text-gray-400 hover:text-orange-500 flex items-center justify-center transition btn-decrease" aria-label="Giảm">
+                                    <i class="fas fa-minus text-xs"></i>
+                                </button>
+                                <span class="text-xs font-bold w-6 text-center qty">@item.Quantity</span>
+                                <button class="w-8 h-full text-gray-400 hover:text-orange-500 flex items-center justify-center transition btn-increase" aria-label="Tăng">
+                                    <i class="fas fa-plus text-xs"></i>
+                                </button>
+                                <button class="ml-2 w-8 h-full text-red-500 hover:text-red-600 flex items-center justify-center transition btn-remove" title="Xóa món">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 empty-cart">
+                <i class="fas fa-shopping-basket text-6xl mb-4"></i>
+                <p>Chưa có món nào</p>
+            </div>
+        }
+    </div>
+
+    <div class="p-5 bg-white border-t border-gray-100">
+        <div class="flex justify-between items-center mb-4">
+            <span class="text-gray-500">Tổng tạm tính</span>
+            <span class="text-xl font-bold text-gray-800" id="cart-total">@Model?.Total.ToString("N0") VNĐ</span>
+        </div>
+        <button class="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/30 flex items-center justify-center gap-3 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed btn-submit" @((Model?.Items == null || Model.Items.Count == 0) ? "disabled" : "")>
+            <span>Gửi Bếp</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+</div>

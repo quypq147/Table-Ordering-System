@@ -62,6 +62,10 @@ appsettings.Local.json
 *.db
 *.sqlite
 
+#Migrations
+**/Migrations/*.cs
+
+
 # Misc
 *.tmp
 *.bak

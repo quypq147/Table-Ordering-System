@@ -1,10 +1,191 @@
-﻿@{
+﻿@model dynamic
+@{
     ViewData["Title"] = "Trang chủ";
+    // Expecting: Model.TableNumber (int?), Model.RestaurantName (string?), Model.Categories (IEnumerable<dynamic>), Model.BestSellers (IEnumerable<dynamic>)
+    var restaurantName = (string?)Model?.RestaurantName ?? "Nhà Hàng Lezato";
+    int? tableNumber = null;
+    if (Model?.TableNumber is int tn) tableNumber = tn;
+    else if (Model?.TableNumber is string ts && int.TryParse(ts, out var tnp)) tableNumber = tnp;
+
+    var categories = (IEnumerable<dynamic>?)Model?.Categories ?? Enumerable.Empty<dynamic>();
+    var bestSellers = (IEnumerable<dynamic>?)Model?.BestSellers ?? Enumerable.Empty<dynamic>();
 }
 
-<div class="text-center">
-    <h1 class="display-5">Chào mừng đến với hệ thống gọi món</h1>
-    <p class="lead">Quét mã QR trên bàn để bắt đầu đặt món. Nhân viên sẽ hỗ trợ bạn nếu cần.</p>
-    <hr />
-    <p class="small text-muted">Nếu chưa rõ cách quét QR, chọn mục "Cách quét QR" phía trên.</p>
+<div class="w-full h-full overflow-auto no-scrollbar">
+    <!-- Hero Banner -->
+    <section class="relative h-[280px] md:h-[360px]">
+        <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1600&auto=format&fit=crop" alt="Banner đồ ăn"
+             class="absolute inset-0 w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-black/40"></div>
+
+        <div class="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
+            <h1 class="text-white text-2xl md:text-4xl font-semibold drop-shadow-md">
+                Chào mừng đến với <span class="text-orange-500 font-bold">@restaurantName</span>!
+            </h1>
+            <div class="mt-3">
+                <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500 text-white shadow-sm">
+                    <i class="fa-solid fa-chair"></i>
+                    <span>Bạn đang ngồi tại Bàn số: <strong>@(tableNumber?.ToString() ?? "—")</strong></span>
+                </span>
+            </div>
+            <p class="mt-3 text-white/90 text-sm md:text-base max-w-2xl">
+                Quét mã QR trên bàn để đặt món nhanh chóng. Nhân viên sẵn sàng hỗ trợ bạn khi cần.
+            </p>
+        </div>
+    </section>
+
+    <!-- Quick Categories -->
+    <section class="px-4 md:px-6 py-5">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg md:text-xl font-semibold">Danh mục nhanh</h2>
+            <a href="/client/menu" class="text-orange-600 text-sm hover:underline">Xem tất cả</a>
+        </div>
+
+        <div class="relative">
+            <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                @if (categories.Any())
+                {
+                    foreach (var c in categories)
+                    {
+                        var name = (string?)c?.Name ?? "Danh mục";
+                        var icon = (string?)c?.IconUrl;
+                        <a href="@($"/client/menu?category={Uri.EscapeDataString(name)}")"
+                           class="flex flex-col items-center justify-center min-w-[90px] w-[90px] h-[90px] rounded-xl bg-white shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-md transition-all">
+                            <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
+                                @if (!string.IsNullOrWhiteSpace(icon))
+                                {
+                                    <img src="@icon" alt="@name" class="w-10 h-10 rounded-full object-cover" />
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-utensils text-orange-500 text-xl"></i>
+                                }
+                            </div>
+                            <div class="mt-2 text-xs font-medium text-gray-700 text-center px-2 line-clamp-2">@name</div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    var defaults = new[] {
+                        new { Name = "Món Khai Vị", Icon = "fa-bowl-food" },
+                        new { Name = "Món Chính", Icon = "fa-burger" },
+                        new { Name = "Tráng Miệng", Icon = "fa-ice-cream" },
+                        new { Name = "Đồ Uống", Icon = "fa-mug-saucer" }
+                    };
+                    foreach (var d in defaults)
+                    {
+                        <div class="flex flex-col items-center justify-center min-w-[90px] w-[90px] h-[90px] rounded-xl bg-white shadow-sm border border-gray-100">
+                            <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
+                                <i class="fa-solid @d.Icon text-orange-500 text-xl"></i>
+                            </div>
+                            <div class="mt-2 text-xs font-medium text-gray-700 text-center px-2">@d.Name</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+
+    <!-- Best Sellers -->
+    <section class="px-4 md:px-6 py-2">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg md:text-xl font-semibold">
+                <span class="mr-1">🔥</span> Món Ngon Phải Thử
+            </h2>
+            <a href="/client/menu?sort=best" class="text-orange-600 text-sm hover:underline">Xem thêm</a>
+        </div>
+
+        <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+            @if (bestSellers.Any())
+            {
+                foreach (var m in bestSellers)
+                {
+                    var name = (string?)m?.Name ?? "Món ngon";
+                    var price = (decimal?)(m?.Price) ?? 0m;
+                    var currency = (string?)m?.Currency ?? "VND";
+                    var img = (string?)m?.ImageUrl ?? "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=800&auto=format&fit=crop";
+                    var id = (Guid?)(m?.Id) ?? Guid.Empty;
+
+                    <div class="min-w-[220px] w-[220px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
+                        <div class="relative h-32">
+                            <img src="@img" alt="@name" class="w-full h-full object-cover" />
+                            <button class="absolute bottom-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white text-orange-600 shadow hover:bg-orange-50"
+                                    onclick="quickAdd('@id')"
+                                    title="Thêm nhanh">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="p-3">
+                            <div class="font-semibold text-gray-800 line-clamp-2">@name</div>
+                            <div class="mt-2 flex items-baseline justify-between">
+                                <span class="text-orange-600 font-bold">@price.ToString("N0")</span>
+                                <span class="text-xs text-gray-500">@currency</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                // Fallback demo cards when no data
+                var demo = new[] {
+                    new { Name = "Cơm gà xối mỡ", Img = "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=800&auto=format&fit=crop", Price = 55000 },
+                    new { Name = "Bún thịt nướng", Img = "https://images.unsplash.com/photo-1607252650355-f7fd0460cc7f?q=80&w=800&auto=format&fit=crop", Price = 65000 },
+                    new { Name = "Trà đào cam sả", Img = "https://images.unsplash.com/photo-1541976076758-347942db197f?q=80&w=800&auto=format&fit=crop", Price = 35000 },
+                    new { Name = "Bánh flan", Img = "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800&auto=format&fit=crop", Price = 29000 }
+                };
+                foreach (var d in demo)
+                {
+                    <div class="min-w-[220px] w-[220px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="relative h-32">
+                            <img src="@d.Img" alt="@d.Name" class="w-full h-full object-cover" />
+                            <button class="absolute bottom-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white text-orange-600 shadow hover:bg-orange-50" title="Thêm nhanh">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="p-3">
+                            <div class="font-semibold text-gray-800 line-clamp-2">@d.Name</div>
+                            <div class="mt-2 flex items-baseline justify-between">
+                                <span class="text-orange-600 font-bold">@d.Price.ToString("N0")</span>
+                                <span class="text-xs text-gray-500">VND</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="px-4 md:px-6 py-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg md:text-xl font-semibold">Sẵn sàng gọi món?</h3>
+                <p class="text-gray-600 text-sm md:text-base">Chọn món yêu thích và thêm vào giỏ nhanh chóng.</p>
+            </div>
+            <a href="/client/menu" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 text-white shadow hover:bg-orange-500">
+                <i class="fa-solid fa-utensils"></i>
+                <span>Bắt đầu chọn món</span>
+            </a>
+        </div>
+    </section>
 </div>
+
+@section Scripts {
+    <script>
+        // Quick add handler (adjust endpoint as needed)
+        async function quickAdd(id) {
+            try {
+                if (!id || id === '00000000-0000-0000-0000-000000000000') return;
+                const resp = await fetch(`/client/menu/items/${id}/quick-add`, { method: 'POST' });
+                if (!resp.ok) throw new Error(await resp.text());
+                // Optional: show toast then navigate
+                window.location.href = '/client/cart';
+            } catch (e) {
+                console.error(e);
+                alert('Không thể thêm món. Vui lòng thử lại.');
+            }
+        }
+    </script>
+}

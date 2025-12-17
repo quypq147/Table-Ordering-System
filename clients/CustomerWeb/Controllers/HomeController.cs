@@ -33,6 +33,25 @@ namespace CustomerWeb.Controllers
             return View();
         }
 
+        [HttpPost("/client/leave-table")]
+        public IActionResult LeaveTable()
+        {
+            try
+            {
+                // Clear known cookies/session keys
+                Response.Cookies.Delete("sessionId");
+                Response.Cookies.Delete("tableCode");
+                Response.Cookies.Delete("orderId");
+            }
+            catch { }
+
+            // Optionally clear server session
+            try { HttpContext.Session?.Clear(); } catch { }
+
+            // Redirect to QR help or welcome
+            return Redirect("/client/qr-help");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

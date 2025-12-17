@@ -2,216 +2,348 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Theo dõi đơn hàng";
+
     var orderId = ViewBag.OrderId is Guid g ? g : Model?.OrderId ?? Guid.Empty;
-    var currency = "VND"; // currency not in DTO, default VND
     var initialStatus = Model?.Status ?? "Draft";
-    Func<string,int> stepIndex = status => status switch {
-        "Submitted" => 1,
-        "InProgress" => 2,
-        "Ready" => 3,
-        "Served" => 4,
-        "Paid" => 5,
-        _ => 0
-    };
-    var initialStep = stepIndex(initialStatus);
+
 }
-<div class="container py-3">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-1">Theo dõi đơn hàng</h5>
-            <div class="small text-muted">Mã đơn: <span class="fw-semibold" id="orderCode">@Model?.OrderId.ToString().Substring(0,8)</span> · Bàn: <span class="fw-semibold" id="tableCode">@Model?.TableCode</span></div>
-        </div>
-        <a href="/client/menu?tableCode=@Model?.TableCode" class="btn btn-link">← Menu</a>
+
+<div class="min-h-screen bg-[#F9F9F9] pb-24">
+
+    <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+        <a href="/" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-[#FE724C] hover:text-white transition-all">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <h1 class="text-lg font-bold text-gray-800 hidden md:block">Theo dõi trạng thái đơn hàng</h1>
+        <h1 class="text-lg font-bold text-gray-800 md:hidden">Theo dõi đơn</h1>
+
+        <button onclick="requestPayment()" class="md:hidden w-10 h-10 flex items-center justify-center rounded-xl text-[#FE724C] bg-orange-50 hover:bg-orange-100 transition-all">
+            <i class="fas fa-bell"></i>
+        </button>
+        <div class="hidden md:block w-10"></div>
     </div>
 
-    <div class="card mt-2">
-        <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between stepper" id="statusStepper">
-                <div class="step @(initialStep >= 1 ? "done" : "") @(initialStep == 1 ? "active" : "")" data-step="1">
-                    <div class="dot">1</div>
-                    <div class="label">Đã đặt</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 2 ? "done" : "") @(initialStep == 2 ? "active" : "")" data-step="2">
-                    <div class="dot dot-yellow">2</div>
-                    <div class="label">Trong bếp</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 3 ? "done" : "") @(initialStep == 3 ? "active" : "")" data-step="3">
-                    <div class="dot dot-green">3</div>
-                    <div class="label">Đang mang ra</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 4 ? "done" : "") @(initialStep == 4 ? "active" : "")" data-step="4">
-                    <div class="dot">4</div>
-                    <div class="label">Đã phục vụ</div>
-                </div>
-                <div class="bar"></div>
-                <div class="step @(initialStep >= 5 ? "done" : "") @(initialStep == 5 ? "active" : "")" data-step="5">
-                    <div class="dot">5</div>
-                    <div class="label">Đã thanh toán</div>
+    <div class="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10">
+
+        <div class="md:col-span-5 space-y-6">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] text-center relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FFC529] to-[#FE724C]"></div>
+
+                <p class="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">Mã đơn hàng</p>
+                <h2 class="text-4xl font-black text-gray-800 tracking-tight mb-6">#@(Model?.OrderCode ?? "---")</h2>
+
+                <div class="flex justify-center items-center gap-4">
+                    <div class="inline-flex items-center gap-2 px-5 py-3 bg-orange-50 rounded-2xl text-[#FE724C] font-bold border border-orange-100">
+                        <i class="fas fa-chair text-lg"></i>
+                        <span class="text-lg">Bàn @(Model?.TableCode ?? "--")</span>
+                    </div>
+                    <div class="inline-flex items-center gap-2 px-5 py-3 bg-gray-50 rounded-2xl text-gray-500 font-bold border border-gray-200">
+                        <i class="fas fa-clock"></i>
+                        <span>@(DateTime.Now.ToString("HH:mm"))</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-2">
-                Trạng thái hiện tại:
-                <span id="currentStatus" class="badge bg-secondary">@Model?.Status</span>
+            <div class="hidden md:grid grid-cols-2 gap-4">
+                @* Remove add-more-items button to encourage chat-based ordering *@
+                <button onclick="requestPayment()" class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-[#FE724C] text-white font-bold shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all transform active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                        <i class="fas fa-receipt text-xl"></i>
+                    </div>
+                    <span> Yêu Cầu Thanh toán</span>
+                </button>
             </div>
         </div>
-    </div>
 
-    <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span class="fw-semibold">Món trong đơn</span>
-            <span class="badge bg-light text-dark">Tổng: <b id="totalAmount">@Model?.Total.ToString("N0")</b> @currency</span>
-        </div>
-        <div class="list-group list-group-flush" id="orderItems">
-            @if (Model?.Items is { Count: > 0 })
-            {
-                foreach (var it in Model.Items)
-                {
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold">@it.Name</div>
-                            @if (!string.IsNullOrWhiteSpace(it.Note))
-                            {
-                                <div class="small text-muted">@it.Note</div>
-                            }
-                        </div>
-                        <div class="text-end">
-                            <div class="small text-muted">SL: @it.Quantity</div>
-                            <div class="fw-semibold">@it.LineTotal.ToString("N0") @currency</div>
+        <div class="md:col-span-7">
+            <div class="bg-white rounded-3xl p-6 md:p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] h-full">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="font-bold text-gray-800 text-xl">Trạng thái</h3>
+                    <span class="animate-pulse w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)]"></span>
+                </div>
+
+                <div class="relative pl-4 md:pl-8 border-l-2 border-gray-100 space-y-10" id="tracking-steps">
+                    <div class="step-item relative group" data-step="1">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đã gửi bếp</h4>
+                            <p class="text-sm text-gray-400 mt-1">Đơn hàng đã được chuyển xuống bếp</p>
                         </div>
                     </div>
-                }
-            }
-            else
-            {
-                <div class="list-group-item text-muted">Chưa có món.</div>
-            }
+
+                    <div class="step-item relative group" data-step="2">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đang chế biến</h4>
+                            <p class="text-sm text-gray-400 mt-1">Đầu bếp đang thực hiện món ăn</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item relative group" data-step="3">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Sẵn sàng phục vụ</h4>
+                            <p class="text-sm text-gray-400 mt-1">Món ăn đã nấu xong</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item relative group" data-step="4">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đã phục vụ</h4>
+                            <p class="text-sm text-gray-400 mt-1">Chúc quý khách ngon miệng!</p>
+                        </div>
+                    </div>
+
+                    <div class="step-item relative group" data-step="5">
+                        <div class="absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center bg-gray-200 z-10"></div>
+                        <div class="pl-2">
+                            <h4 class="font-bold text-lg transition-colors">Đã thanh toán</h4>
+                            <p class="text-sm text-gray-400 mt-1">Cảm ơn quý khách!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1080">
-        <div id="toast" class="toast align-items-center text-bg-secondary border-0" data-bs-delay="2800" data-bs-autohide="true">
-            <div class="d-flex">
-                <div class="toast-body d-flex align-items-center">
-                    <span id="toastMsg">—</span>
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    <!-- Floating Chat Button -->
+    <button id="chatFab" onclick="openChatPopup()" class="fixed bottom-6 right-6 w-14 h-14 bg-[#FE724C] text-white rounded-full shadow-lg flex items-center justify-center z-50">
+        <i class="fas fa-comment-dots"></i>
+    </button>
+
+    <!-- Chat Popup Modal -->
+    <div id="chatPopup" class="fixed inset-0 flex items-end justify-end p-6 pointer-events-none">
+        <div class="w-96 bg-white rounded-2xl shadow-xl pointer-events-auto p-4 hidden" id="chatWindow">
+            <div class="flex items-center justify-between mb-3">
+                <div class="fw-semibold">Chat với nhân viên</div>
+                <button class="btn btn-sm btn-light" onclick="closeChatPopup()">✕</button>
+            </div>
+            <div id="chatMessages" style="height:300px; overflow:auto;" class="mb-3">
+                <!-- messages loaded by JS -->
+            </div>
+            <div class="d-flex flex-wrap gap-1 mb-2" id="chatSuggestions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickChat('Cho em xin thêm menu ạ')">Cho em xin thêm menu ạ</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickChat('Cho em gọi thêm đồ uống')">Cho em gọi thêm đồ uống</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="quickChat('Bàn em cần hỗ trợ thêm')">Bàn em cần hỗ trợ thêm</button>
+            </div>
+            <div class="d-flex gap-2">
+                <input id="chatInput" class="form-control" placeholder="Nhập tin nhắn..." />
+                <button class="btn btn-primary" onclick="sendChat()">Gửi</button>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .stepper { gap: .5rem; }
-    .step { display:flex; flex-direction:column; align-items:center; min-width:64px; }
-    .step .dot {
-        width:32px; height:32px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        background:#e5e7eb; color:#111827; font-weight:600;
-        border:2px solid #9ca3af;
-    }
-    .step.active .dot { border-color:#2563EB; box-shadow:0 0 0 3px rgba(37,99,235,.2); }
-    .step.done .dot { background:#111827; color:#fff; border-color:#111827; }
-    .step .label { margin-top:.25rem; font-size:.85rem; color:#6b7280; white-space:nowrap; }
-    .step.active .label { color:#111827; font-weight:600; }
-    .bar { flex:1; height:2px; background:#e5e7eb; }
-    .dot-yellow { background:#f59e0b !important; color:#111827 !important; border-color:#f59e0b !important; }
-    .dot-green { background:#10b981 !important; color:#06251b !important; border-color:#10b981 !important; }
-</style>
-
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
-        (function(){
             const orderId = "@orderId";
-            const currency = "@currency";
+            const initialStatus = "@initialStatus";
+            const normalizedOrderId = orderId ? orderId.toLowerCase() : "";
+            const tableCode = "@(Model?.TableCode ?? "")";
 
             const statusMap = {
-                Draft: { step: 0, badge: "secondary", text: "Đang chọn món" },
-                Submitted: { step: 1, badge: "primary", text: "Đã đặt" },
-                InProgress: { step: 2, badge: "warning", text: "Trong bếp" },
-                Ready: { step: 3, badge: "success", text: "Đang mang ra" },
-                Served: { step: 4, badge: "dark", text: "Đã phục vụ" },
-                Paid: { step: 5, badge: "success", text: "Đã thanh toán" },
-                Cancelled: { step: -1, badge: "danger", text: "Đã hủy" },
-                WaitingForPayment: { step: 2, badge: "info", text: "Chờ thanh toán" }
+                Draft: 'Đang chọn món',
+                Submitted: 'Đã gửi bếp',
+                InProgress: 'Đang chế biến',
+                Ready: 'Món đã sẵn sàng',
+                Served: 'Đã phục vụ',
+                Cancelled: 'Đơn đã bị hủy',
+                WaitingForPayment: 'Đang chờ thanh toán',
+                Paid: 'Đã thanh toán'
             };
 
-            function toast(msg, cls){
-                const el = document.getElementById('toast');
-                if(!el) return;
-                el.classList.remove('text-bg-secondary','text-bg-success','text-bg-danger','text-bg-info','text-bg-warning','text-bg-primary','text-bg-dark');
-                el.classList.add(cls || 'text-bg-secondary');
-                const body = document.getElementById('toastMsg');
-                if(body) body.textContent = msg || '';
-                bootstrap.Toast.getOrCreateInstance(el).show();
-            }
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/customer")
+                .withAutomaticReconnect()
+                .build();
 
-            function updateBadge(status){
-                const s = statusMap[status] || statusMap.Draft;
-                const el = document.getElementById('currentStatus');
-                if(!el) return;
-                el.className = 'badge';
-                el.classList.add('bg-' + s.badge);
-                el.textContent = s.text;
-            }
+            connection.on("orderStatusChanged", (id, newStatus) => {
+                const incoming = (typeof id === "string" ? id : id?.toString?.())?.toLowerCase();
+                if (incoming && normalizedOrderId && incoming !== normalizedOrderId) {
+                    return;
+                }
 
-            function setStepper(step){
-                const container = document.getElementById('statusStepper');
-                if(!container) return;
-                const steps = container.querySelectorAll('.step');
-                steps.forEach(s => {
-                    const idx = parseInt(s.dataset.step, 10);
-                    s.classList.toggle('active', idx === step);
-                    s.classList.toggle('done', idx < step);
-                });
-            }
+                console.log("Realtime Update:", newStatus);
+                if (window.toast && window.toast.success) {
+                    window.toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
+                }
+                updateTrackingUI(newStatus);
+            });
 
-            async function startSignalR(){
-                const hubUrl = "/hubs/customer";
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl(hubUrl)
-                    .withAutomaticReconnect()
-                    .build();
+            connection.on("chatMessage", payload => {
+                if (!payload) return;
+                appendChatMessage(payload.sender === 'customer' ? 'Bạn' : 'Nhân viên', payload.message, payload.sender === 'customer');
+            });
 
-                connection.on("OrderStatusChanged", payload => {
-                    const status = (payload && payload.status) || 'Draft';
-                    const m = statusMap[status] || statusMap.Draft;
-                    updateBadge(status);
-                    setStepper(m.step);
-                    toast(`Trạng thái đơn đã cập nhật: ${m.text}`, 'text-bg-info');
-                });
-
-                connection.on("OrderPaid", payload => {
-                    updateBadge("Paid");
-                    setStepper(5);
-                    toast("Thanh toán thành công. Cảm ơn!", 'text-bg-success');
-                });
-
+            async function startSignalR() {
                 try {
-                    await connection.start();
-                    if (connection.state === signalR.HubConnectionState.Connected) {
-                        try {
-                            await connection.invoke("JoinOrderGroup", orderId);
-                        } catch (e) {
-                            console.warn("JoinOrderGroup failed:", e);
-                        }
+            if (connection.state === signalR.HubConnectionState.Disconnected) {
+                await connection.start();
+                console.log("SignalR Connected.");
+
+                // Join nhóm sau khi connect thành công
+                if (orderId) {
+                    // Lưu ý: chuyển orderId về chữ thường như đã nhắc ở bài trước
+                    await connection.invoke("JoinOrderGroup", orderId.toLowerCase());
+                }
+            }
+        } catch (err) {
+            console.error("SignalR Connection Error: ", err);
+            // Thử lại sau 5 giây nếu lỗi
+            setTimeout(startSignalR, 5000);
+        }
+            }
+
+            connection.onreconnected(async () => {
+                try {
+                    if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
+                        await connection.invoke("JoinOrderGroup", orderId);
                     }
-                } catch (e) {
-                    console.error("SignalR connection failed:", e);
-                    toast("Không thể kết nối realtime.", 'text-bg-warning');
+                    if (tableCode) {
+                        await connection.invoke("JoinTableGroup", tableCode);
+                    }
+                } catch (err) {
+                    console.error("SignalR Rejoin Error:", err);
+                }
+            });
+
+            function updateTrackingUI(status) {
+                // Nếu đơn đã bị hủy: highlight đặc biệt và dừng
+                if (status === 'Cancelled') {
+                    const statusHeader = document.querySelector('h3.font-bold');
+                    if (statusHeader) {
+                        statusHeader.innerText = 'Đơn hàng đã bị hủy';
+                        statusHeader.classList.add('text-red-600');
+                    }
+
+                    document.querySelectorAll('.step-item .rounded-full').forEach(dot => {
+                        dot.classList.remove('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
+                        dot.classList.add('bg-red-200');
+                    });
+
+                    if (window.toast && window.toast.error) {
+                        window.toast.error('Đơn hàng của bạn đã bị hủy. Vui lòng liên hệ nhân viên.');
+                    }
+
+                    return;
+                }
+
+                let stepIndex = 0;
+                switch (status) {
+                    case 'Submitted': stepIndex = 1; break;
+                    case 'InProgress': stepIndex = 2; break;
+                    case 'Ready': stepIndex = 3; break;
+                    case 'Served': stepIndex = 4; break;
+                    case 'Paid': stepIndex = 5; break;
+                    default: stepIndex = 0; break;
+                }
+
+                if (stepIndex > 0) {
+                    document.querySelectorAll('.step-item').forEach(el => {
+                        const step = parseInt(el.getAttribute('data-step'));
+                        const dot = el.querySelector('.rounded-full');
+                        if (!dot) { return; }
+
+                        dot.className = "absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center z-10";
+
+                        if (step <= stepIndex) {
+                            dot.classList.add('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
+                        } else {
+                            dot.classList.add('bg-gray-200');
+                        }
+                    });
                 }
             }
 
-            document.addEventListener('DOMContentLoaded', async () => {
-                const initial = "@initialStatus";
-                updateBadge(initial);
-                setStepper((statusMap[initial]||statusMap.Draft).step);
-                await startSignalR();
+            updateTrackingUI(initialStatus);
+            startSignalR();
+
+            function requestPayment() {
+                if (!orderId || orderId === '00000000-0000-0000-0000-000000000000') {
+                    if (window.toast && window.toast.error) {
+                        window.toast.error('Không xác định đơn hàng');
+                    }
+                    return;
+                }
+
+                fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Gửi yêu cầu thất bại');
+                        if (window.toast && window.toast.success) {
+                            window.toast.success('Đã gọi nhân viên thanh toán. Vui lòng chờ.');
+                        }
+                    }).catch(e => {
+                        if (window.toast && window.toast.error) {
+                            window.toast.error(e.message || 'Lỗi kết nối');
+                        }
+                    });
+            }
+
+            function openChatPopup() {
+                document.getElementById('chatWindow').classList.remove('hidden');
+                loadChatHistory();
+            }
+            function closeChatPopup() {
+                document.getElementById('chatWindow').classList.add('hidden');
+            }
+
+            function appendChatMessage(senderLabel, message, isSelf) {
+                const box = document.getElementById('chatMessages');
+                const el = document.createElement('div');
+                el.className = 'mb-2 ' + (isSelf ? 'text-right' : 'text-left');
+                el.innerHTML = `<div class="small text-muted">${senderLabel}</div>
+                                <div class="inline-block px-3 py-2 rounded-xl ${isSelf ? 'bg-blue-500 text-white' : 'bg-gray-100'}">${message}</div>`;
+                box.appendChild(el);
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function loadChatHistory() {
+                if (!tableCode) return;
+                fetch(`/proxy/public/chat/history?tableCode=${encodeURIComponent(tableCode)}`)
+                    .then(r => r.json())
+                    .then(list => {
+                        const box = document.getElementById('chatMessages');
+                        box.innerHTML = '';
+                        (list || []).forEach(m => {
+                            appendChatMessage(m.sender === 'customer' ? 'Bạn' : 'Nhân viên', m.message, m.sender === 'customer');
+                        });
+                    }).catch(() => { });
+            }
+
+            function sendChat() {
+                const input = document.getElementById('chatInput');
+                const text = input.value && input.value.trim();
+                if (!text) return;
+
+                fetch('/proxy/public/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tableCode: tableCode, sender: 'customer', message: text })
+                })
+                    .then(r => { if (!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
+                    .then((payload) => {
+                        appendChatMessage('Bạn', payload.message || text, true);
+                        input.value = '';
+                    })
+                    .catch(e => {
+                        if (window.toast && window.toast.error) {
+                            window.toast.error(e.message || 'Lỗi gửi');
+                        }
+                    });
+            }
+
+            function quickChat(message) {
+                const input = document.getElementById('chatInput');
+                input.value = message;
+                sendChat();
+            }
+
+            $(document).ready(function () {
+                startSignalR();
+                loadChatHistory();
+                updateTrackingUI(initialStatus);
             });
-        })();
     </script>
 }

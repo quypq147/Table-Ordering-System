@@ -1,7 +1,9 @@
 using Application.Abstractions;
 using Application.Invoices.Commands;
+using Application.Tables.Commands;
 using Application.Common.CQRS; // ISender
 using Domain.Events;
+using Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Orders.Events.Handlers;
@@ -15,7 +17,10 @@ namespace Application.Orders.Events.Handlers;
 /// - generate an <c>Invoice</c> for the paid order
 /// - notify other subsystems (reports, external accounting)
 /// </remarks>
-public sealed class OrderPaidHandler(ILogger<OrderPaidHandler> logger, ISender sender) : IDomainEventHandler<OrderPaid>
+public sealed class OrderPaidHandler(
+    ILogger<OrderPaidHandler> logger,
+    ISender sender,
+    IOrderRepository orderRepository) : IDomainEventHandler<OrderPaid>
 {
     /// <summary>
     /// Handle the <see cref="OrderPaid"/> event.
@@ -27,14 +32,22 @@ public sealed class OrderPaidHandler(ILogger<OrderPaidHandler> logger, ISender s
     {
         logger.LogInformation("OrderPaid handled for OrderId={OrderId}, Amount={Amount} {Currency}", domainEvent.OrderId, domainEvent.Amount, domainEvent.Currency);
 
-        // Generate invoice immediately after payment
         try
         {
+            // Generate invoice for the paid order
             await sender.Send(new GenerateInvoiceForOrderCommand(domainEvent.OrderId), ct);
+
+            // Auto release table after payment
+            var order = await orderRepository.GetByIdAsync(domainEvent.OrderId, ct);
+            if (order != null)
+            {
+                await sender.Send(new MarkTableAvailableCommand(order.TableId), ct);
+                logger.LogInformation("Auto-released Table {TableId} after payment.", order.TableId);
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to generate invoice for paid order {OrderId}", domainEvent.OrderId);
+            logger.LogError(ex, "Error handling OrderPaid for {OrderId}", domainEvent.OrderId);
         }
 
         // TODO: update dashboard metrics here (e.g. increment RevenueToday, RecentOrders)

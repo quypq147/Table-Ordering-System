@@ -1,0 +1,111 @@
+﻿@page "/chat"
+@using WaiterApp.Services
+@inject OrdersRealtimeService Realtime
+@inject NavigationManager Nav
+
+<div class="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="px-6 py-6 bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Tin nhắn</h1>
+        <p class="text-sm text-gray-500">Danh sách hội thoại từ các bàn</p>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        @if (conversations.Count == 0)
+        {
+            <div class="text-center py-10 text-gray-400">
+                <span class="material-icons-round text-4xl mb-2">chat_bubble_outline</span>
+                <p>Chưa có tin nhắn nào</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var conv in conversations.Values.OrderByDescending(c => c.LastMessageTime))
+            {
+                <div @onclick="() => OpenDetail(conv.TableId)"
+                     class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-soft flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all">
+
+                    <div class="relative w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                        @GetShortCode(conv.TableId)
+                        @if (conv.UnreadCount > 0)
+                        {
+                            <span class="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
+                                @conv.UnreadCount
+                            </span>
+                        }
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-bold text-gray-800 dark:text-white truncate">@conv.TableId</h3>
+                            <span class="text-xs text-gray-400">@conv.LastMessageTime.ToLocalTime().ToString("HH:mm")</span>
+                        </div>
+                        <p class="text-sm text-gray-500 truncate @(conv.UnreadCount > 0 ? "font-semibold text-gray-800 dark:text-gray-200" : "")">
+                            @conv.LastMessage
+                        </p>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code{
+    private readonly Dictionary<string, ConversationVm> conversations = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Realtime.ChatMessageReceived += OnMessageReceived;
+        await Realtime.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.ChatMessageReceived -= OnMessageReceived;
+    }
+
+    private void OnMessageReceived(ChatMessagePayload p)
+    {
+        InvokeAsync(() =>
+        {
+            if (!conversations.TryGetValue(p.TableId, out var conv))
+            {
+                conv = new ConversationVm { TableId = p.TableId };
+                conversations[p.TableId] = conv;
+            }
+
+            conv.LastMessage = p.Message;
+            conv.LastMessageTime = p.SentAtUtc == default ? DateTime.UtcNow : p.SentAtUtc;
+
+            if (!IsOwnMessage(p))
+            {
+                conv.UnreadCount++;
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private void OpenDetail(string tableId)
+    {
+        // Reset biến đếm khi mở xem
+        if (conversations.TryGetValue(tableId, out var conv))
+        {
+            conv.UnreadCount = 0;
+        }
+        StateHasChanged();
+        Nav.NavigateTo($"/chat/{tableId}");
+    }
+
+    private string GetShortCode(string code) => code.Replace("Table", "").Replace("T-", "").Trim();
+
+    private static bool IsOwnMessage(ChatMessagePayload payload)
+        => payload.Sender is "Staff" or "Tôi";
+
+    class ConversationVm
+    {
+        public string TableId { get; set; } = "";
+        public string LastMessage { get; set; } = "";
+        public DateTime LastMessageTime { get; set; }
+        public int UnreadCount { get; set; }
+    }
+}

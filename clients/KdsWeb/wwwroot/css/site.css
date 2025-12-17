@@ -1,31 +1,191 @@
-html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+﻿/* --- LEZATO KDS THEME --- */
+:root {
+    --brand-orange: #FF5B24;
+    --brand-red: #DC3545;
+    --brand-green: #28a745;
+    --brand-dark: #212529; /* Header bg */
+    --bg-kitchen: #1F2937; /* Body bg tối */
+    --ticket-bg: #FFFFFF;
+    --text-primary: #F9FAFB;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-kitchen);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden; /* Quan trọng: Ẩn scroll body để dùng scroll ngang của container */
+    display: flex;
+    flex-direction: column;
+    margin: 0;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* --- Header --- */
+.kds-header {
+    background-color: var(--brand-dark);
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #374151;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+.toggle-switch {
+    background-color: #343a40;
+    border-radius: 20px;
+    padding: 4px;
+    display: inline-flex;
+}
+
+.toggle-btn {
+    padding: 6px 20px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #adb5bd;
+    text-decoration: none;
+}
+
+    .toggle-btn.active {
+        background-color: var(--brand-orange);
+        color: white;
+    }
+
+/* --- Main Ticket Grid (Horizontal Scroll) --- */
+.tickets-container {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-x: auto; /* Cuộn ngang */
+    overflow-y: hidden;
+    white-space: nowrap; /* Giữ các thẻ trên 1 dòng */
+    display: flex;
+    gap: 15px;
+    align-items: flex-start; /* Căn trên cùng */
+}
+
+    /* Scrollbar đẹp hơn cho Webkit */
+    .tickets-container::-webkit-scrollbar {
+        height: 10px;
+    }
+
+    .tickets-container::-webkit-scrollbar-track {
+        background: #374151;
+    }
+
+    .tickets-container::-webkit-scrollbar-thumb {
+        background: #6b7280;
+        border-radius: 5px;
+    }
+
+/* --- Ticket Card Styling --- */
+.ticket-card {
+    width: 320px;
+    background: var(--ticket-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    display: inline-flex;
+    flex-direction: column;
+    white-space: normal; /* Reset text wrap bên trong thẻ */
+    flex-shrink: 0;
+    height: auto;
+    max-height: calc(100vh - 120px); /* Đảm bảo không tràn màn hình */
+    color: #212529; /* Chữ trong thẻ màu đen */
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ticket-header {
+    padding: 12px 15px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Status Colors */
+.status-new {
+    background-color: var(--brand-orange);
+}
+
+.status-inprogress {
+    background-color: #0d6efd;
+}
+/* Đang nấu: Xanh dương */
+.status-ready {
+    background-color: var(--brand-green);
+}
+/* Xong: Xanh lá */
+.status-late {
+    background-color: var(--brand-red);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.ticket-body {
+    padding: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.order-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.modifier {
+    display: block;
+    font-size: 12px;
+    color: #dc3545; /* Ghi chú màu đỏ cho dễ thấy */
+    font-weight: 500;
+    margin-top: 4px;
+    padding-left: 10px;
+    border-left: 3px solid #dee2e6;
+    font-style: italic;
+}
+
+.ticket-footer {
+    padding: 15px;
+    background-color: white;
+    border-top: 1px solid #eee;
+}
+
+.timer-badge {
+    background: rgba(0,0,0,0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 14px;
 }

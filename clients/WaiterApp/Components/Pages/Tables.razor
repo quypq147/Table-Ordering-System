@@ -1,0 +1,245 @@
+﻿@page "/"
+@page "/tables"
+@using System.Net.Http.Json
+@using TableOrdering.Contracts
+@using WaiterApp.Models
+@using WaiterApp.Services
+@inject ApiClient ApiClient
+@inject NavigationManager Navigation
+@inject OrdersRealtimeService Realtime
+@implements IAsyncDisposable
+
+<div class="px-6 pt-8 pb-24 h-full flex flex-col">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Khu vực chính</p>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Sơ đồ bàn</h1>
+        </div>
+        <button class="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-gray-600 dark:text-gray-300 active:scale-95 transition-transform"
+                @onclick="LoadDataAsync" disabled="@loading">
+            <span class="material-icons-round @(loading ? "animate-spin" : "")">sync</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="p-4 mb-4 rounded-xl bg-red-50 text-red-600 text-sm border border-red-100 flex items-center gap-2">
+            <span class="material-icons-round">error_outline</span>
+            @error
+        </div>
+    }
+
+    @if (tableViewModels == null)
+    {
+        <div class="flex-1 flex justify-center items-center">
+            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    }
+    else if (!tableViewModels.Any())
+    {
+        <div class="flex-1 flex flex-col justify-center items-center text-gray-400">
+            <span class="material-icons-round text-5xl mb-2 opacity-20">table_restaurant</span>
+            <p>Chưa có bàn nào.</p>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4 no-scrollbar">
+            @foreach (var item in tableViewModels)
+            {
+                var cardClass = item.IsNewOrder
+                ? "bg-orange-50 border-orange-200 ring-1 ring-orange-200"
+                : (item.HasActiveOrder ? "bg-green-50 border-green-200" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700");
+
+                var textClass = item.IsNewOrder ? "text-orange-700" : (item.HasActiveOrder ? "text-green-700" : "text-gray-800 dark:text-white");
+
+                <div @onclick="() => HandleTableClick(item)"
+                     class="@cardClass p-4 rounded-2xl shadow-sm border active:scale-95 transition-all cursor-pointer relative h-32 flex flex-col justify-between">
+
+                    <div class="flex justify-between items-start">
+                        <span class="font-bold text-lg @textClass">@GetShortName(item.Table.Code)</span>
+
+                        @if (item.IsNewOrder)
+                        {
+                            <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse shadow-sm"></span>
+                        }
+                        else if (item.HasActiveOrder)
+                        {
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        }
+                    </div>
+
+                    <div class="text-sm">
+                        @if (item.HasActiveOrder)
+                        {
+                            <div class="font-medium @textClass flex items-center gap-1">
+                                <span class="material-icons-round text-base">receipt_long</span>
+                                @item.OrderTotalDisplay
+                            </div>
+                            @if (item.IsNewOrder)
+                            {
+                                <div class="text-xs text-orange-600 mt-1 font-bold">Mới!</div>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-gray-400 text-xs flex items-center gap-1">
+                                <span class="material-icons-round text-base opacity-50">check_circle_outline</span>
+                                Trống
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    // Models
+    class TableViewModel
+    {
+        public TableDto Table { get; set; } = new();
+        public Guid? ActiveOrderId { get; set; }
+        public bool HasActiveOrder { get; set; }
+        public bool IsNewOrder { get; set; }
+        public string OrderTotalDisplay { get; set; } = string.Empty;
+    }
+
+    // Match backend OrderSummaryDto (api/orders/summaries)
+    class OrderSummary
+    {
+        public Guid Id { get; set; }
+        public Guid TableId { get; set; }
+        public string TableCode { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public int PendingItems { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
+    }
+
+    // State
+    private List<TableDto> tables = new();
+    private List<OrderSummary> activeOrders = new();
+    private List<TableViewModel> tableViewModels;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // 1. Đăng ký nhận sự kiện Realtime (QUAN TRỌNG)
+            Realtime.OrderStatusChanged += OnOrderStatusChanged;
+            Realtime.PaymentRequestReceived += OnPaymentRequestReceived;
+
+            await Realtime.StartAsync();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            error = "Không thể kết nối máy chủ.";
+            Console.WriteLine(ex);
+        }
+    }
+
+    // 2. Hủy đăng ký khi rời trang để tránh memory leak
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.OrderStatusChanged -= OnOrderStatusChanged;
+        Realtime.PaymentRequestReceived -= OnPaymentRequestReceived;
+        // Không gọi StopAsync() ở đây nếu muốn giữ kết nối cho trang khác,
+        // hoặc gọi nếu muốn tiết kiệm pin. Tốt nhất để Service tự quản lý lifetime kết nối.
+    }
+
+    // Xử lý sự kiện: Khi có thay đổi, reload lại dữ liệu
+    private void OnOrderStatusChanged(Guid orderId, string status)
+    {
+        Console.WriteLine($"[Tables] OrderStatusChanged: {orderId} -> {status}");
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void OnPaymentRequestReceived(PaymentRequestPayload payload)
+    {
+        Console.WriteLine($"[Tables] PaymentRequestReceived: order={payload.OrderId}, table={payload.TableCode}");
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+
+            // Tải danh sách bàn
+            var tablesResp = await ApiClient.Http.GetAsync("api/tables");
+            if (tablesResp.IsSuccessStatusCode)
+            {
+                tables = await tablesResp.Content.ReadFromJsonAsync<List<TableDto>>() ?? new();
+            }
+
+            // Tải danh sách đơn hàng tóm tắt từ endpoint summaries
+            var ordersResp = await ApiClient.Http.GetAsync("api/orders/summaries?page=1&pageSize=200");
+            if (ordersResp.IsSuccessStatusCode)
+            {
+                var allOrders = await ordersResp.Content.ReadFromJsonAsync<List<OrderSummary>>() ?? new();
+                // Lọc lấy các đơn chưa thanh toán xong
+                activeOrders = allOrders
+                    .Where(o => o.Status != "Paid" && o.Status != "Cancelled")
+                    .ToList();
+            }
+
+            UpdateViewModels();
+            error = null;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateViewModels()
+    {
+        tableViewModels = tables.OrderBy(t => t.Code).Select(t =>
+        {
+            var order = activeOrders.FirstOrDefault(o => o.TableCode == t.Code || o.TableId == t.Id);
+
+            return new TableViewModel
+            {
+                Table = t,
+                ActiveOrderId = order?.Id,
+                HasActiveOrder = order != null,
+                IsNewOrder = order?.Status == "Submitted",
+                OrderTotalDisplay = order != null ? $"{order.PendingItems} món" : string.Empty
+            };
+        }).ToList();
+    }
+
+    private void HandleTableClick(TableViewModel item)
+    {
+        if (item.HasActiveOrder && item.ActiveOrderId.HasValue)
+        {
+            Navigation.NavigateTo($"/orderdetail?orderId={item.ActiveOrderId}");
+        }
+        else
+        {
+            // Bàn trống: Có thể mở trang tạo đơn mới nếu muốn
+            // Navigation.NavigateTo($"/createorder/{item.Table.Id}");
+        }
+    }
+
+    private string GetShortName(string code) => code.Replace("Table", "").Replace("T-", "").Trim();
+}}

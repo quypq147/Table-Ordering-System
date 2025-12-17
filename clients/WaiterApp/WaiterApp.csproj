@@ -73,16 +73,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <MauiXaml Update="AppShell.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-      <MauiXaml Update="Pages\ChatPage.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-      <MauiXaml Update="Pages\OrdersPage.xaml">
-        <Generator>MSBuild:Compile</Generator>
-      </MauiXaml>
-      <MauiXaml Update="Pages\SettingsPage.xaml">
+      <MauiXaml Update="MainPage.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>
     </ItemGroup>

@@ -1,0 +1,154 @@
+﻿@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using WaiterApp.Services
+@inject AuthService Auth
+@inject NavigationManager Navigation
+@inject WaiterApp.Services.ToastService ToastService
+
+<style>
+    .glass-panel {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .login-page-root {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+</style>
+
+<div class="login-page-root bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-100 flex flex-col justify-center relative overflow-hidden transition-colors duration-300">
+
+    <div class="absolute top-[-10%] right-[-20%] w-96 h-96 bg-primary/20 rounded-full blur-[80px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] left-[-20%] w-80 h-80 bg-blue-400/10 dark:bg-blue-600/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+    <div class="w-full max-w-md mx-auto px-6 py-8 z-10 flex flex-col h-full justify-between sm:justify-center sm:h-auto">
+
+        <div class="mb-10 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6 text-primary">
+                <span class="material-icons-round text-4xl">restaurant_menu</span>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight mb-2">Lezato.</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm font-medium">Waiter Companion App</p>
+        </div>
+
+        <div class="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-soft p-8 relative overflow-hidden border border-gray-100 dark:border-gray-800">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 to-primary"></div>
+
+            <EditForm Model="@model" OnValidSubmit="HandleLogin" class="space-y-5">
+                <DataAnnotationsValidator />
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1" for="username">Tài khoản</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <span class="material-icons-round text-gray-400 group-focus-within:text-primary transition-colors">person</span>
+                        </div>
+                        <InputText id="username"
+                                   class="block w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary/50 transition-all duration-200"
+                                   placeholder="Nhập tên đăng nhập"
+                                   @bind-Value="model.Username" />
+                    </div>
+                    <ValidationMessage For="@(() => model.Username)" class="text-red-500 text-xs mt-1 ml-1" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 ml-1" for="password">Mật khẩu</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <span class="material-icons-round text-gray-400 group-focus-within:text-primary transition-colors">lock</span>
+                        </div>
+                        <InputText type="password"
+                                   id="password"
+                                   class="block w-full pl-12 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary/50 transition-all duration-200"
+                                   placeholder="••••••••"
+                                   @bind-Value="model.Password" />
+                    </div>
+                    <ValidationMessage For="@(() => model.Password)" class="text-red-500 text-xs mt-1 ml-1" />
+                </div>
+
+                <div class="flex items-center justify-between mt-2">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" class="form-checkbox w-4 h-4 text-primary rounded border-gray-300 dark:border-gray-600 focus:ring-primary bg-transparent" />
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Ghi nhớ tôi</span>
+                    </label>
+                    <a href="#" class="text-sm font-medium text-primary hover:text-orange-600 dark:hover:text-orange-400 transition-colors">Quên mật khẩu?</a>
+                </div>
+
+                @if (!string.IsNullOrEmpty(serverError))
+                {
+                    <div class="p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm text-center">
+                        @serverError
+                    </div>
+                }
+
+                <button type="submit" disabled="@isSubmitting" class="w-full bg-primary hover:bg-orange-600 text-white font-bold py-4 rounded-full shadow-glow transform transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed">
+                    @if (isSubmitting)
+                    {
+                        <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Đang xử lý...</span>
+                    }
+                    else
+                    {
+                        <span>Đăng nhập</span>
+                        <span class="material-icons-round text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    }
+                </button>
+            </EditForm>
+        </div>
+
+        <div class="mt-8 text-center space-y-4">
+            <button type="button" onclick="document.documentElement.classList.toggle('dark')" class="p-3 bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-full shadow-lg text-gray-600 dark:text-gray-300 hover:text-primary transition-all mx-auto block w-max">
+                <span class="material-icons-round dark:hidden">dark_mode</span>
+                <span class="material-icons-round hidden dark:block">light_mode</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel model = new();
+    private bool isSubmitting = false;
+    private string? serverError;
+
+    private async Task HandleLogin()
+    {
+        isSubmitting = true;
+        serverError = null;
+
+        try
+        {
+            // Gọi AuthService đã có sẵn
+            var (success, err) = await Auth.LoginAsync(model.Username, model.Password);
+
+            if (success)
+            {
+                ToastService.ShowSuccess("Đăng nhập thành công!");
+                // Điều hướng về trang chủ
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+            else
+            {
+                serverError = string.IsNullOrWhiteSpace(err) ? "Tên đăng nhập hoặc mật khẩu không đúng." : err;
+                ToastService.ShowError(serverError);
+            }
+        }
+        catch (Exception ex)
+        {
+            serverError = "Đã xảy ra lỗi kết nối: " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Vui lòng nhập tài khoản")]
+        public string Username { get; set; } = "";
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+        public string Password { get; set; } = "";
+    }
+}

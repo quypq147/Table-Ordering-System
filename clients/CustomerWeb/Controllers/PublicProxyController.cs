@@ -334,5 +334,15 @@ public class PublicProxyController : ControllerBase
     [HttpPost("orders/{orderId:guid}/mock-transfer")]
     public async Task<IActionResult> MockTransfer(Guid orderId)
     => await Pipe(await B().PostAsync($"/api/public/orders/{orderId}/mock-transfer", new StringContent("{}", Encoding.UTF8, "application/json")));
+
+    public sealed record ChatSendDto(string TableCode, string Sender, string Message);
+
+    [HttpPost("chat")]
+    public async Task<IActionResult> SendChat([FromBody] ChatSendDto dto)
+    {
+        var client = B();
+        var res = await client.PostAsJsonAsync("/api/chat", dto);
+        return await Pipe(res);
+    }
 }
 

@@ -5,5 +5,6 @@ public enum TableStatus
     // Bàn trống, chưa có order đang hoạt động
     Available = 0,
     // Bàn đang có khách / có order
-    InUse = 1
+    InUse = 1,
+    Reserved = 2
 }
