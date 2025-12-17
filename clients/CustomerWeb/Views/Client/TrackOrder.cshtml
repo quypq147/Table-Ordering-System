@@ -45,17 +45,11 @@
 
             <div class="hidden md:grid grid-cols-2 gap-4">
                 @* Remove add-more-items button to encourage chat-based ordering *@
-                <div class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-white border border-gray-100 text-gray-600 font-bold opacity-60 cursor-not-allowed">
-                    <div class="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center">
-                        <i class="fas fa-plus text-xl"></i>
-                    </div>
-                    <span>Gọi thêm món qua chat</span>
-                </div>
                 <button onclick="requestPayment()" class="flex flex-col items-center justify-center gap-2 py-6 rounded-3xl bg-[#FE724C] text-white font-bold shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-all transform active:scale-95">
                     <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
                         <i class="fas fa-receipt text-xl"></i>
                     </div>
-                    <span>Thanh toán</span>
+                    <span> Yêu Cầu Thanh toán</span>
                 </button>
             </div>
         </div>
@@ -154,7 +148,7 @@
             InProgress: 'Đang chế biến',
             Ready: 'Món đã sẵn sàng',
             Served: 'Đã phục vụ',
-            Cancelled: 'Đã hủy',
+            Cancelled: 'Đơn đã bị hủy',
             WaitingForPayment: 'Đang chờ thanh toán',
             Paid: 'Đã thanh toán'
         };
@@ -171,7 +165,9 @@
             }
 
             console.log("Realtime Update:", newStatus);
-            toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
+            if (window.toast && window.toast.success) {
+                window.toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
+            }
             updateTrackingUI(newStatus);
         });
 
@@ -209,8 +205,28 @@
         });
 
         function updateTrackingUI(status) {
+            // Nếu đơn đã bị hủy: highlight đặc biệt và dừng
+            if (status === 'Cancelled') {
+                const statusHeader = document.querySelector('h3.font-bold');
+                if (statusHeader) {
+                    statusHeader.innerText = 'Đơn hàng đã bị hủy';
+                    statusHeader.classList.add('text-red-600');
+                }
+
+                document.querySelectorAll('.step-item .rounded-full').forEach(dot => {
+                    dot.classList.remove('bg-green-500', 'shadow-[0_0_10px_rgba(34,197,94,0.6)]');
+                    dot.classList.add('bg-red-200');
+                });
+
+                if (window.toast && window.toast.error) {
+                    window.toast.error('Đơn hàng của bạn đã bị hủy. Vui lòng liên hệ nhân viên.');
+                }
+
+                return;
+            }
+
             let stepIndex = 0;
-            switch(status) {
+            switch (status) {
                 case 'Submitted': stepIndex = 1; break;
                 case 'InProgress': stepIndex = 2; break;
                 case 'Ready': stepIndex = 3; break;
@@ -219,11 +235,11 @@
                 default: stepIndex = 0; break;
             }
 
-            if(stepIndex > 0) {
+            if (stepIndex > 0) {
                 document.querySelectorAll('.step-item').forEach(el => {
                     const step = parseInt(el.getAttribute('data-step'));
                     const dot = el.querySelector('.rounded-full');
-                    if(!dot) { return; }
+                    if (!dot) { return; }
 
                     dot.className = "absolute -left-[25px] md:-left-[41px] top-0 w-6 h-6 md:w-8 md:h-8 rounded-full border-4 border-white shadow-sm transition-all duration-300 ring-4 ring-transparent flex items-center justify-center z-10";
 
@@ -239,29 +255,36 @@
         updateTrackingUI(initialStatus);
         startSignalR();
 
-        function requestPayment(){
-            if(!orderId || orderId === '00000000-0000-0000-0000-000000000000'){
-                toast.error('Không xác định đơn hàng'); return;
+        function requestPayment() {
+            if (!orderId || orderId === '00000000-0000-0000-0000-000000000000') {
+                if (window.toast && window.toast.error) {
+                    window.toast.error('Không xác định đơn hàng');
+                }
+                return;
             }
 
             fetch(`/proxy/public/orders/${orderId}/request-cash`, { method: 'POST' })
                 .then(r => {
-                    if(!r.ok) throw new Error('Gửi yêu cầu thất bại');
-                    toast.success('Đã gọi nhân viên thanh toán. Vui lòng chờ.');
+                    if (!r.ok) throw new Error('Gửi yêu cầu thất bại');
+                    if (window.toast && window.toast.success) {
+                        window.toast.success('Đã gọi nhân viên thanh toán. Vui lòng chờ.');
+                    }
                 }).catch(e => {
-                    toast.error(e.message || 'Lỗi kết nối');
+                    if (window.toast && window.toast.error) {
+                        window.toast.error(e.message || 'Lỗi kết nối');
+                    }
                 });
         }
 
-        function openChatPopup(){
+        function openChatPopup() {
             document.getElementById('chatWindow').classList.remove('hidden');
             loadChatHistory();
         }
-        function closeChatPopup(){
+        function closeChatPopup() {
             document.getElementById('chatWindow').classList.add('hidden');
         }
 
-        function appendChatMessage(senderLabel, message, isSelf){
+        function appendChatMessage(senderLabel, message, isSelf) {
             const box = document.getElementById('chatMessages');
             const el = document.createElement('div');
             el.className = 'mb-2 ' + (isSelf ? 'text-right' : 'text-left');
@@ -271,8 +294,8 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        function loadChatHistory(){
-            if(!tableCode) return;
+        function loadChatHistory() {
+            if (!tableCode) return;
             fetch(`/proxy/public/chat/history?tableCode=${encodeURIComponent(tableCode)}`)
                 .then(r => r.json())
                 .then(list => {
@@ -281,35 +304,40 @@
                     (list || []).forEach(m => {
                         appendChatMessage(m.sender === 'customer' ? 'Bạn' : 'Nhân viên', m.message, m.sender === 'customer');
                     });
-                }).catch(() => {});
+                }).catch(() => { });
         }
 
-        function sendChat(){
+        function sendChat() {
             const input = document.getElementById('chatInput');
             const text = input.value && input.value.trim();
-            if(!text) return;
+            if (!text) return;
 
             fetch('/proxy/public/chat', {
                 method: 'POST',
-                headers: {'Content-Type':'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tableCode: tableCode, sender: 'customer', message: text })
             })
-            .then(r => { if(!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
-            .then((payload) => {
-                appendChatMessage('Bạn', payload.message || text, true);
-                input.value = '';
-            })
-            .catch(e => { toast.error(e.message || 'Lỗi gửi'); });
+                .then(r => { if (!r.ok) throw new Error('Không gửi được tin nhắn'); return r.json(); })
+                .then((payload) => {
+                    appendChatMessage('Bạn', payload.message || text, true);
+                    input.value = '';
+                })
+                .catch(e => {
+                    if (window.toast && window.toast.error) {
+                        window.toast.error(e.message || 'Lỗi gửi');
+                    }
+                });
         }
 
-        function quickChat(message){
+        function quickChat(message) {
             const input = document.getElementById('chatInput');
             input.value = message;
             sendChat();
         }
-         $(document).ready(function() {
+
+        $(document).ready(function () {
             startSignalR();
-            loadChatHistory(); // Load lịch sử chat ngay lập tức từ Database
+            loadChatHistory();
             updateTrackingUI(initialStatus);
         });
     </script>

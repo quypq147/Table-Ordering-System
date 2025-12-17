@@ -1,92 +1,158 @@
 ﻿@using TableOrdering.Contracts
 @model IEnumerable<KitchenTicketDto>
-@* Lưu ý: Gộp các món chung đơn vào 1 phiếu *@
+@* Lưu ý: Gộp các món chung đơn vào 1 phiếu, tách ra tab đang thực hiện và lịch sử *@
 
 @{
     ViewData["Title"] = "Bếp Chính";
 
-    // Nhóm ticket theo OrderId để hiển thị 1 phiếu / đơn
-    var grouped = Model?
+    var allGroups = (Model ?? Enumerable.Empty<KitchenTicketDto>())
         .GroupBy(t => new { t.OrderId, t.OrderCode, t.TableCode })
         .OrderBy(g => g.Min(x => x.CreatedAt))
         .ToList();
+
+    // Đơn đang thực hiện: còn món ở trạng thái New/InProgress/Ready
+    var activeGroups = allGroups
+        .Where(g => g.Any(t => t.Status == "New" || t.Status == "InProgress" || t.Status == "Ready"))
+        .ToList();
+
+    // Lịch sử / đã xong hoặc hủy: tất cả món đều Served/Cancelled
+    var historyGroups = allGroups
+        .Where(g => g.All(t => t.Status == "Served" || t.Status == "Cancelled"))
+        .OrderByDescending(g => g.Min(x => x.CreatedAt))
+        .ToList();
 }
 
-<div id="tickets-container" class="tickets-container">
-    @if (grouped != null)
+<div class="container-fluid px-0">
+    <ul class="nav nav-tabs mb-3" id="kdsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-pane" type="button" role="tab">
+                <i class="fas fa-fire me-2 text-danger"></i>Đang thực hiện (@activeGroups.Count)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab">
+                <i class="fas fa-history me-2"></i>Lịch sử / Hủy (@historyGroups.Count)
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="kdsTabContent">
+        <div class="tab-pane fade show active" id="active-pane" role="tabpanel">
+            <div id="tickets-container" class="tickets-container">
+                @foreach (var orderGroup in activeGroups)
+                {
+                    @RenderTicketCard(orderGroup, false)
+                }
+                @if (!activeGroups.Any())
+                {
+                    <div class="text-muted text-center py-5">Không có món đang chờ</div>
+                }
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="history-pane" role="tabpanel">
+            <div class="tickets-container opacity-75">
+                @foreach (var orderGroup in historyGroups)
+                {
+                    @RenderTicketCard(orderGroup, true)
+                }
+                @if (!historyGroups.Any())
+                {
+                    <div class="text-muted text-center py-5">Chưa có lịch sử</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    async Task RenderTicketCard(IGrouping<dynamic, KitchenTicketDto> orderGroup, bool isHistory)
     {
-        foreach (var orderGroup in grouped)
+        var first = orderGroup.First();
+        string statusClass = "status-new";
+        string statusLabel = "MỚI";
+
+        bool allCancelled = orderGroup.All(x => x.Status == "Cancelled");
+        bool allServed = orderGroup.All(x => x.Status == "Served");
+
+        if (allCancelled)
         {
-            var first = orderGroup.First();
-            string statusClass = "status-new";
-            string statusLabel = "MỚI";
+            statusClass = "bg-secondary text-white border-secondary";
+            statusLabel = "ĐÃ HỦY";
+        }
+        else if (orderGroup.Any(x => x.Status == "Ready"))
+        {
+            statusClass = "status-ready";
+            statusLabel = "ĐÃ XONG";
+        }
+        else if (orderGroup.Any(x => x.Status == "InProgress"))
+        {
+            statusClass = "status-inprogress";
+            statusLabel = "ĐANG NẤU";
+        }
+        else if (allServed)
+        {
+            statusClass = "bg-dark text-white";
+            statusLabel = "ĐÃ BÊ";
+        }
 
-            // Chọn trạng thái hiển thị theo ưu tiên từ nhóm (nếu có món đang nấu/đã xong)
-            if (orderGroup.Any(x => x.Status == "Ready"))
-            {
-                statusClass = "status-ready";
-                statusLabel = "ĐÃ XONG";
-            }
-            else if (orderGroup.Any(x => x.Status == "InProgress"))
-            {
-                statusClass = "status-inprogress";
-                statusLabel = "ĐANG NẤU";
-            }
-
-            <div class="ticket-card" id="order-@orderGroup.Key.OrderId" data-id="@orderGroup.Key.OrderId" data-created="@first.CreatedAt.ToString("o")">
-                <div class="ticket-header @statusClass">
-                    <div>
-                        <span class="fw-bold fs-5">#@orderGroup.Key.OrderCode</span>
-                        <div class="small opacity-75">Bàn: @orderGroup.Key.TableCode</div>
-                    </div>
-                    <div class="text-end">
-                        <div class="timer-badge">00:00</div>
-                        <div class="small opacity-75 mt-1">@statusLabel</div>
-                    </div>
+        <div class="ticket-card @(isHistory ? "grayscale" : string.Empty)" id="order-@orderGroup.Key.OrderId" data-id="@orderGroup.Key.OrderId" data-created="@first.CreatedAt.ToString("o")">
+            <div class="ticket-header @statusClass">
+                <div>
+                    <span class="fw-bold fs-5">#@orderGroup.Key.OrderCode</span>
+                    <div class="small opacity-75">Bàn: @orderGroup.Key.TableCode</div>
                 </div>
-
-                <div class="ticket-body">
-                    @foreach (var ticket in orderGroup)
-                    {
-                        <div class="order-item">
-                            <div class="d-flex justify-content-between">
-                                <span>@ticket.ItemName</span>
-                                <span class="badge bg-dark rounded-pill">x @ticket.Qty</span>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <div class="ticket-footer">
-                    @* Hiển thị nút thao tác theo từng ticket để giữ chức năng *@
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach (var ticket in orderGroup)
-                        {
-                            if (ticket.Status == "New")
-                            {
-                                <button onclick="changeStatus('@ticket.Id', 'start')" class="btn btn-outline-primary btn-action">
-                                    <i class="fas fa-fire me-2"></i>Bắt đầu nấu (@ticket.ItemName)
-                                </button>
-                            }
-                            else if (ticket.Status == "InProgress")
-                            {
-                                <button onclick="changeStatus('@ticket.Id', 'done')" class="btn btn-outline-success btn-action">
-                                    <i class="fas fa-check me-2"></i>Hoàn tất (@ticket.ItemName)
-                                </button>
-                            }
-                            else if (ticket.Status == "Ready")
-                            {
-                                <button onclick="changeStatus('@ticket.Id', 'served')" class="btn btn-dark btn-action">
-                                    <i class="fas fa-concierge-bell me-2"></i>Đã bê ra (@ticket.ItemName)
-                                </button>
-                            }
-                        }
-                    </div>
+                <div class="text-end">
+                    <div class="timer-badge">00:00</div>
+                    <div class="small opacity-75 mt-1">@statusLabel</div>
                 </div>
             </div>
-        }
+
+            <div class="ticket-body">
+                @foreach (var ticket in orderGroup)
+                {
+                    var cancelledClass = ticket.Status == "Cancelled" ? "text-decoration-line-through text-danger" : string.Empty;
+                    <div class="order-item d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="@cancelledClass">@ticket.ItemName</span>
+                        </div>
+                        <span class="badge bg-light text-dark border">x @ticket.Qty</span>
+                    </div>
+                }
+            </div>
+
+            @if (!isHistory)
+            {
+                <div class="ticket-footer d-flex gap-2 flex-wrap">
+                    @foreach (var ticket in orderGroup)
+                    {
+                        if (ticket.Status == "New")
+                        {
+                            <button onclick="changeStatus('@ticket.Id', 'start')" class="btn btn-sm btn-outline-primary flex-grow-1">
+                                <i class="fas fa-fire"></i> Nấu @ticket.ItemName
+                            </button>
+                            <button onclick="confirmCancel('@ticket.Id')" class="btn btn-sm btn-outline-danger" title="Hủy món">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        }
+                        else if (ticket.Status == "InProgress")
+                        {
+                            <button onclick="changeStatus('@ticket.Id', 'done')" class="btn btn-sm btn-outline-success flex-grow-1">
+                                <i class="fas fa-check"></i> Xong @ticket.ItemName
+                            </button>
+                        }
+                        else if (ticket.Status == "Ready")
+                        {
+                            <button onclick="changeStatus('@ticket.Id', 'served')" class="btn btn-sm btn-dark flex-grow-1">
+                                <i class="fas fa-concierge-bell"></i> Bê @ticket.ItemName
+                            </button>
+                        }
+                    }
+                </div>
+            }
+        </div>
     }
-</div>
+}
 
 @section Scripts {
     <script>
@@ -105,12 +171,12 @@
                     (diffSecs < 10 ? "0" + diffSecs : diffSecs);
 
                 const badge = card.querySelector('.timer-badge');
-                if(badge) {
+                if (badge) {
                     badge.innerText = timeStr;
                     if (diffMins >= 15) {
                         const header = card.querySelector('.ticket-header');
-                        if(!header.classList.contains('status-late') && !header.classList.contains('status-ready')) {
-                             header.classList.add('status-late');
+                        if (header && !header.classList.contains('status-late') && !header.classList.contains('status-ready')) {
+                            header.classList.add('status-late');
                         }
                     }
                 }
@@ -120,15 +186,23 @@
         setInterval(updateTimers, 1000);
         updateTimers();
 
+        async function confirmCancel(id) {
+            if (confirm('Bạn có chắc muốn hủy món này?')) {
+                await changeStatus(id, 'cancel');
+            }
+        }
+
         async function changeStatus(id, op) {
-             try {
+            try {
                 const res = await fetch(`/Board/ChangeStatus?id=${id}&op=${op}`, { method: 'POST' });
-                if(res.ok) {
+                if (res.ok) {
                     location.reload();
                 } else {
                     alert("Lỗi cập nhật trạng thái");
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
         }
     </script>
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Maui.ApplicationModel; // for MainThread
 
 namespace WaiterApp.Services;
 
@@ -43,31 +44,41 @@ public sealed class OrdersRealtimeService
             var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/customer").ToString();
 
             var conn = new HubConnectionBuilder()
-                .WithUrl(hubUrl, o => o.AccessTokenProvider = () => Task.FromResult(_authService.Token))
+                .WithUrl(hubUrl, o =>
+                {
+                    // Always use latest token when (re)connecting
+                    o.AccessTokenProvider = () => Task.FromResult(_authService.Token);
+                })
                 .WithAutomaticReconnect()
                 .Build();
 
-            conn.On<Guid, string>("orderStatusChanged", (orderId, status) => OrderStatusChanged?.Invoke(orderId, status));
+            // Accept orderId as string and parse to Guid to avoid type issues
+            conn.On<string, string>("orderStatusChanged", (orderIdStr, status) =>
+            {
+                if (!Guid.TryParse(orderIdStr, out var orderId)) return;
 
-            // Lắng nghe chatMessage: payload ẩn danh { tableId, sender, message, sentAtUtc }
+                System.Diagnostics.Debug.WriteLine($"[SignalR] Order {orderId} updated to {status}");
+                MainThread.BeginInvokeOnMainThread(() => OrderStatusChanged?.Invoke(orderId, status));
+            });
+
+            // Chat message from customer -> staff
             conn.On<ChatMessagePayload>("chatMessage", payload =>
             {
                 ChatMessageReceived?.Invoke(payload);
             });
 
-            // Lắng nghe yêu cầu thanh toán tiền mặt từ khách
+            // Cash payment request from customer
             conn.On<PaymentRequestPayload>("ReceivePaymentRequest", payload =>
-             {
-                 PaymentRequestReceived?.Invoke(payload);
-             });
+            {
+                PaymentRequestReceived?.Invoke(payload);
+            });
 
-            // Rejoin staff group whenever SignalR auto-reconnects
             conn.Reconnected += async _ =>
             {
+                System.Diagnostics.Debug.WriteLine("SignalR Reconnected. Rejoining staff group...");
                 try
                 {
                     await conn.InvokeAsync("JoinStaffGroup");
-                    System.Diagnostics.Debug.WriteLine("Rejoined Staff group after reconnect.");
                 }
                 catch (Exception ex)
                 {
@@ -75,49 +86,22 @@ public sealed class OrdersRealtimeService
                 }
             };
 
-            // Ensure we clean up the local connection if startup fails
             try
             {
                 await conn.StartAsync();
-                // Nhóm staff để nhận mọi chat của khách và yêu cầu thanh toán
                 await conn.InvokeAsync("JoinStaffGroup");
             }
             catch
             {
-                try
-                {
-                    await conn.DisposeAsync();
-                }
-                catch
-                {
-                    // ignore disposal exceptions during cleanup
-                }
-
+                try { await conn.DisposeAsync(); } catch { }
                 throw;
             }
 
-            // Atomically publish the fully-initialized connection
             var previous = Interlocked.Exchange(ref _connection, conn);
             if (previous != null)
             {
-                // Clean up any previous connection if still present
-                try
-                {
-                    await previous.StopAsync();
-                }
-                catch
-                {
-                    // ignore stop errors
-                }
-
-                try
-                {
-                    await previous.DisposeAsync();
-                }
-                catch
-                {
-                    // ignore dispose errors
-                }
+                try { await previous.StopAsync(); } catch { }
+                try { await previous.DisposeAsync(); } catch { }
             }
         }
         finally
