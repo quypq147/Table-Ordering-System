@@ -35,7 +35,7 @@
         {
             @foreach (var order in filteredOrders)
             {
-                <div @onclick="NaviagateToOrderDetail"
+                <div @onclick="() => NavigateToDetail(order.Id)"
                      class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-soft border border-gray-50 dark:border-gray-700 active:scale-95 transition-transform cursor-pointer">
 
                     <div class="flex justify-between items-start mb-3">
@@ -64,11 +64,134 @@
 </div>
 
 @code {
-    // ... (Giữ nguyên logic C# cũ: Enum, List, LoadAsync, Filter...)
-    // Copy lại toàn bộ logic C# từ file Orders.razor cũ của bạn vào đây.
-    // Chỉ thay đổi phần Render HTML ở trên.
+    // --- View Models & Enums ---
+    public class OrderSummaryVm
+    {
+        public Guid Id { get; set; }
+        public string TableCode { get; set; } = "";
+        public string Status { get; set; } = "";
+        public int PendingItems { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
+    }
+    private enum OrderFilter { New, InProgress, Completed }
 
-    // Helper Styles
+    // --- State ---
+    private List<OrderSummaryVm> orders = new();
+    private List<OrderSummaryVm> filteredOrders = new();
+    private OrderFilter activeFilter = OrderFilter.New;
+    private string? searchTerm;
+    private bool isRefreshing;
+    private string? loadError;
+    private CancellationTokenSource? cts;
+
+    // --- Lifecycle ---
+    protected override async Task OnInitializedAsync()
+    {
+        cts = new CancellationTokenSource();
+        // Đăng ký sự kiện Realtime
+        Realtime.OrderStatusChanged += OnOrderStatusChanged;
+
+        await Realtime.StartAsync();
+        await LoadAsync();
+        ApplyFilters();
+
+        // Auto refresh backup (mỗi 30s) phòng trường hợp mạng lag mất realtime
+        _ = AutoRefreshAsync(cts.Token);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.OrderStatusChanged -= OnOrderStatusChanged;
+        cts?.Cancel();
+        await Realtime.StopAsync();
+        cts?.Dispose();
+    }
+
+    // --- Logic Handlers ---
+    private void OnOrderStatusChanged(Guid id, string status)
+    {
+        // Khi có sự kiện từ SignalR, tải lại danh sách đơn
+        _ = InvokeAsync(async () =>
+        {
+            await LoadAsync();
+            ApplyFilters();
+            StateHasChanged(); // Ép giao diện vẽ lại
+        });
+    }
+
+    private async Task LoadAsync()
+    {
+        isRefreshing = true;
+        loadError = null;
+        try
+        {
+            var url = $"api/orders?page=1&pageSize=200";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await ApiClient.Http.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                orders = await response.Content.ReadFromJsonAsync<List<OrderSummaryVm>>() ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+            Console.WriteLine($"Load Error: {ex.Message}");
+        }
+        finally
+        {
+            isRefreshing = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<OrderSummaryVm> query = orders;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(o => o.TableCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        string[] statusFilter = activeFilter switch
+        {
+            OrderFilter.New => new[] { "Submitted" }, // Tab Mới chỉ hiện Submitted
+            OrderFilter.InProgress => new[] { "InProgress", "Ready", "WaitingForPayment" }, // Tab Bếp
+            _ => new[] { "Paid", "Cancelled" } // Tab Xong
+        };
+
+        filteredOrders = query
+            .Where(o => statusFilter.Contains(o.Status))
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ToList();
+    }
+
+    private void SetFilter(OrderFilter f)
+    {
+        activeFilter = f;
+        ApplyFilters();
+    }
+
+    // FIX 2: Hàm điều hướng nhận ID và nội suy chuỗi đúng
+    private void NavigateToDetail(Guid orderId)
+    {
+        Navigation.NavigateTo($"/orderdetail?orderId={orderId}");
+    }
+
+    private Task AutoRefreshAsync(CancellationToken ct) => Task.Run(async () =>
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(30), ct);
+                await InvokeAsync(async () => { await LoadAsync(); ApplyFilters(); StateHasChanged(); });
+            }
+        }
+        catch { }
+    });
+
+    // --- Helpers ---
     private string GetTabClass(OrderFilter f)
         => activeFilter == f
             ? "flex-1 py-2 rounded-lg bg-white dark:bg-gray-700 text-primary shadow-sm text-sm font-medium transition-all"
@@ -85,94 +208,6 @@
         _ => "bg-gray-100 text-gray-500"
     };
 
-    // (Đừng quên copy các hàm logic: OnInitializedAsync, RefreshAsync, ApplyFilters...)
-    private enum OrderFilter { New, InProgress, Completed }
-    private List<OrderSummaryVm> orders = new();
-    private List<OrderSummaryVm> filteredOrders = new();
-    private OrderFilter activeFilter = OrderFilter.New;
-    private string? searchTerm;
-    private bool isRefreshing;
-    private string? loadError;
-    private CancellationTokenSource? cts;
-
-    protected override async Task OnInitializedAsync()
-    {
-        cts = new CancellationTokenSource();
-        Realtime.OrderStatusChanged += OnOrderStatusChanged;
-        await Realtime.StartAsync();
-        await LoadAsync();
-        ApplyFilters();
-        _ = AutoRefreshAsync(cts.Token);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Realtime.OrderStatusChanged -= OnOrderStatusChanged;
-        cts?.Cancel();
-        await Realtime.StopAsync();
-        cts?.Dispose();
-    }
-
-    private async Task RefreshAsync()
-    {
-        isRefreshing = true;
-        try { await LoadAsync(); ApplyFilters(); } finally { isRefreshing = false; }
-    }
-
-    private async Task LoadAsync()
-    {
-        isRefreshing = true; loadError = null;
-        try
-        {
-            // Update namespace WaiterApiEndpoints properly if needed
-            var url = $"api/orders?page=1&pageSize=200";
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await ApiClient.Http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) { orders = new(); return; }
-            orders = await response.Content.ReadFromJsonAsync<List<OrderSummaryVm>>() ?? new();
-        }
-        catch (Exception ex) { loadError = ex.Message; }
-        finally { isRefreshing = false; }
-    }
-
-    private Task AutoRefreshAsync(CancellationToken ct) => Task.Run(async () =>
-    {
-        try
-        {
-            while (!ct.IsCancellationRequested)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(30), ct);
-                await LoadAsync(); ApplyFilters(); await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch { }
-    });
-
-    private void OnOrderStatusChanged(Guid id, string status)
-        => _ = InvokeAsync(async () => { await LoadAsync(); ApplyFilters(); StateHasChanged(); });
-
-    private void ApplyFilters()
-    {
-        IEnumerable<OrderSummaryVm> query = orders;
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-            query = query.Where(o => o.TableCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
-
-        string[] statusFilter = activeFilter switch
-        {
-            OrderFilter.New => new[] { "Submitted" },
-            OrderFilter.InProgress => new[] { "InProgress", "Ready", "WaitingForPayment" },
-            _ => new[] { "Paid", "Cancelled" }
-        };
-
-        filteredOrders = query.Where(o => statusFilter.Contains(o.Status)).OrderByDescending(x => x.CreatedAtUtc).ToList();
-    }
-    private async void NaviagateToOrderDetail()
-    {
-        Navigation.NavigateTo("/orderdetail?orderId={order.Id}", true);
-
-    }
-    private void SetFilter(OrderFilter f) { activeFilter = f; ApplyFilters(); }
-
     private string GetStatusText(string s) => s switch
     {
         "Submitted" => "Mới",
@@ -181,13 +216,4 @@
         "Paid" => "Xong",
         _ => s
     };
-
-    public class OrderSummaryVm
-    {
-        public Guid Id { get; set; }
-        public string TableCode { get; set; } = "";
-        public string Status { get; set; } = "";
-        public int PendingItems { get; set; }
-        public DateTime CreatedAtUtc { get; set; }
-    }
 }

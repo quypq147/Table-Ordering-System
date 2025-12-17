@@ -7,8 +7,9 @@
 @inject ApiClient ApiClient
 @inject NavigationManager Navigation
 @inject OrdersRealtimeService Realtime
+@implements IAsyncDisposable
 
-<div class="px-6 pt-8 pb-24">
+<div class="px-6 pt-8 pb-24 h-full flex flex-col">
     <div class="flex justify-between items-start mb-6">
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Khu vực chính</p>
@@ -28,147 +29,74 @@
         </div>
     }
 
-    <div class="grid grid-cols-2 gap-4">
-        @if (loading && tables.Count == 0)
-        {
-            <div class="col-span-2 py-10 text-center text-gray-400 text-sm">Đang tải dữ liệu...</div>
-        }
-        else
-        {
+    @if (tableViewModels == null)
+    {
+        <div class="flex-1 flex justify-center items-center">
+            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    }
+    else if (!tableViewModels.Any())
+    {
+        <div class="flex-1 flex flex-col justify-center items-center text-gray-400">
+            <span class="material-icons-round text-5xl mb-2 opacity-20">table_restaurant</span>
+            <p>Chưa có bàn nào.</p>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4 no-scrollbar">
             @foreach (var item in tableViewModels)
             {
+                var cardClass = item.IsNewOrder
+                ? "bg-orange-50 border-orange-200 ring-1 ring-orange-200"
+                : (item.HasActiveOrder ? "bg-green-50 border-green-200" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700");
+
+                var textClass = item.IsNewOrder ? "text-orange-700" : (item.HasActiveOrder ? "text-green-700" : "text-gray-800 dark:text-white");
+
                 <div @onclick="() => HandleTableClick(item)"
-                     class="relative p-4 rounded-2xl shadow-soft transition-all duration-200 active:scale-95 cursor-pointer border-2
-                            @(item.HasActiveOrder
-                                ? "bg-white dark:bg-gray-800 border-primary/50 shadow-glow"
-                                : "bg-white dark:bg-gray-800 border-transparent opacity-75")">
+                     class="@cardClass p-4 rounded-2xl shadow-sm border active:scale-95 transition-all cursor-pointer relative h-32 flex flex-col justify-between">
 
-                    @if (item.IsNewOrder)
-                    {
-                        <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md animate-bounce whitespace-nowrap z-10 flex items-center gap-1">
-                            <span class="material-icons-round text-[10px]">notifications_active</span>
-                            Vừa gửi đơn
-                        </div>
-                    }
+                    <div class="flex justify-between items-start">
+                        <span class="font-bold text-lg @textClass">@GetShortName(item.Table.Code)</span>
 
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="text-lg font-bold text-gray-800 dark:text-white">@item.Table.Code</span>
-                        <div class="w-3 h-3 rounded-full @(item.HasActiveOrder ? "bg-primary animate-pulse" : "bg-green-500")"></div>
+                        @if (item.IsNewOrder)
+                        {
+                            <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse shadow-sm"></span>
+                        }
+                        else if (item.HasActiveOrder)
+                        {
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        }
                     </div>
 
-                    <div class="flex flex-col items-center gap-2 py-2">
-                        <div class="w-14 h-14 rounded-full flex items-center justify-center @(item.HasActiveOrder ? "bg-orange-50 text-primary" : "bg-green-50 text-green-500")">
-                            <span class="material-icons-round text-3xl">
-                                @(item.IsNewOrder ? "notifications_active" : (item.HasActiveOrder ? "soup_kitchen" : "table_restaurant"))
-                            </span>
-                        </div>
-                        <span class="text-xs font-semibold @(item.HasActiveOrder ? "text-primary" : "text-green-600")">
-                            @(item.IsNewOrder ? "Khách gọi món!" : (item.HasActiveOrder ? "Đang phục vụ" : "Bàn trống"))
-                        </span>
-                    </div>
-
-                    <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-xs text-gray-400">
-                        <span class="flex items-center gap-1">
-                            <span class="material-icons-round text-[12px]">person</span>
-                            @item.Table.Seats
-                        </span>
+                    <div class="text-sm">
                         @if (item.HasActiveOrder)
                         {
-                            <span class="font-bold text-primary">@item.OrderTotalDisplay</span>
+                            <div class="font-medium @textClass flex items-center gap-1">
+                                <span class="material-icons-round text-base">receipt_long</span>
+                                @item.OrderTotalDisplay
+                            </div>
+                            @if (item.IsNewOrder)
+                            {
+                                <div class="text-xs text-orange-600 mt-1 font-bold">Mới!</div>
+                            }
                         }
                         else
                         {
-                            <span class="text-green-500 font-medium">Sẵn sàng</span>
+                            <span class="text-gray-400 text-xs flex items-center gap-1">
+                                <span class="material-icons-round text-base opacity-50">check_circle_outline</span>
+                                Trống
+                            </span>
                         }
                     </div>
                 </div>
             }
-        }
-    </div>
+        </div>
+    }
 </div>
 
 @code {
-    private List<TableDto> tables = new();
-    private List<OrderSummary> activeOrders = new();
-    private List<TableViewModel> tableViewModels = new();
-    private bool loading;
-    private string? error;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Realtime.OrderStatusChanged += OnOrderStatusChanged;
-        await Realtime.StartAsync();
-        await LoadDataAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Realtime.OrderStatusChanged -= OnOrderStatusChanged;
-    }
-
-    private void OnOrderStatusChanged(Guid orderId, string status)
-        => _ = InvokeAsync(async () => await LoadDataAsync());
-
-    private async Task LoadDataAsync()
-    {
-        loading = true; error = null;
-        try
-        {
-            var tablesTask = ApiClient.Http.GetFromJsonAsync<List<TableDto>>("api/tables");
-            var ordersTask = ApiClient.Http.GetFromJsonAsync<List<OrderSummary>>("api/orders?pageSize=200");
-
-            await Task.WhenAll(tablesTask, ordersTask);
-
-            tables = tablesTask.Result?.OrderBy(t => t.Code).ToList() ?? new();
-            var allOrders = ordersTask.Result ?? new();
-
-            // Only keep non-finalized orders (table should be free after Paid/Cancelled)
-            activeOrders = allOrders
-                .Where(o => o.Status != "Paid" && o.Status != "Cancelled")
-                .ToList();
-
-            BuildViewModels();
-        }
-        catch (Exception ex)
-        {
-            error = "Lỗi kết nối: " + ex.Message;
-        }
-        finally
-        {
-            loading = false;
-        }
-    }
-
-    private void BuildViewModels()
-    {
-        tableViewModels = tables.Select(t =>
-        {
-            var order = activeOrders
-                .FirstOrDefault(o => o.TableCode == t.Code || o.TableId == t.Id);
-
-            return new TableViewModel
-            {
-                Table = t,
-                ActiveOrderId = order?.Id,
-                HasActiveOrder = order != null,
-                IsNewOrder = order?.Status == "Submitted",
-                OrderTotalDisplay = order != null ? $"{order.PendingItems} món" : string.Empty
-            };
-        }).ToList();
-    }
-
-    private void HandleTableClick(TableViewModel item)
-    {
-        if (item.HasActiveOrder && item.ActiveOrderId.HasValue)
-        {
-            Navigation.NavigateTo($"/orderdetail?orderId={item.ActiveOrderId}");
-        }
-        else
-        {
-            // Table is free, could navigate to new order page later
-        }
-    }
-
+    // Models
     class TableViewModel
     {
         public TableDto Table { get; set; } = new();
@@ -186,4 +114,132 @@
         public string Status { get; set; } = string.Empty;
         public int PendingItems { get; set; }
     }
+
+    // State
+    private List<TableDto> tables = new();
+    private List<OrderSummary> activeOrders = new();
+    private List<TableViewModel> tableViewModels;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // 1. Đăng ký nhận sự kiện Realtime (QUAN TRỌNG)
+            Realtime.OrderStatusChanged += OnOrderStatusChanged;
+            Realtime.PaymentRequestReceived += OnPaymentRequestReceived;
+
+            await Realtime.StartAsync();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            error = "Không thể kết nối máy chủ.";
+            Console.WriteLine(ex);
+        }
+    }
+
+    // 2. Hủy đăng ký khi rời trang để tránh memory leak
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.OrderStatusChanged -= OnOrderStatusChanged;
+        Realtime.PaymentRequestReceived -= OnPaymentRequestReceived;
+        // Không gọi StopAsync() ở đây nếu muốn giữ kết nối cho trang khác,
+        // hoặc gọi nếu muốn tiết kiệm pin. Tốt nhất để Service tự quản lý lifetime kết nối.
+    }
+
+    // Xử lý sự kiện: Khi có thay đổi, reload lại dữ liệu
+    private void OnOrderStatusChanged(Guid orderId, string status)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void OnPaymentRequestReceived(PaymentRequestPayload payload)
+    {
+        // Có thể thêm logic hiện thông báo toast hoặc icon tiền mặt
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync(); // Reload để cập nhật trạng thái nếu cần
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged(); // Báo hiệu UI đang load
+
+            // Tải danh sách bàn
+            var tablesResp = await ApiClient.Http.GetAsync("api/tables");
+            if (tablesResp.IsSuccessStatusCode)
+            {
+                tables = await tablesResp.Content.ReadFromJsonAsync<List<TableDto>>() ?? new();
+            }
+
+            // Tải danh sách đơn hàng đang hoạt động (Status != Paid/Cancelled)
+            // Lưu ý: Backend cần có API hỗ trợ lọc trạng thái này, hoặc dùng API list all rồi lọc client (tạm thời)
+            var ordersResp = await ApiClient.Http.GetAsync("api/orders?page=1&pageSize=100");
+            if (ordersResp.IsSuccessStatusCode)
+            {
+                var allOrders = await ordersResp.Content.ReadFromJsonAsync<List<OrderSummary>>() ?? new();
+                // Lọc lấy các đơn chưa thanh toán xong
+                activeOrders = allOrders
+                    .Where(o => o.Status != "Paid" && o.Status != "Cancelled")
+                    .ToList();
+            }
+
+            // Map dữ liệu
+            UpdateViewModels();
+            error = null;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateViewModels()
+    {
+        tableViewModels = tables.OrderBy(t => t.Code).Select(t =>
+        {
+            // Tìm đơn hàng khớp với bàn này
+            var order = activeOrders.FirstOrDefault(o => o.TableCode == t.Code || o.TableId == t.Id);
+
+            return new TableViewModel
+            {
+                Table = t,
+                ActiveOrderId = order?.Id,
+                HasActiveOrder = order != null,
+                IsNewOrder = order?.Status == "Submitted", // Nếu trạng thái là Submitted -> Mới
+                OrderTotalDisplay = order != null ? $"{order.PendingItems} món" : string.Empty
+            };
+        }).ToList();
+    }
+
+    private void HandleTableClick(TableViewModel item)
+    {
+        if (item.HasActiveOrder && item.ActiveOrderId.HasValue)
+        {
+            Navigation.NavigateTo($"/orderdetail?orderId={item.ActiveOrderId}");
+        }
+        else
+        {
+            // Bàn trống: Có thể mở trang tạo đơn mới nếu muốn
+            // Navigation.NavigateTo($"/createorder/{item.Table.Id}");
+        }
+    }
+
+    private string GetShortName(string code) => code.Replace("Table", "").Replace("T-", "").Trim();
 }

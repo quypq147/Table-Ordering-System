@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Maui.ApplicationModel; // for MainThread
+using Microsoft.Maui.ApplicationModel;
+using WaiterApp.Models;
 
 namespace WaiterApp.Services;
 
 public sealed class OrdersRealtimeService
 {
-    private const string MissingBaseUrlMessage = "API base URL is missing. Update it in Settings.";
-
+    private const string MissingBaseUrlMessage = "Chưa cấu hình API URL.";
     private readonly AuthService _authService;
     private readonly ApiClient _apiClient;
     private readonly SemaphoreSlim _startStopLock = new(1, 1);
@@ -14,11 +14,7 @@ public sealed class OrdersRealtimeService
 
     public event Action<Guid, string>? OrderStatusChanged;
     public event Action<string>? ConfigurationError;
-
-    // Chat message từ khách -> nhân viên
     public event Action<ChatMessagePayload>? ChatMessageReceived;
-
-    // Payment request từ khách (Thanh toán tiền mặt)
     public event Action<PaymentRequestPayload>? PaymentRequestReceived;
 
     public OrdersRealtimeService(AuthService authService, ApiClient apiClient)
@@ -35,130 +31,80 @@ public sealed class OrdersRealtimeService
         try
         {
             if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting }) return;
+
             if (_apiClient.Http.BaseAddress is null)
             {
                 ConfigurationError?.Invoke(MissingBaseUrlMessage);
                 return;
             }
 
-            var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/customer").ToString();
+            // FIX: Xử lý URL an toàn hơn để tránh lỗi nếu BaseAddress có/không có dấu gạch chéo
+            var baseUrl = _apiClient.Http.BaseAddress.ToString().TrimEnd('/');
+            var hubUrl = $"{baseUrl}/hubs/customer";
 
             var conn = new HubConnectionBuilder()
                 .WithUrl(hubUrl, o =>
                 {
-                    // Always use latest token when (re)connecting
                     o.AccessTokenProvider = () => Task.FromResult(_authService.Token);
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
-            // Accept orderId as string and parse to Guid to avoid type issues
-            conn.On<string, string>("orderStatusChanged", (orderIdStr, status) =>
+            // Lắng nghe sự kiện từ API (ApiCustomerNotifier gửi 2 tham số)
+            conn.On<Guid, string>("orderStatusChanged", (orderId, status) =>
             {
-                if (!Guid.TryParse(orderIdStr, out var orderId)) return;
-
-                System.Diagnostics.Debug.WriteLine($"[SignalR] Order {orderId} updated to {status}");
+                System.Diagnostics.Debug.WriteLine($"[SignalR] Order {orderId} -> {status}");
                 MainThread.BeginInvokeOnMainThread(() => OrderStatusChanged?.Invoke(orderId, status));
             });
 
-            // Chat message from customer -> staff
-            conn.On<ChatMessagePayload>("chatMessage", payload =>
+            // FIX: Fallback lắng nghe sự kiện dạng Object (nếu Infrastructure Notifier bị dùng nhầm)
+            conn.On<object>("orderStatusChanged", (payload) =>
             {
-                ChatMessageReceived?.Invoke(payload);
+                // Logic parse object payload thủ công nếu cần thiết để backup
+                System.Diagnostics.Debug.WriteLine("[SignalR] Nhận payload object (Legacy/Wrong Notifier)");
             });
 
-            // Cash payment request from customer
-            conn.On<PaymentRequestPayload>("ReceivePaymentRequest", payload =>
-            {
-                PaymentRequestReceived?.Invoke(payload);
-            });
+            conn.On<ChatMessagePayload>("chatMessage", p => ChatMessageReceived?.Invoke(p));
+            conn.On<PaymentRequestPayload>("ReceivePaymentRequest", p => PaymentRequestReceived?.Invoke(p));
 
-            conn.Reconnected += async _ =>
-            {
-                System.Diagnostics.Debug.WriteLine("SignalR Reconnected. Rejoining staff group...");
-                try
-                {
-                    await conn.InvokeAsync("JoinStaffGroup");
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error rejoining staff group: {ex.Message}");
-                }
-            };
+            conn.Reconnected += async _ => await JoinStaffGroupSafe(conn);
 
-            try
-            {
-                await conn.StartAsync();
-                await conn.InvokeAsync("JoinStaffGroup");
-            }
-            catch
-            {
-                try { await conn.DisposeAsync(); } catch { }
-                throw;
-            }
+            await conn.StartAsync();
+            await JoinStaffGroupSafe(conn);
 
             var previous = Interlocked.Exchange(ref _connection, conn);
-            if (previous != null)
-            {
-                try { await previous.StopAsync(); } catch { }
-                try { await previous.DisposeAsync(); } catch { }
-            }
+            if (previous != null) await previous.DisposeAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SignalR] Connection Error: {ex.Message}");
         }
         finally
         {
             _startStopLock.Release();
+        }
+    }
+
+    private async Task JoinStaffGroupSafe(HubConnection conn)
+    {
+        try
+        {
+            await conn.InvokeAsync("JoinStaffGroup");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SignalR] JoinStaffGroup Failed: {ex.Message}");
         }
     }
 
     public async Task StopAsync()
     {
-        // Prevent concurrent Start/Stop
         await _startStopLock.WaitAsync();
         try
         {
-            // Take ownership and null out the field
             var conn = Interlocked.Exchange(ref _connection, null);
-            if (conn != null)
-            {
-                await conn.StopAsync();
-                await conn.DisposeAsync();
-            }
+            if (conn != null) await conn.DisposeAsync();
         }
-        finally
-        {
-            _startStopLock.Release();
-        }
+        finally { _startStopLock.Release(); }
     }
-
-    // Helper to subscribe to hub events in a safe way
-    public void On<T>(string eventName, Action<T> handler)
-    {
-        var conn = _connection;
-        if (conn == null)
-        {
-            // No active connection yet; nothing to wire
-            return;
-        }
-
-        // Register handler on the underlying SignalR connection
-        conn.On(eventName, handler);
-    }
-}
-
-// DTO đơn giản để nhận payload chat từ Hub
-public sealed class ChatMessagePayload
-{
-    public string TableId { get; set; } = string.Empty;
-    public string Sender { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-
-    public string ReceiverId { get; set; } = string.Empty;
-    public DateTime SentAtUtc { get; set; }
-}
-
-// DTO cho yêu cầu thanh toán tiền mặt từ khách
-public sealed class PaymentRequestPayload
-{
-    public Guid OrderId { get; set; }
-    public string TableCode { get; set; } = string.Empty;
 }

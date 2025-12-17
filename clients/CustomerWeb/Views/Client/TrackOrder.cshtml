@@ -5,6 +5,7 @@
 
     var orderId = ViewBag.OrderId is Guid g ? g : Model?.OrderId ?? Guid.Empty;
     var initialStatus = Model?.Status ?? "Draft";
+    
 }
 
 <div class="min-h-screen bg-[#F9F9F9] pb-24">
@@ -136,6 +137,12 @@
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        console.log("TrackOrder page loaded");
+        console.log("Order ID:", "@orderId");
+        console.log("Order Code: appendChatMessage", "@(Model?.OrderCode ?? "")");");
+        console.log("Table Code:", "@(Model?.TableCode ?? "")");
+    </script>
     <script>
         const orderId = "@orderId";
         const initialStatus = "@initialStatus";
