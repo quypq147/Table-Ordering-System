@@ -80,12 +80,6 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 app.UseCors("adminweb");
-// Ví dụ cấu hình CORS chuẩn cho SignalR development
-app.UseCors(policy =>
-    policy.WithOrigins("https://localhost:7001", "http://localhost:5001") // Thay bằng port thực tế của CustomerWeb
-          .AllowAnyMethod()
-          .AllowAnyHeader()
-          .AllowCredentials()); // BẮT BUỘC cho SignalR
 
 app.UseGlobalExceptionHandler();
 

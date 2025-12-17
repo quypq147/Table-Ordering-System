@@ -34,32 +34,75 @@ public class KdsRealtimeService
         try
         {
             if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting })
+            {
+                System.Diagnostics.Debug.WriteLine("[KdsRealtime] StartAsync: already connected or connecting.");
                 return;
+            }
 
             if (_apiClient.Http.BaseAddress is null)
             {
+                System.Diagnostics.Debug.WriteLine("[KdsRealtime] StartAsync: missing BaseAddress.");
                 ConfigurationError?.Invoke(MissingBaseUrlMessage);
                 return;
             }
 
             var hubUrl = new Uri(_apiClient.Http.BaseAddress, "hubs/kds").ToString();
+            System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Building connection to {hubUrl}");
 
             var conn = new HubConnectionBuilder()
-                .WithUrl(hubUrl, options => { options.AccessTokenProvider = () => Task.FromResult(_authService.Token); })
+                .WithUrl(hubUrl, options =>
+                {
+                    options.AccessTokenProvider = () =>
+                    {
+                        var token = _authService.Token;
+                        System.Diagnostics.Debug.WriteLine($"[KdsRealtime] AccessTokenProvider called. HasToken={(string.IsNullOrWhiteSpace(token) ? "false" : "true")}");
+                        return Task.FromResult(token);
+                    };
+                })
                 .WithAutomaticReconnect()
                 .Build();
 
-            conn.On<KitchenTicketDto[]>("ticketsCreated", tickets => TicketsCreated?.Invoke(tickets));
-            conn.On<KitchenTicketDto>("ticketChanged", ticket => TicketChanged?.Invoke(ticket));
+            conn.Reconnecting += error =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Reconnecting: {error?.Message}");
+                return Task.CompletedTask;
+            };
+
+            conn.Reconnected += connectionId =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Reconnected. ConnectionId={connectionId}");
+                return Task.CompletedTask;
+            };
+
+            conn.Closed += error =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Closed: {error?.Message}");
+                return Task.CompletedTask;
+            };
+
+            conn.On<KitchenTicketDto[]>("ticketsCreated", tickets =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Event ticketsCreated: count={tickets?.Length ?? 0}");
+                TicketsCreated?.Invoke(tickets);
+            });
+
+            conn.On<KitchenTicketDto>("ticketChanged", ticket =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Event ticketChanged: ticketId={ticket.Id}");
+                TicketChanged?.Invoke(ticket);
+            });
 
             try
             {
+                System.Diagnostics.Debug.WriteLine("[KdsRealtime] Starting connection...");
                 await conn.StartAsync();
+                System.Diagnostics.Debug.WriteLine($"[KdsRealtime] Connection started. State={conn.State}, ConnectionId={conn.ConnectionId}");
             }
             catch
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[KdsRealtime] StartAsync failed, disposing connection.");
                     await conn.DisposeAsync();
                 }
                 catch
@@ -73,6 +116,7 @@ public class KdsRealtimeService
             var previous = Interlocked.Exchange(ref _connection, conn);
             if (previous != null)
             {
+                System.Diagnostics.Debug.WriteLine("[KdsRealtime] Disposing previous connection instance.");
                 try
                 {
                     await previous.StopAsync();
@@ -106,8 +150,13 @@ public class KdsRealtimeService
             var conn = Interlocked.Exchange(ref _connection, null);
             if (conn != null)
             {
+                System.Diagnostics.Debug.WriteLine("[KdsRealtime] Stopping and disposing connection.");
                 await conn.StopAsync();
                 await conn.DisposeAsync();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[KdsRealtime] StopAsync called but there is no active connection.");
             }
         }
         finally

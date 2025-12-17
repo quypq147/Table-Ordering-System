@@ -30,54 +30,97 @@ public sealed class OrdersRealtimeService
         await _startStopLock.WaitAsync();
         try
         {
-            if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting }) return;
+            if (_connection is { State: HubConnectionState.Connected or HubConnectionState.Connecting })
+            {
+                System.Diagnostics.Debug.WriteLine("[OrdersRealtime] StartAsync: already connected or connecting.");
+                return;
+            }
 
             if (_apiClient.Http.BaseAddress is null)
             {
+                System.Diagnostics.Debug.WriteLine("[OrdersRealtime] StartAsync: missing BaseAddress.");
                 ConfigurationError?.Invoke(MissingBaseUrlMessage);
                 return;
             }
 
-            // FIX: Xử lý URL an toàn hơn để tránh lỗi nếu BaseAddress có/không có dấu gạch chéo
             var baseUrl = _apiClient.Http.BaseAddress.ToString().TrimEnd('/');
             var hubUrl = $"{baseUrl}/hubs/customer";
+            System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Building connection to {hubUrl}");
 
             var conn = new HubConnectionBuilder()
                 .WithUrl(hubUrl, o =>
                 {
-                    o.AccessTokenProvider = () => Task.FromResult(_authService.Token);
+                    o.AccessTokenProvider = () =>
+                    {
+                        var token = _authService.Token;
+                        System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] AccessTokenProvider called. HasToken={(string.IsNullOrWhiteSpace(token) ? "false" : "true")}");
+                        return Task.FromResult(token);
+                    };
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
-            // Lắng nghe sự kiện từ API (ApiCustomerNotifier gửi 2 tham số)
+            conn.Reconnecting += error =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Reconnecting: {error?.Message}");
+                return Task.CompletedTask;
+            };
+
+            conn.Reconnected += async connectionId =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Reconnected. ConnectionId={connectionId}");
+                await JoinStaffGroupSafe(conn);
+            };
+
+            conn.Closed += error =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Closed: {error?.Message}");
+                return Task.CompletedTask;
+            };
+
+            // Backend: (Guid orderId, string status)
             conn.On<Guid, string>("orderStatusChanged", (orderId, status) =>
             {
-                System.Diagnostics.Debug.WriteLine($"[SignalR] Order {orderId} -> {status}");
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Event orderStatusChanged: {orderId} -> {status}");
                 MainThread.BeginInvokeOnMainThread(() => OrderStatusChanged?.Invoke(orderId, status));
             });
 
-            // FIX: Fallback lắng nghe sự kiện dạng Object (nếu Infrastructure Notifier bị dùng nhầm)
-            conn.On<object>("orderStatusChanged", (payload) =>
+            conn.On<ChatMessagePayload>("chatMessage", p =>
             {
-                // Logic parse object payload thủ công nếu cần thiết để backup
-                System.Diagnostics.Debug.WriteLine("[SignalR] Nhận payload object (Legacy/Wrong Notifier)");
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Event chatMessage: table={p.TableId} sender={p.Sender}");
+                ChatMessageReceived?.Invoke(p);
             });
 
-            conn.On<ChatMessagePayload>("chatMessage", p => ChatMessageReceived?.Invoke(p));
-            conn.On<PaymentRequestPayload>("ReceivePaymentRequest", p => PaymentRequestReceived?.Invoke(p));
+            conn.On<PaymentRequestPayload>("ReceivePaymentRequest", p =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Event ReceivePaymentRequest: order={p.OrderId} table={p.TableCode}");
+                PaymentRequestReceived?.Invoke(p);
+            });
 
-            conn.Reconnected += async _ => await JoinStaffGroupSafe(conn);
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[OrdersRealtime] Starting connection...");
+                await conn.StartAsync();
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Connection started. State={conn.State}, ConnectionId={conn.ConnectionId}");
+            }
+            catch (Exception startEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] StartAsync failed: {startEx}");
+                throw;
+            }
 
-            await conn.StartAsync();
             await JoinStaffGroupSafe(conn);
 
             var previous = Interlocked.Exchange(ref _connection, conn);
-            if (previous != null) await previous.DisposeAsync();
+            if (previous != null)
+            {
+                System.Diagnostics.Debug.WriteLine("[OrdersRealtime] Disposing previous connection instance.");
+                await previous.DisposeAsync();
+            }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SignalR] Connection Error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] Connection Error: {ex}");
         }
         finally
         {
@@ -89,11 +132,13 @@ public sealed class OrdersRealtimeService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine("[OrdersRealtime] Invoking JoinStaffGroup...");
             await conn.InvokeAsync("JoinStaffGroup");
+            System.Diagnostics.Debug.WriteLine("[OrdersRealtime] JoinStaffGroup invoked successfully.");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SignalR] JoinStaffGroup Failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[OrdersRealtime] JoinStaffGroup Failed: {ex}");
         }
     }
 
@@ -103,7 +148,15 @@ public sealed class OrdersRealtimeService
         try
         {
             var conn = Interlocked.Exchange(ref _connection, null);
-            if (conn != null) await conn.DisposeAsync();
+            if (conn != null)
+            {
+                System.Diagnostics.Debug.WriteLine("[OrdersRealtime] Stopping and disposing connection.");
+                await conn.DisposeAsync();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[OrdersRealtime] StopAsync called but there is no active connection.");
+            }
         }
         finally { _startStopLock.Release(); }
     }

@@ -41,7 +41,7 @@
             <div id="tickets-container" class="tickets-container">
                 @foreach (var orderGroup in activeGroups)
                 {
-                    @RenderTicketCard(orderGroup, false)
+                    RenderTicketCard(orderGroup, false);
                 }
                 @if (!activeGroups.Any())
                 {
@@ -54,7 +54,7 @@
             <div class="tickets-container opacity-75">
                 @foreach (var orderGroup in historyGroups)
                 {
-                    @RenderTicketCard(orderGroup, true)
+                    RenderTicketCard(orderGroup, true);
                 }
                 @if (!historyGroups.Any())
                 {
@@ -66,7 +66,8 @@
 </div>
 
 @functions {
-    async Task RenderTicketCard(IGrouping<dynamic, KitchenTicketDto> orderGroup, bool isHistory)
+    // Helper only renders markup; no async work
+    void RenderTicketCard(IGrouping<dynamic, KitchenTicketDto> orderGroup, bool isHistory)
     {
         var first = orderGroup.First();
         string statusClass = "status-new";

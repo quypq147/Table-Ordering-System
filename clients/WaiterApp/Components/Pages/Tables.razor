@@ -106,6 +106,7 @@
         public string OrderTotalDisplay { get; set; } = string.Empty;
     }
 
+    // Match backend OrderSummaryDto (api/orders/summaries)
     class OrderSummary
     {
         public Guid Id { get; set; }
@@ -113,6 +114,7 @@
         public string TableCode { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public int PendingItems { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
     }
 
     // State
@@ -152,6 +154,7 @@
     // Xử lý sự kiện: Khi có thay đổi, reload lại dữ liệu
     private void OnOrderStatusChanged(Guid orderId, string status)
     {
+        Console.WriteLine($"[Tables] OrderStatusChanged: {orderId} -> {status}");
         _ = InvokeAsync(async () =>
         {
             await LoadDataAsync();
@@ -161,10 +164,10 @@
 
     private void OnPaymentRequestReceived(PaymentRequestPayload payload)
     {
-        // Có thể thêm logic hiện thông báo toast hoặc icon tiền mặt
+        Console.WriteLine($"[Tables] PaymentRequestReceived: order={payload.OrderId}, table={payload.TableCode}");
         _ = InvokeAsync(async () =>
         {
-            await LoadDataAsync(); // Reload để cập nhật trạng thái nếu cần
+            await LoadDataAsync();
             StateHasChanged();
         });
     }
@@ -174,7 +177,7 @@
         try
         {
             loading = true;
-            StateHasChanged(); // Báo hiệu UI đang load
+            StateHasChanged();
 
             // Tải danh sách bàn
             var tablesResp = await ApiClient.Http.GetAsync("api/tables");
@@ -183,9 +186,8 @@
                 tables = await tablesResp.Content.ReadFromJsonAsync<List<TableDto>>() ?? new();
             }
 
-            // Tải danh sách đơn hàng đang hoạt động (Status != Paid/Cancelled)
-            // Lưu ý: Backend cần có API hỗ trợ lọc trạng thái này, hoặc dùng API list all rồi lọc client (tạm thời)
-            var ordersResp = await ApiClient.Http.GetAsync("api/orders?page=1&pageSize=100");
+            // Tải danh sách đơn hàng tóm tắt từ endpoint summaries
+            var ordersResp = await ApiClient.Http.GetAsync("api/orders/summaries?page=1&pageSize=200");
             if (ordersResp.IsSuccessStatusCode)
             {
                 var allOrders = await ordersResp.Content.ReadFromJsonAsync<List<OrderSummary>>() ?? new();
@@ -195,7 +197,6 @@
                     .ToList();
             }
 
-            // Map dữ liệu
             UpdateViewModels();
             error = null;
         }
@@ -214,7 +215,6 @@
     {
         tableViewModels = tables.OrderBy(t => t.Code).Select(t =>
         {
-            // Tìm đơn hàng khớp với bàn này
             var order = activeOrders.FirstOrDefault(o => o.TableCode == t.Code || o.TableId == t.Id);
 
             return new TableViewModel
@@ -222,7 +222,7 @@
                 Table = t,
                 ActiveOrderId = order?.Id,
                 HasActiveOrder = order != null,
-                IsNewOrder = order?.Status == "Submitted", // Nếu trạng thái là Submitted -> Mới
+                IsNewOrder = order?.Status == "Submitted",
                 OrderTotalDisplay = order != null ? $"{order.PendingItems} món" : string.Empty
             };
         }).ToList();
@@ -242,4 +242,4 @@
     }
 
     private string GetShortName(string code) => code.Replace("Table", "").Replace("T-", "").Trim();
-}
+}}

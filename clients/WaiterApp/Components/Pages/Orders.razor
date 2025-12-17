@@ -125,12 +125,13 @@
         loadError = null;
         try
         {
-            var url = $"api/orders?page=1&pageSize=200";
+            var url = "api/orders/summaries?page=1&pageSize=200";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await ApiClient.Http.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
-                orders = await response.Content.ReadFromJsonAsync<List<OrderSummaryVm>>() ?? new();
+                var data = await response.Content.ReadFromJsonAsync<List<OrderSummaryVm>>() ?? new();
+                orders = data;
             }
         }
         catch (Exception ex)
