@@ -50,7 +50,7 @@
         {
             @foreach (var order in filteredOrders)
             {
-                var isReady = order.Status == 3;
+                var isReady = order.Status == "Served";
                 var cardClass = isReady 
                     ? "bg-green-50 border-green-200 shadow-md ring-1 ring-green-400 dark:bg-green-900/20 dark:border-green-800" 
                     : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm";
@@ -58,7 +58,7 @@
                 <div @onclick="() => NavigateToDetail(order.Id)"
                      class="p-4 rounded-xl border active:scale-[0.98] transition-all cursor-pointer relative overflow-hidden group @cardClass">
                     
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 @GetStatusColorBar(order.Status)"></div>
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 @GetStatusColorBar(2)"></div>
 
                     <div class="flex justify-between items-start pl-3">
                         <div class="flex-1">
@@ -121,7 +121,7 @@
     {
         try {
             allOrders = await ApiClient.Http.GetFromJsonAsync<List<OrderSummaryDto>>("api/orders") ?? new();
-            activeCount = allOrders.Count(o => o.Status <= 3 || o.Status == 7);
+            activeCount = allOrders.Count(o => o.Status == "Submitted" || o.Status == "InProgress" || o.Status == "Ready" || o.Status == "WaitingForPayment");
             ApplyFilters();
         } catch {} finally { isLoading = false; }
     }
@@ -132,15 +132,15 @@
     {
         var query = allOrders.AsEnumerable();
         if (activeFilter == OrderFilter.Active) 
-            query = query.Where(o => o.Status <= 3 || o.Status == 7); 
+            query = query.Where(o => o.Status == "Submitted" || o.Status == "InProgress" || o.Status == "Ready" || o.Status == "WaitingForPayment");
         else 
-            query = query.Where(o => o.Status == 4 || o.Status == 5 || o.Status == 6);
+            query = query.Where(o => o.Status == "Served" || o.Status == "Paid" || o.Status == "Cancelled");
 
         if (!string.IsNullOrWhiteSpace(searchTerm)) {
             var l = searchTerm.ToLower();
             query = query.Where(o => o.TableNumber.ToLower().Contains(l));
         }
-        filteredOrders = query.OrderByDescending(o => o.Status == 3 || o.Status == 7).ThenBy(o => o.CreatedTime).ToList();
+        filteredOrders = query.OrderByDescending(o => o.Status == "Served" || o.Status == "WaitingForPayment").ThenBy(o => o.CreatedTime).ToList();
     }
 
     private void NavigateToDetail(Guid id) => Navigation.NavigateTo($"/orderdetail?orderId={id}");
@@ -148,23 +148,25 @@
     private string GetTabClass(OrderFilter f) => activeFilter == f ? "flex-1 py-2 bg-white rounded-lg shadow-sm text-primary font-bold transition-all" : "flex-1 py-2 text-gray-500 font-medium";
     private string GetShortCode(string c) => c?.Length > 6 ? c.Substring(0, 6).ToUpper() : c;
 
-    private string GetStatusText(int s) => s switch {
-        1 => "Chờ duyệt", 2 => "Đang nấu", 
-        3 => "Món đã xong", 
-        4 => "Đã phục vụ", 5 => "Đã thanh toán", 
-        6 => "Đã hủy", 
-        7 => "Khách gọi TT", 
-        _ => ""
+    private string GetStatusText(string s) => s switch
+    {
+        "Submitted" => "Chờ duyệt",
+        "InProgress" => "Đang nấu",
+        "Ready" => "Món đã xong",
+        "Served" => "Đã phục vụ",
+        "Paid" => "Đã thanh toán",
+        "Cancelled" => "Đã hủy",
+        "WaitingForPayment" => "Khách gọi TT", // Hoặc status tương ứng backend trả về
+        _ => s
     };
 
-    private string GetStatusClass(int s) => s switch {
-        1 => "bg-blue-100 text-blue-700",
-        2 => "bg-orange-100 text-orange-700",
-        3 => "bg-green-600 text-white shadow-md animate-pulse", 
-        7 => "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold animate-pulse", 
-        4 => "bg-gray-200 text-gray-700",
-        5 => "bg-gray-100 text-gray-500",
-        6 => "bg-red-100 text-red-700 line-through",
+    private string GetStatusClass(string s) => s switch
+    {
+        "Submitted" => "bg-blue-100 text-blue-700",
+        "InProgress" => "bg-orange-100 text-orange-700",
+        "Ready" => "bg-green-600 text-white shadow-md animate-pulse",
+        "WaitingForPayment" => "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold animate-pulse",
+        "Served" => "bg-gray-200 text-gray-700",
         _ => "bg-gray-100 text-gray-500"
     };
     
@@ -178,7 +180,7 @@
         public Guid Id { get; set; }
         public string OrderCode { get; set; } = "";
         public string TableNumber { get; set; } = "";
-        public int Status { get; set; }
+        public string Status { get; set; }
         public int ItemsCount { get; set; }
         public decimal TotalAmount { get; set; }
         public DateTime CreatedTime { get; set; }

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace WaiterApp.Services;
 
@@ -52,14 +53,21 @@ public class ApiClient
         }
     }
     // --- THÊM MỚI: Hàm xử lý thanh toán ---
-    public async Task<bool> PayOrderAsync(Guid orderId, PaymentMethod method)
+    public async Task<bool> PayOrderAsync(Guid orderId, decimal amount, string currency = "VND")
     {
-        // TODO: Khi backend đã sẵn sàng (US18), hãy uncomment dòng dưới để gọi API thật
-        // var response = await Http.PostAsJsonAsync($"api/orders/{orderId}/pay", new { Method = method.ToString() });
-        // return response.IsSuccessStatusCode;
+        try
+        {
+            // Tạo body đúng với PayDto bên Backend (Amount, Currency)
+            var body = new { Amount = amount, Currency = currency };
 
-        // HIỆN TẠI: Giả lập thanh toán luôn thành công theo yêu cầu
-        await Task.Delay(500); // Giả lập độ trễ mạng
-        return true;
+            // Gọi API thật
+            var response = await Http.PostAsJsonAsync($"api/orders/{orderId}/pay", body);
+
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
