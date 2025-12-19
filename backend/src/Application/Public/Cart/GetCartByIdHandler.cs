@@ -42,14 +42,14 @@ public sealed class GetCartByIdHandler : IQueryHandler<GetCartByIdQuery, CartDto
 
         return new CartDto(
         OrderId: order.Id,
+        OrderCode: order.Code,
         TableCode: tableCode,
         Status: status,
         Items: items,
         Subtotal: subtotal,
         ServiceCharge: service,
         Tax: tax,
-        Total: total,
-        Code: order.Code
+        Total: total
         );
     }
 }

@@ -66,14 +66,14 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
 
                 return new CartDto(
                     OrderId: active.Id,
+                    OrderCode: active.Code,
                     TableCode: tableCode,
                     Status: status,
                     Items: items,
                     Subtotal: subtotal,
                     ServiceCharge: service,
                     Tax: tax,
-                    Total: total,
-                    Code: active.Code
+                    Total: total
                 );
             }
         }
@@ -106,14 +106,14 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
 
             return new CartDto(
                 OrderId: open.Id,
+                OrderCode: open.Code,
                 TableCode: table.Code,
                 Status: status,
                 Items: items,
                 Subtotal: subtotal,
                 ServiceCharge: service,
                 Tax: tax,
-                Total: total,
-                Code: open.Code
+                Total: total
             );
         }
 
@@ -131,14 +131,14 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
         // Return new empty cart dto
         return new CartDto(
             OrderId: order.Id,
+            OrderCode: order.Code,
             TableCode: table.Code,
             Status: order.OrderStatus.ToString(),
             Items: new List<CartItemDto>(),
             Subtotal: 0m,
             ServiceCharge: 0m,
             Tax: 0m,
-            Total: 0m,
-            Code: order.Code
+            Total: 0m
         );
     }
 }

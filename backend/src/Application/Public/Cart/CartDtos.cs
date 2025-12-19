@@ -12,12 +12,12 @@ public sealed record CartItemDto(
 
 public sealed record CartDto(
  Guid OrderId,
+ string OrderCode,
  string TableCode,
  string Status,
  List<CartItemDto> Items,
  decimal Subtotal,
  decimal ServiceCharge,
  decimal Tax,
- decimal Total,
- string Code // short human-friendly order code
+ decimal Total
 );
