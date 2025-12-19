@@ -102,22 +102,15 @@
                         Món đã xong! Hãy mang ra bàn.
                     </div>
                 }
-
-
-
-                else if (order.Status == 7 || order.Status == 4)
+                else if (order.Status == 5) // Paid
+                {
+                <div class="w-full py-3 bg-gray-100 text-gray-500 rounded-xl font-bold text-center border border-gray-200">
+                    Đã thanh toán xong
+                </div>
+                }
+                else
                 {
                     <div class="flex flex-col gap-3 animate-fade-in">
-                        @if (order.Status == 7)
-                        {
-                            <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-xl text-center mb-1 animate-pulse">
-                                <p class="text-yellow-700 font-bold flex items-center justify-center gap-2">
-                                    <span class="material-icons-round">notifications_active</span>
-                                    Khách đang yêu cầu thanh toán!
-                                </p>
-                            </div>
-                        }
-
                         <div class="grid grid-cols-2 gap-3">
                             <button class="py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                                     @onclick="() => HandlePayment(PaymentMethod.Cash)">
@@ -130,13 +123,6 @@
                                 CK / QR
                             </button>
                         </div>
-                    </div>
-                }
-
-                else if (order.Status == 5) // Paid
-                {
-                    <div class="w-full py-3 bg-gray-100 text-gray-500 rounded-xl font-bold text-center border border-gray-200">
-                        Đã thanh toán xong
                     </div>
                 }
             </div>
