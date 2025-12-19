@@ -8,7 +8,7 @@
 
 }
 
-<div class="min-h-screen bg-[#F9F9F9] pb-24">
+<div class="min-h-screen bg-[#F9F9F9] pb-24" data-order-id="@orderId" data-table-id="@(Model?.TableCode ?? string.Empty)" data-customer-hub-url="/hubs/customer">
 
     <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
         <a href="/" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-[#FE724C] hover:text-white transition-all">
@@ -136,11 +136,9 @@
 </div>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
             const orderId = "@orderId";
             const initialStatus = "@initialStatus";
-            const normalizedOrderId = orderId ? orderId.toLowerCase() : "";
             const tableCode = "@(Model?.TableCode ?? "")";
 
             const statusMap = {
@@ -154,60 +152,11 @@
                 Paid: 'Đã thanh toán'
             };
 
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl("/hubs/customer")
-                .withAutomaticReconnect()
-                .build();
-
-            connection.on("orderStatusChanged", (id, newStatus) => {
-                const incoming = (typeof id === "string" ? id : id?.toString?.())?.toLowerCase();
-                if (incoming && normalizedOrderId && incoming !== normalizedOrderId) {
-                    return;
-                }
-
-                console.log("Realtime Update:", newStatus);
-                if (window.toast && window.toast.success) {
-                    window.toast.success(`Cập nhật trạng thái: ${statusMap[newStatus] || newStatus}`);
-                }
-                updateTrackingUI(newStatus);
-            });
-
-            connection.on("chatMessage", payload => {
-                if (!payload) return;
-                appendChatMessage(payload.sender === 'customer' ? 'Bạn' : 'Nhân viên', payload.message, payload.sender === 'customer');
-            });
-
-            async function startSignalR() {
-                try {
-            if (connection.state === signalR.HubConnectionState.Disconnected) {
-                await connection.start();
-                console.log("SignalR Connected.");
-
-                // Join nhóm sau khi connect thành công
-                if (orderId) {
-                    // Lưu ý: chuyển orderId về chữ thường như đã nhắc ở bài trước
-                    await connection.invoke("JoinOrderGroup", orderId.toLowerCase());
-                }
+            if (document && document.body) {
+                document.body.dataset.customerHubUrl = '/hubs/customer';
+                document.body.dataset.orderId = orderId;
+                document.body.dataset.tableId = tableCode;
             }
-        } catch (err) {
-            console.error("SignalR Connection Error: ", err);
-            // Thử lại sau 5 giây nếu lỗi
-            setTimeout(startSignalR, 5000);
-        }
-            }
-
-            connection.onreconnected(async () => {
-                try {
-                    if (orderId && orderId !== '00000000-0000-0000-0000-000000000000') {
-                        await connection.invoke("JoinOrderGroup", orderId);
-                    }
-                    if (tableCode) {
-                        await connection.invoke("JoinTableGroup", tableCode);
-                    }
-                } catch (err) {
-                    console.error("SignalR Rejoin Error:", err);
-                }
-            });
 
             function updateTrackingUI(status) {
                 // Nếu đơn đã bị hủy: highlight đặc biệt và dừng
@@ -257,8 +206,24 @@
                 }
             }
 
+            window.customerRealtime = window.customerRealtime || {};
+            window.customerRealtime.onOrderStatusChanged = ({ orderId, status }) => {
+                console.log('Realtime Update:', status);
+                if (window.toast && window.toast.success) {
+                    window.toast.success(`Cập nhật trạng thái: ${statusMap[status] || status}`);
+                }
+                updateTrackingUI(status);
+            };
+
+            window.customerRealtime.onChatMessage = (payload) => {
+                if (!payload) return;
+                appendChatMessage(payload.sender === 'customer' ? 'Bạn' : 'Nhân viên', payload.message, payload.sender === 'customer');
+            };
+
             updateTrackingUI(initialStatus);
-            startSignalR();
+            if (window.customerRealtime && typeof window.customerRealtime.start === 'function') {
+                window.customerRealtime.start();
+            }
 
             function requestPayment() {
                 if (!orderId || orderId === '00000000-0000-0000-0000-000000000000') {
@@ -341,9 +306,11 @@
             }
 
             $(document).ready(function () {
-                startSignalR();
                 loadChatHistory();
                 updateTrackingUI(initialStatus);
+                if (window.customerRealtime && typeof window.customerRealtime.start === 'function') {
+                    window.customerRealtime.start();
+                }
             });
     </script>
 }

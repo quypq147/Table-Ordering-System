@@ -2,6 +2,7 @@
 @using WaiterApp.Services
 @using WaiterApp.Models
 @using TableOrdering.Contracts
+@implements IDisposable
 @inject ApiClient ApiClient
 @inject OrdersRealtimeService Realtime
 @inject ToastService Toast
@@ -10,177 +11,305 @@
 <div class="px-6 pt-8 pb-24 h-full flex flex-col bg-gray-50 dark:bg-gray-900">
     <div class="mb-4">
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">Danh sách Đơn hàng</h1>
+
         <div class="relative">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 material-icons-round">search</span>
             <input type="text"
-                   class="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-primary/50 text-sm"
-                   placeholder="Tìm số bàn..."
+                   class="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-primary/50 text-sm transition-all"
+                   placeholder="Tìm tên bàn (T01...) hoặc mã đơn..."
                    @bind="searchTerm" @bind:event="oninput" />
         </div>
     </div>
 
+    @* Bộ lọc Tab *@
     <div class="flex p-1 bg-gray-200 dark:bg-gray-800 rounded-xl mb-6 shadow-inner">
         <button class="@GetTabClass(OrderFilter.Active)" @onclick="() => SetFilter(OrderFilter.Active)">
             Cần phục vụ
             @if (activeCount > 0)
             {
-                 <span class="ml-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">@activeCount</span>
+                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-bold shadow-sm animate-pulse">@activeCount</span>
             }
         </button>
-        <button class="@GetTabClass(OrderFilter.Completed)" @onclick="() => SetFilter(OrderFilter.Completed)">
-            Đã xong
+        <button class="@GetTabClass(OrderFilter.All)" @onclick="() => SetFilter(OrderFilter.All)">
+            Tất cả đơn
         </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto space-y-3 no-scrollbar pb-20">
-        @if (isLoading)
+    @* Danh sách đơn hàng *@
+    <div class="flex-1 overflow-y-auto space-y-3 no-scrollbar pb-20 -mx-2 px-2">
+        @if (loading)
         {
-            <div class="flex flex-col items-center py-10 text-gray-400">
-                 <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+                <span class="text-sm">Đang tải dữ liệu...</span>
             </div>
         }
-        else if (!filteredOrders.Any())
+        else if (FilteredOrders.Any())
         {
-            <div class="flex flex-col items-center py-10 text-gray-400 opacity-60">
-                <span class="material-icons-round text-5xl">receipt_long</span>
-                <p>Không có đơn hàng.</p>
-            </div>
-        }
-        else
-        {
-            @foreach (var order in filteredOrders)
+            @foreach (var order in FilteredOrders)
             {
-                var isReady = order.Status == 3;
-                var cardClass = isReady 
-                    ? "bg-green-50 border-green-200 shadow-md ring-1 ring-green-400 dark:bg-green-900/20 dark:border-green-800" 
-                    : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm";
+                <div @onclick="() => OpenDetail(order.Id)"
+                     class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 active:scale-[0.98] transition-all cursor-pointer relative overflow-hidden group">
 
-                <div @onclick="() => NavigateToDetail(order.Id)"
-                     class="p-4 rounded-xl border active:scale-[0.98] transition-all cursor-pointer relative overflow-hidden group @cardClass">
-                    
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 @GetStatusColorBar(order.Status)"></div>
+                    @* Thanh màu trạng thái *@
+                    <div class="absolute left-0 top-0 bottom-0 w-1 @GetStatusColorBar(order.Status)"></div>
 
-                    <div class="flex justify-between items-start pl-3">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-mono font-bold text-gray-400 bg-white/50 px-1.5 rounded">
-                                    #@GetShortCode(order.OrderCode)
-                                </span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide @GetStatusClass(order.Status)">
-                                    @GetStatusText(order.Status)
+                    <div class="flex justify-between items-start mb-2 pl-2">
+                        <div class="flex items-center gap-3">
+                            @* Hiển thị Avatar: Lấy chữ cái đầu của Tên bàn *@
+                            <div class="w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center font-bold text-lg text-gray-700 dark:text-gray-300 border border-gray-100 dark:border-gray-600">
+                                @GetTableInitials(order.TableId)
+                            </div>
+                            <div>
+                                @* UI: Hiển thị Table Code (T01, Bàn 2...) *@
+                                <h3 class="font-bold text-gray-800 dark:text-white text-base">
+                                    Bàn @GetTableCode(order.TableId)
+                                </h3>
+                                <span class="text-xs text-gray-400 font-mono">
+                                    #@(string.IsNullOrEmpty(order.OrderCode) ? order.Id.ToString().Substring(0, 8) : order.OrderCode)
                                 </span>
                             </div>
-                            
-                            <h3 class="font-bold text-lg text-gray-800 dark:text-white flex items-center gap-2">
-                                <span>Bàn @order.TableNumber</span>
-                                @if (isReady)
-                                {
-                                    <span class="flex h-3 w-3 relative">
-                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                                    </span>
-                                }
-                            </h3>
-
-                            <p class="text-sm text-gray-500 mt-1">
-                                @(order.ItemsCount) món &bull; <span class="font-semibold">@order.TotalAmount.ToString("N0") đ</span>
-                            </p>
                         </div>
+                        <span class="px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm @GetStatusClass(order.Status)">
+                            @GetStatusText(order.Status)
+                        </span>
+                    </div>
 
-                        <div class="text-right flex flex-col justify-center h-full">
-                            <span class="material-icons-round text-gray-300">chevron_right</span>
+                    <div class="pl-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+                        <div class="flex justify-between items-end">
+                            <div class="text-sm text-gray-600 dark:text-gray-400 line-clamp-1 flex-1 mr-4">
+                                @if (order.Items != null && order.Items.Any())
+                                {
+                                    <span>@order.Items.Count món: @string.Join(", ", order.Items.Select(i => i.Name))</span>
+                                }
+                                else
+                                {
+                                    <span>Chưa chọn món</span>
+                                }
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-400 mb-0.5">Tổng tiền</p>
+                                <span class="text-base font-bold text-primary">@order.Total.ToString("N0") @order.Currency</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             }
         }
+        else
+        {
+            <div class="flex flex-col items-center justify-center h-64 text-gray-400">
+                <span class="material-icons-round text-6xl mb-4 opacity-20">assignment</span>
+                <p>Không tìm thấy đơn hàng nào</p>
+            </div>
+        }
     </div>
 </div>
 
 @code {
-    public enum OrderFilter { Active, Completed }
-    
-    private List<OrderSummaryDto> allOrders = new();
-    private List<OrderSummaryDto> filteredOrders = new();
-    private OrderFilter activeFilter = OrderFilter.Active;
+    private List<OrderDtoVm> orders = new();
+
+    // Dictionary dùng để Map từ TableId (Guid) -> TableCode (string)
+    private Dictionary<Guid, string> tableCodeMap = new();
+
+    private bool loading = true;
     private string searchTerm = "";
-    private bool isLoading = true;
-    private int activeCount = 0;
+    private OrderFilter currentFilter = OrderFilter.Active;
+
+    // Đếm số lượng đơn Active (Chờ duyệt, Đang nấu, Đã xong, Chờ TT)
+    private int activeCount => orders.Count(o => IsActive(o.Status));
+
+    public enum OrderFilter { Active, All }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-        Realtime.OrderStatusChanged += HandleOrderStatusChanged;
+        // 1. Load danh sách bàn trước để lấy Code hiển thị UI
+        await LoadTables();
+
+        // 2. Load đơn hàng
+        await LoadOrders();
+
+        // 3. Đăng ký nhận thông báo Realtime
+        Realtime.OrderStatusChanged += HandleStatusChange;
+        Realtime.PaymentRequestReceived += HandlePaymentRequest;
+
         if (!Realtime.IsConnected) await Realtime.StartAsync();
     }
 
-    private void HandleOrderStatusChanged(Guid orderId, string status) => InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
-    public void Dispose() => Realtime.OrderStatusChanged -= HandleOrderStatusChanged;
-
-    private async Task LoadAsync()
+    public void Dispose()
     {
-        try {
-            allOrders = await ApiClient.Http.GetFromJsonAsync<List<OrderSummaryDto>>("api/orders") ?? new();
-            activeCount = allOrders.Count(o => o.Status <= 3 || o.Status == 7);
-            ApplyFilters();
-        } catch {} finally { isLoading = false; }
+        Realtime.OrderStatusChanged -= HandleStatusChange;
+        Realtime.PaymentRequestReceived -= HandlePaymentRequest;
     }
-    
-    private void SetFilter(OrderFilter f) { activeFilter = f; ApplyFilters(); }
 
-    private void ApplyFilters()
+    private void HandleStatusChange(Guid orderId, string status)
     {
-        var query = allOrders.AsEnumerable();
-        if (activeFilter == OrderFilter.Active) 
-            query = query.Where(o => o.Status <= 3 || o.Status == 7); 
-        else 
-            query = query.Where(o => o.Status == 4 || o.Status == 5 || o.Status == 6);
+        InvokeAsync(async () =>
+        {
+            await LoadOrders(); // Load lại danh sách khi có thay đổi
+            StateHasChanged();
+        });
+    }
 
-        if (!string.IsNullOrWhiteSpace(searchTerm)) {
-            var l = searchTerm.ToLower();
-            query = query.Where(o => o.TableNumber.ToLower().Contains(l));
+    private void HandlePaymentRequest(PaymentRequestPayload payload)
+    {
+        InvokeAsync(async () =>
+        {
+            var tableName = GetTableCode(payload.TableId);
+            Toast.ShowInfo($"Bàn {tableName} yêu cầu thanh toán!");
+            await LoadOrders();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadTables()
+    {
+        try
+        {
+            var tables = await ApiClient.Http.GetFromJsonAsync<List<TableDto>>("api/tables");
+            if (tables != null)
+            {
+                tableCodeMap = tables.ToDictionary(t => t.Id, t => t.Code);
+            }
         }
-        filteredOrders = query.OrderByDescending(o => o.Status == 3 || o.Status == 7).ThenBy(o => o.CreatedTime).ToList();
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi load bàn: {ex.Message}");
+        }
     }
 
-    private void NavigateToDetail(Guid id) => Navigation.NavigateTo($"/orderdetail?orderId={id}");
+    private async Task LoadOrders()
+    {
+        loading = true;
+        try
+        {
+            // SỬA QUAN TRỌNG: Gọi api/orders/all thay vì api/orders
+            orders = await ApiClient.Http.GetFromJsonAsync<List<OrderDtoVm>>("api/orders/all") ?? new();
 
-    private string GetTabClass(OrderFilter f) => activeFilter == f ? "flex-1 py-2 bg-white rounded-lg shadow-sm text-primary font-bold transition-all" : "flex-1 py-2 text-gray-500 font-medium";
-    private string GetShortCode(string c) => c?.Length > 6 ? c.Substring(0, 6).ToUpper() : c;
+            // Sắp xếp: Ưu tiên đơn chờ thanh toán & món đã xong lên đầu
+            orders = orders.OrderByDescending(o => GetPriority(o.Status))
+                           .ThenByDescending(o => o.Id) // Id tạm dùng để sort mới nhất
+                           .ToList();
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError("Lỗi tải đơn hàng: " + ex.Message);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
 
-    private string GetStatusText(int s) => s switch {
-        1 => "Chờ duyệt", 2 => "Đang nấu", 
-        3 => "Món đã xong", 
-        4 => "Đã phục vụ", 5 => "Đã thanh toán", 
-        6 => "Đã hủy", 
-        7 => "Khách gọi TT", 
-        _ => ""
+    // --- Helper hiển thị UI dựa trên TableCode ---
+    private string GetTableCode(Guid tableId)
+    {
+        return tableCodeMap.TryGetValue(tableId, out var code) ? code : "...";
+    }
+
+    private string GetTableInitials(Guid tableId)
+    {
+        var code = GetTableCode(tableId);
+        if (code == "...") return "?";
+        // Lấy số từ mã bàn, ví dụ T-01 -> 01
+        var digits = new string(code.Where(char.IsDigit).ToArray());
+        return string.IsNullOrEmpty(digits) ? code.Substring(0, 1).ToUpper() : digits;
+    }
+
+    private IEnumerable<OrderDtoVm> FilteredOrders
+    {
+        get
+        {
+            var query = orders.AsEnumerable();
+
+            if (currentFilter == OrderFilter.Active)
+            {
+                query = query.Where(o => IsActive(o.Status));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(o =>
+                    GetTableCode(o.TableId).Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (o.OrderCode != null && o.OrderCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            return query;
+        }
+    }
+
+    private void SetFilter(OrderFilter filter) { currentFilter = filter; StateHasChanged(); }
+
+    private string GetTabClass(OrderFilter filter)
+    {
+        var baseClass = "flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center";
+        return currentFilter == filter
+            ? $"{baseClass} bg-white dark:bg-gray-700 text-primary shadow-sm"
+            : $"{baseClass} text-gray-500 hover:text-gray-700 dark:text-gray-400";
+    }
+
+    private void OpenDetail(Guid id) => Navigation.NavigateTo($"/orderdetail?orderId={id}");
+
+    // Trạng thái Active: Submitted(1), InProgress(2), Ready(3), WaitingForPayment(7)
+    private bool IsActive(int status) => status == 1 || status == 2 || status == 3 || status == 7;
+
+    private int GetPriority(int status) => status switch
+    {
+        7 => 100, // WaitingForPayment (Khách đợi tính tiền)
+        3 => 90,  // Ready (Món xong, cần bưng)
+        1 => 80,  // Submitted (Cần duyệt)
+        2 => 70,  // InProgress
+        _ => 0
     };
 
-    private string GetStatusClass(int s) => s switch {
-        1 => "bg-blue-100 text-blue-700",
-        2 => "bg-orange-100 text-orange-700",
-        3 => "bg-green-600 text-white shadow-md animate-pulse", 
-        7 => "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold animate-pulse", 
-        4 => "bg-gray-200 text-gray-700",
-        5 => "bg-gray-100 text-gray-500",
-        6 => "bg-red-100 text-red-700 line-through",
+    private string GetStatusText(int s) => s switch
+    {
+        1 => "Chờ duyệt",
+        2 => "Đang nấu",
+        3 => "Món đã xong",
+        4 => "Đã phục vụ",
+        5 => "Đã thanh toán",
+        6 => "Đã hủy",
+        7 => "Khách gọi TT",
+        _ => "Không rõ"
+    };
+
+    private string GetStatusClass(int s) => s switch
+    {
+        1 => "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+        2 => "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+        3 => "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-200 animate-pulse",
+        7 => "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold animate-pulse dark:bg-yellow-900/30 dark:text-yellow-300",
+        4 => "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400",
         _ => "bg-gray-100 text-gray-500"
     };
-    
-    private string GetStatusColorBar(int s) => s switch {
-        1 => "bg-blue-500", 2 => "bg-orange-400", 
-        3 => "bg-green-500", 
-        4 => "bg-gray-400", 5 => "bg-gray-300", 6 => "bg-red-500", 7 => "bg-yellow-400", _ => "bg-gray-300"
+
+    private string GetStatusColorBar(int s) => s switch
+    {
+        1 => "bg-blue-500",
+        2 => "bg-orange-400",
+        3 => "bg-green-500",
+        7 => "bg-yellow-500",
+        4 => "bg-gray-400",
+        _ => "bg-transparent"
     };
 
-    public class OrderSummaryDto {
+    // ViewModel cho UI
+    public class OrderDtoVm
+    {
         public Guid Id { get; set; }
-        public string OrderCode { get; set; } = "";
-        public string TableNumber { get; set; } = "";
+        public Guid TableId { get; set; }
+        public string OrderCode { get; set; }
         public int Status { get; set; }
-        public int ItemsCount { get; set; }
-        public decimal TotalAmount { get; set; }
-        public DateTime CreatedTime { get; set; }
+        public decimal Total { get; set; }
+        public string Currency { get; set; } = "VND";
+        public List<OrderItemVm> Items { get; set; } = new();
+    }
+
+    public class OrderItemVm
+    {
+        public string Name { get; set; }
+        public int Quantity { get; set; }
     }
 }

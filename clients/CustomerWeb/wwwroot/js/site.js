@@ -7,6 +7,83 @@
 function debounce(fn, delay) { let t; return function () { const ctx = this, args = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(ctx, args); }, delay); }; }
 function formatVnd(value) { try { return Number(value).toLocaleString('vi-VN') + ' VNĐ'; } catch { return value + ' VNĐ'; } }
 
+// CustomerWeb SignalR realtime (CustomerHub)
+(function (w) {
+    function normalizeGuid(value) {
+        if (!value) return '';
+        return String(value).trim().toLowerCase();
+    }
+
+    // Expose a minimal API so pages can react without duplicating SignalR connections
+    w.customerRealtime = w.customerRealtime || {
+        connected: false,
+        onOrderStatusChanged: null,
+        onOrderPaid: null,
+        onChatMessage: null,
+        start: async function () { }
+    };
+
+    // CustomerWeb uses global signalR script from pages that need it (TrackOrder already includes it)
+    if (!w.signalR) return;
+
+    const body = document.body || document.documentElement;
+    const hubUrl = body?.dataset?.customerHubUrl || '/hubs/customer';
+    const orderId = normalizeGuid(body?.dataset?.orderId);
+    const tableId = normalizeGuid(body?.dataset?.tableId);
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl(hubUrl)
+        .withAutomaticReconnect([0, 2000, 10000, 30000])
+        .build();
+
+    async function joinGroups() {
+        // Join order group first (TrackOrder)
+        if (orderId) {
+            try { await connection.invoke('JoinOrderGroup', orderId); } catch (e) { console.warn('JoinOrderGroup failed', e); }
+        }
+        // Join table group (chat & potential cart/table broadcasts)
+        if (tableId) {
+            try { await connection.invoke('JoinTableGroup', tableId); } catch (e) { console.warn('JoinTableGroup failed', e); }
+        }
+    }
+
+    connection.on('orderStatusChanged', (id, status) => {
+        const incoming = normalizeGuid(id);
+        if (orderId && incoming && incoming !== orderId) return;
+        if (typeof w.customerRealtime.onOrderStatusChanged === 'function') {
+            w.customerRealtime.onOrderStatusChanged({ orderId: incoming || orderId, status });
+        }
+    });
+
+    connection.on('orderPaid', (payload) => {
+        if (typeof w.customerRealtime.onOrderPaid === 'function') {
+            w.customerRealtime.onOrderPaid(payload);
+        }
+    });
+
+    connection.on('chatMessage', (payload) => {
+        if (typeof w.customerRealtime.onChatMessage === 'function') {
+            w.customerRealtime.onChatMessage(payload);
+        }
+    });
+
+    connection.onreconnected(async () => {
+        await joinGroups();
+    });
+
+    w.customerRealtime.start = async function () {
+        if (connection.state !== signalR.HubConnectionState.Disconnected) return;
+        try {
+            await connection.start();
+            w.customerRealtime.connected = true;
+            await joinGroups();
+        } catch (e) {
+            console.warn('SignalR start failed', e);
+            setTimeout(() => w.customerRealtime.start(), 5000);
+        }
+    };
+})(window);
+
 // Tailwind Toast for CustomerWeb
 (function (w, $) {
     const containerSelector = '#toast-container';

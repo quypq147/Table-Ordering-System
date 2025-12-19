@@ -142,12 +142,7 @@
                                 <i class="fas fa-check"></i> Xong @ticket.ItemName
                             </button>
                         }
-                        else if (ticket.Status == "Ready")
-                        {
-                            <button onclick="changeStatus('@ticket.Id', 'served')" class="btn btn-sm btn-dark flex-grow-1">
-                                <i class="fas fa-concierge-bell"></i> Bê @ticket.ItemName
-                            </button>
-                        }
+                        @* Bỏ nút 'Bê' tại KDS: Ready chỉ là món đã xong, không được phép chuyển sang Served từ bếp *@
                     }
                 </div>
             }
