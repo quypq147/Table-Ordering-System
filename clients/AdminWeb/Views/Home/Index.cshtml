@@ -76,6 +76,8 @@
     </tbody>
 </table>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 <script id="dashboard-data" type="application/json">
     @Html.Raw(ViewBag.DashboardJson ?? "{}")
 </script>
@@ -85,24 +87,38 @@
         try {
             const revEl = document.getElementById('rev7DaysChart');
             const topEl = document.getElementById('topItemsChart');
-            if (!revEl || !topEl || !model) return;
 
-            const rev = Array.isArray(model.revenueLast7Days) ? model.revenueLast7Days : [];
-            const revLabels = rev.map(r => (r.date || r.Date || '').toString().slice(5));
-            const revData = rev.map(r => Number(r.total ?? r.Total ?? 0));
+            // Kiểm tra thư viện Chart đã load chưa
+            if (!revEl || !topEl || !model || typeof Chart === 'undefined') return;
+
+            // BƯỚC 2: Sửa tên biến thành PascalCase (Chữ cái đầu viết hoa)
+            // Cũ: model.revenueLast7Days -> Mới: model.RevenueLast7Days
+            const rev = Array.isArray(model.RevenueLast7Days) ? model.RevenueLast7Days : [];
+
+            // Cũ: r.date -> Mới: r.Date (hoặc r.date để fallback)
+            const revLabels = rev.map(r => (r.Date || r.date || '').toString().slice(5));
+
+            // Cũ: r.total -> Mới: r.Total
+            const revData = rev.map(r => Number(r.Total || r.total || 0));
 
             new Chart(revEl, {
                 type: 'bar',
                 data: { labels: revLabels, datasets: [{ label: 'Doanh Thu (VND)', data: revData, backgroundColor: 'rgba(54, 162, 235, 0.5)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] },
-                options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
 
-            const items = Array.isArray(model.topItems) ? model.topItems.slice(0,5) : [];
-            const itemLabels = items.map(i => i.name || i.Name || '');
-            const itemData = items.map(i => Number(i.totalQty ?? i.TotalQty ?? i.qty ?? i.Quantity ?? 0));
-            const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF'];
+            // BƯỚC 3: Sửa tên biến TopItems thành PascalCase
+            // Cũ: model.topItems -> Mới: model.TopItems
+            const items = Array.isArray(model.TopItems) ? model.TopItems.slice(0,5) : [];
 
-            new Chart(topEl, { type: 'pie', data: { labels: itemLabels, datasets: [{ data: itemData, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: true } });
+            // Cũ: i.name -> Mới: i.Name
+            const itemLabels = items.map(i => i.Name || i.name || '');
+
+            // Cũ: i.totalQty -> Mới: i.TotalQty
+            const itemData = items.map(i => Number(i.TotalQty || i.totalQty || i.qty || 0));
+
+            const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF'];
+            new Chart(topEl, { type: 'pie', data: { labels: itemLabels, datasets: [{ data: itemData, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false } });
         } catch (e) { console.warn('Chart render error', e); }
     }
 
@@ -111,7 +127,10 @@
         if (!el) return;
         let model = {};
         try { model = JSON.parse(el.textContent || '{}'); } catch {}
+
+        // Đảm bảo chạy khi window load xong để Chart.js kịp tải
         const init = () => renderCharts(model);
-        if (window.Chart) init(); else window.addEventListener('load', init);
+        if (document.readyState === 'complete') init();
+        else window.addEventListener('load', init);
     })();
 </script>
