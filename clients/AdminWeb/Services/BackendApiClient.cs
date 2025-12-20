@@ -779,6 +779,40 @@ namespace AdminWeb.Services
             return JsonSerializer.Deserialize<DashboardVm>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
+        // ===== STATISTICS =====
+        public async Task<StatisticsVm?> GetStatisticsAsync(DateTime? fromUtc = null, DateTime? toUtc = null, int top = 5, CancellationToken ct = default)
+        {
+            AttachBearer();
+
+            var q = new List<string>();
+            if (fromUtc is DateTime f)
+            {
+                var s = f.ToUniversalTime().ToString("O");
+                q.Add($"fromUtc={Uri.EscapeDataString(s)}");
+            }
+            if (toUtc is DateTime t)
+            {
+                var s = t.ToUniversalTime().ToString("O");
+                q.Add($"toUtc={Uri.EscapeDataString(s)}");
+            }
+            if (top > 0) q.Add($"top={top}");
+
+            var url = "/api/admin/statistics" + (q.Count > 0 ? "?" + string.Join("&", q) : "");
+            using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+            var raw = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+            if (resp.StatusCode == HttpStatusCode.NotFound)
+                return null;
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var msg = TryExtractError(raw) ?? $"{(int)resp.StatusCode} {resp.ReasonPhrase}";
+                throw new HttpRequestException(msg);
+            }
+
+            return JsonSerializer.Deserialize<StatisticsVm>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
         // ===== Helpers =====
         private async Task<T?> GetOrDefaultAsync<T>(string requestUri, CancellationToken cancellationToken)
         {

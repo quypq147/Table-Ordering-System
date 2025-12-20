@@ -59,5 +59,8 @@ namespace AdminWeb.Services
 
         // Dashboard
         Task<DashboardVm?> GetDashboardAsync(CancellationToken ct = default);
+
+        // Statistics
+        Task<StatisticsVm?> GetStatisticsAsync(DateTime? fromUtc = null, DateTime? toUtc = null, int top = 5, CancellationToken ct = default);
     }
 }
