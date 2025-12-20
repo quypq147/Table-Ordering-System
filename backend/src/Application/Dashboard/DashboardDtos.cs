@@ -10,9 +10,20 @@ public sealed record DashboardMetricsDto(
  string Currency,
  IReadOnlyList<string> RevenueByHourLabels,
  IReadOnlyList<decimal> RevenueByHourValues,
- IReadOnlyList<RecentOrderDto> RecentOrders
+ IReadOnlyList<RecentOrderDto> RecentOrders,
+ IReadOnlyList<DashboardChartDataDto> RevenueLast7Days,
+    IReadOnlyList<TopItemDto> TopItems
 );
-
+public sealed record DashboardChartDataDto(
+    string Date,
+    decimal Total
+);
+public sealed record TopItemDto(
+    Guid Id,
+    string Name,
+    int Qty,
+    decimal Total
+);
 public sealed record RecentOrderDto(
  Guid Id,
  string Code,

@@ -16,4 +16,3 @@ public sealed record StatisticsDto(
 
 public sealed record RevenuePointDto(string Date, decimal Total);
 
-public sealed record TopItemDto(Guid MenuItemId, string Name, int TotalQty, decimal TotalAmount);
