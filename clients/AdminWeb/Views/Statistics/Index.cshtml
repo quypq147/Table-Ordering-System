@@ -1,0 +1,159 @@
+﻿@model AdminWeb.Services.Models.StatisticsVm
+@{
+    ViewData["Title"] = "Thống kê";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Thống kê</h2>
+        <small class="text-muted">Theo khoảng thời gian (UTC)</small>
+        @if (ViewBag.StatsError is string err)
+        {
+            <div class="text-danger small mt-1">@err</div>
+        }
+    </div>
+
+    <form method="get" class="d-flex gap-2 align-items-end">
+        <div>
+            <label class="form-label mb-0 small text-muted">Từ (UTC)</label>
+            <input class="form-control form-control-sm" type="date" name="from" value="@Model.FromUtc.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label mb-0 small text-muted">Đến (UTC)</label>
+            <input class="form-control form-control-sm" type="date" name="to" value="@Model.ToUtc.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label mb-0 small text-muted">Top món</label>
+            <input class="form-control form-control-sm" type="number" min="1" max="50" name="top" value="@(Model.TopItems?.Length > 0 ? Model.TopItems.Length : 5)" />
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">Xem</button>
+    </form>
+</div>
+
+<div class="stats mb-4">
+    <div class="stat kpi">
+        <div class="stat-head"><span>Doanh thu</span></div>
+        <div class="stat-value" id="statRevenue">0</div>
+        <p class="muted">Tổng doanh thu đơn đã thanh toán</p>
+    </div>
+    <div class="stat kpi">
+        <div class="stat-head"><span>Tổng đơn</span></div>
+        <div class="stat-value" id="statOrdersTotal">0</div>
+        <p class="muted">Số đơn tạo trong khoảng</p>
+    </div>
+    <div class="stat kpi">
+        <div class="stat-head"><span>Đã thanh toán</span></div>
+        <div class="stat-value" id="statOrdersPaid">0</div>
+        <p class="muted">Số đơn Paid</p>
+    </div>
+    <div class="stat kpi">
+        <div class="stat-head"><span>Đã hủy</span></div>
+        <div class="stat-value" id="statOrdersCancelled">0</div>
+        <p class="muted">Số đơn Cancelled</p>
+    </div>
+</div>
+
+<div class="container my-4">
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Doanh thu theo ngày</h5>
+                    <canvas id="revByDayChart" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Top món bán chạy</h5>
+                    <canvas id="topItemsChart" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Top món (chi tiết)</h5>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Món</th>
+                        <th class="text-end">SL</th>
+                        <th class="text-end">Doanh thu</th>
+                    </tr>
+                </thead>
+                <tbody id="topItemsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script id="stats-data" type="application/json">@Html.Raw(ViewBag.StatsJson ?? "{}")</script>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const raw = document.getElementById('stats-data')?.textContent || '{}';
+        let model = {};
+        try { model = JSON.parse(raw); } catch {}
+
+        const currency = model.Currency || 'VND';
+        const fmtN = (v) => (typeof v === 'number' ? v.toLocaleString('vi-VN') : (v ?? '0'));
+        const fmtMoney = (v) => {
+            try {
+                return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(v || 0);
+            } catch { return fmtN(v); }
+        };
+
+        document.getElementById('statRevenue').textContent = fmtMoney(model.RevenueTotal || 0);
+        document.getElementById('statOrdersTotal').textContent = fmtN(model.OrdersTotal || 0);
+        document.getElementById('statOrdersPaid').textContent = fmtN(model.OrdersPaid || 0);
+        document.getElementById('statOrdersCancelled').textContent = fmtN(model.OrdersCancelled || 0);
+
+        // Revenue by day
+        const rev = Array.isArray(model.RevenueByDay) ? model.RevenueByDay : [];
+        const revLabels = rev.map(x => (x.Date || '').toString().slice(5));
+        const revData = rev.map(x => Number(x.Total || 0));
+        const ctxRev = document.getElementById('revByDayChart');
+        if (ctxRev && window.Chart) {
+            new Chart(ctxRev, {
+                type: 'bar',
+                data: { labels: revLabels, datasets: [{ label: 'Doanh thu', data: revData, backgroundColor: 'rgba(54, 162, 235, 0.5)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v)=> v.toLocaleString('vi-VN') } } } }
+            });
+        }
+
+        // Top items
+        const items = Array.isArray(model.TopItems) ? model.TopItems : [];
+        const itemLabels = items.map(i => i.Name || '');
+        const itemQty = items.map(i => Number(i.TotalQty || 0));
+        const ctxTop = document.getElementById('topItemsChart');
+        if (ctxTop && window.Chart) {
+            new Chart(ctxTop, {
+                type: 'pie',
+                data: { labels: itemLabels, datasets: [{ data: itemQty, backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#C9CBCF'] }] },
+                options: { responsive: true }
+            });
+        }
+
+        // Top items table
+        const tb = document.getElementById('topItemsTable');
+        if (tb) {
+            if (!items.length) {
+                tb.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Chưa có dữ liệu.</td></tr>';
+            } else {
+                tb.innerHTML = items.map(i => `
+                    <tr>
+                        <td>${i.Name || ''}</td>
+                        <td class="text-end">${fmtN(i.TotalQty || 0)}</td>
+                        <td class="text-end">${fmtMoney(i.TotalAmount || 0)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+    </script>
+}

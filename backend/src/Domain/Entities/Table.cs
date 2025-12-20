@@ -22,6 +22,9 @@ public class Table : Entity<Guid>
 
     public void MarkInUse()
     {
+        if (Status == TableStatus.InUse)
+            return;
+
         Status = TableStatus.InUse;
         CurrentSessionId = Guid.NewGuid();
     }

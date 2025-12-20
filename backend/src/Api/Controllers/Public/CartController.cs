@@ -1,6 +1,7 @@
 using Application.Orders.Commands; // ChangeItemQuantityCommand, RemoveItemCommand
 using Application.Orders.Queries; // GetOrderByIdQuery
 using Application.Public.Cart;
+using Application.Tables.Commands;
 using Domain.Enums; // for OrderStatus
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting; // attribute
@@ -145,11 +146,18 @@ public partial class CartController : ControllerBase
     public async Task<ActionResult> CloseSession(Guid orderId, CancellationToken ct)
     {
         var orderDto = await _cqrs.Send(new GetOrderByIdQuery(orderId), ct);
-        if (orderDto is not null && orderDto.Status == OrderStatus.Draft)
-        {
-            // Reuse Cancel command; domain prevents cancelling Paid
-            await _cqrs.Send(new CancelOrderCommand(orderId), ct);
-        }
+        if (orderDto is null) return NotFound();
+
+        // Option (1): ch? cho phép r?i bàn / ?óng phiên khi ??n v?n còn Draft
+        if (orderDto.Status != OrderStatus.Draft)
+            throw new InvalidOperationException("??n ?ã g?i b?p ho?c ?ang x? lý, không th? r?i bàn.");
+
+        // Cancel draft order
+        await _cqrs.Send(new CancelOrderCommand(orderId), ct);
+
+        // Free table session
+        await _cqrs.Send(new MarkTableAvailableCommand(orderDto.TableId), ct);
+
         return NoContent();
     }
 }

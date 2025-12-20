@@ -7,33 +7,22 @@
 
 <div class="stats mb-4">
     <div class="stat kpi">
-        <div class="stat-head">
-            <span>Tổng bàn</span>
-        </div>
+        <div class="stat-head"><span>Tổng bàn</span></div>
         <div class="stat-value metric" data-metric="TotalTables">0</div>
         <p class="muted">Tổng số bàn trong hệ thống</p>
     </div>
-
     <div class="stat kpi">
-        <div class="stat-head">
-            <span>Bàn đang phục vụ</span>
-        </div>
+        <div class="stat-head"><span>Bàn đang phục vụ</span></div>
         <div class="stat-value metric" data-metric="ActiveTables">0</div>
         <p class="muted">Số bàn có khách hiện tại</p>
     </div>
-
     <div class="stat kpi">
-        <div class="stat-head">
-            <span>Đơn hôm nay</span>
-        </div>
+        <div class="stat-head"><span>Đơn hôm nay</span></div>
         <div class="stat-value metric" data-metric="OrdersToday">0</div>
         <p class="muted">Tổng số đơn đã tạo trong ngày</p>
     </div>
-
     <div class="stat kpi">
-        <div class="stat-head">
-            <span>Doanh thu hôm nay</span>
-        </div>
+        <div class="stat-head"><span>Doanh thu hôm nay</span></div>
         <div class="stat-value metric" data-metric="RevenueToday">₫0</div>
         <p class="muted">Tạm tính theo đơn đã ghi nhận</p>
     </div>
@@ -45,7 +34,9 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Doanh Thu (7 ngày)</h5>
-                    <canvas id="rev7DaysChart" height="180"></canvas>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="rev7DaysChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -53,7 +44,9 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">5 món có số lượng bán cao nhất</h5>
-                    <canvas id="topItemsChart" height="180"></canvas>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="topItemsChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -61,20 +54,28 @@
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-    <div class="panel"><h4>Doanh thu theo giờ</h4><canvas id="revChart" height="140"></canvas></div>
-    <div class="panel"><h4>Trạng thái đơn hôm nay</h4><canvas id="stationChart" height="140"></canvas></div>
+    <div class="panel">
+        <h4>Doanh thu theo giờ</h4>
+        <div style="position: relative; height: 200px; width: 100%;">
+            <canvas id="revChart"></canvas>
+        </div>
+    </div>
+    <div class="panel">
+        <h4>Trạng thái đơn hôm nay</h4>
+        <div style="position: relative; height: 200px; width: 100%;">
+            <canvas id="stationChart"></canvas>
+        </div>
+    </div>
 </div>
 
 <table class="table">
     <thead><tr><th>Mã</th><th>Trạng thái</th><th class="text-end">Tổng</th><th>Lúc</th><th></th></tr></thead>
     <tbody id="recentOrders">
-        <tr class="skeleton-row">
-            <td colspan="5">
-                <div class="skeleton-block skeleton-line-md"></div>
-            </td>
-        </tr>
+        <tr class="skeleton-row"><td colspan="5"><div class="skeleton-block skeleton-line-md"></div></td></tr>
     </tbody>
 </table>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script id="dashboard-data" type="application/json">
     @Html.Raw(ViewBag.DashboardJson ?? "{}")
@@ -85,24 +86,55 @@
         try {
             const revEl = document.getElementById('rev7DaysChart');
             const topEl = document.getElementById('topItemsChart');
-            if (!revEl || !topEl || !model) return;
 
-            const rev = Array.isArray(model.revenueLast7Days) ? model.revenueLast7Days : [];
-            const revLabels = rev.map(r => (r.date || r.Date || '').toString().slice(5));
-            const revData = rev.map(r => Number(r.total ?? r.Total ?? 0));
+            if (!revEl || !topEl || !model || typeof Chart === 'undefined') return;
+
+            // FIX 2: Hủy biểu đồ cũ trước khi vẽ mới để tránh lỗi hiển thị chồng lấn
+            const oldRev = Chart.getChart(revEl);
+            if (oldRev) oldRev.destroy();
+
+            const oldTop = Chart.getChart(topEl);
+            if (oldTop) oldTop.destroy();
+
+            // --- Vẽ Chart Doanh Thu ---
+            const rev = Array.isArray(model.RevenueLast7Days) ? model.RevenueLast7Days : [];
+            const revLabels = rev.map(r => (r.Date || r.date || '').toString().slice(5));
+            const revData = rev.map(r => Number(r.Total || r.total || 0));
 
             new Chart(revEl, {
                 type: 'bar',
-                data: { labels: revLabels, datasets: [{ label: 'Doanh Thu (VND)', data: revData, backgroundColor: 'rgba(54, 162, 235, 0.5)', borderColor: 'rgba(54, 162, 235, 1)', borderWidth: 1 }] },
-                options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+                data: {
+                    labels: revLabels,
+                    datasets: [{
+                        label: 'Doanh Thu (VND)',
+                        data: revData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Quan trọng: Để chart theo kích thước div cha
+                    scales: { y: { beginAtZero: true } }
+                }
             });
 
-            const items = Array.isArray(model.topItems) ? model.topItems.slice(0,5) : [];
-            const itemLabels = items.map(i => i.name || i.Name || '');
-            const itemData = items.map(i => Number(i.totalQty ?? i.TotalQty ?? i.qty ?? i.Quantity ?? 0));
+            // --- Vẽ Chart Top Món ---
+            const items = Array.isArray(model.TopItems) ? model.TopItems.slice(0,5) : [];
+            const itemLabels = items.map(i => i.Name || i.name || '');
+            const itemData = items.map(i => Number(i.TotalQty || i.totalQty || i.qty || 0));
             const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF'];
 
-            new Chart(topEl, { type: 'pie', data: { labels: itemLabels, datasets: [{ data: itemData, backgroundColor: colors, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: true } });
+            new Chart(topEl, {
+                type: 'pie',
+                data: { labels: itemLabels, datasets: [{ data: itemData, backgroundColor: colors, borderWidth: 1 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
         } catch (e) { console.warn('Chart render error', e); }
     }
 
@@ -111,7 +143,9 @@
         if (!el) return;
         let model = {};
         try { model = JSON.parse(el.textContent || '{}'); } catch {}
+
         const init = () => renderCharts(model);
-        if (window.Chart) init(); else window.addEventListener('load', init);
+        if (document.readyState === 'complete') init();
+        else window.addEventListener('load', init);
     })();
 </script>

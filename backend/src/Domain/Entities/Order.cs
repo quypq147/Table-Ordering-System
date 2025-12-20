@@ -168,7 +168,7 @@ public class Order : AggregateRoot<Guid>
 
 	public void Pay(Money amount, string method)
 	{
-		if (OrderStatus != OrderStatus.Submitted && OrderStatus != OrderStatus.Ready && OrderStatus != OrderStatus.Served)
+		if (OrderStatus != OrderStatus.Submitted && OrderStatus != OrderStatus.Ready && OrderStatus != OrderStatus.Served && OrderStatus != OrderStatus.WaitingForPayment)
 			throw new InvalidOperationException("Đơn này chưa thể thanh toán.");
 
 		var due = Total();

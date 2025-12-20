@@ -132,18 +132,29 @@ public class ClientController : Controller
     }
 
     [HttpPost]
-    public IActionResult LeaveTable(string? tableCode)
+    public async Task<IActionResult> LeaveTable(string? tableCode)
     {
         try
         {
-            // Clear any server-side session data and redirect user out of table session
+            // Try close session on backend using current orderId cookie (set by public cart start)
+            if (Request.Cookies.TryGetValue("orderId", out var oidRaw) && Guid.TryParse(oidRaw, out var orderId) && orderId != Guid.Empty)
+            {
+                await _apiClient.CloseSessionAsync(orderId);
+            }
+
+            // Clear any server-side session data and cookies, then redirect user out of table session
             HttpContext.Session?.Clear();
+            Response.Cookies.Delete("sessionId");
+            Response.Cookies.Delete("tableCode");
+            Response.Cookies.Delete("orderId");
+            Response.Cookies.Delete("tableId");
+
             return RedirectToAction(nameof(ScanHelp));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "LeaveTable failed");
-            return BadRequest("Không thể rời bàn lúc này");
+            return BadRequest(ex.Message);
         }
     }
 

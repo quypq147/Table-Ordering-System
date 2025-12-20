@@ -39,12 +39,22 @@
                 </a>
             </li>
             <li>
+                <a href="@Url.Action("Index", "Categories")" class="@(controller == "Categories" ? "active" : "")">
+                    <i class="fas fa-bar"></i> Danh Mục
+                </a>
+            </li>
+            <li>
                 <a href="@Url.Action("Index", "Tables")" class="@(controller == "Tables" ? "active" : "")">
                     <i class="fas fa-chair"></i> Bàn
                 </a>
             </li>
             <li>
-                <a href="#" class="">
+                <a href="@Url.Action("Index", "Users")" class="@(controller == "Users" ? "active" : "")">
+                    <i class="fas fa-user"></i> Nhân Sự
+                </a>
+            </li>
+            <li>
+                <a href="@Url.Action("Index", "Statistics")" class="@(controller == "Statistics" ? "active" : "")">
                     <i class="fas fa-chart-line"></i> Thống kê
                 </a>
             </li>

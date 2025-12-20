@@ -85,9 +85,6 @@ public sealed class StartCartByTableCodeHandler : IRequestHandler<StartCartByTab
             .FirstOrDefaultAsync(ct);
         if (open is not null)
         {
-            table.MarkInUse();
-            await _db.SaveChangesAsync(ct);
-
             var items = open.Items.Select(i => new CartItemDto(
                 Id: i.Id,
                 MenuItemId: i.MenuItemId,
